@@ -1,0 +1,204 @@
+definitions:
+  apimodels.Response:
+    properties:
+      data:
+        description: данные ответа
+      message:
+        description: сообщение ошибки
+        type: string
+      status:
+        description: результат обработки fail/success
+        type: string
+    type: object
+  authapimodels.SendEmail:
+    properties:
+      email:
+        description: Почта, на которую надо отправить письмо с подтверждением
+        type: string
+    type: object
+  spaceapimodels.CreateAdmin:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      password:
+        type: string
+      phone_number:
+        type: string
+    type: object
+  spaceapimodels.CreateOrganization:
+    properties:
+      admin_data:
+        $ref: '#/definitions/spaceapimodels.CreateAdmin'
+      director_name:
+        type: string
+      full_name:
+        type: string
+      inn:
+        type: string
+      kpp:
+        type: string
+      ogrn:
+        type: string
+      organization_name:
+        type: string
+      organization_type:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /api/auth/check-email:
+    post:
+      description: Проверить почту
+      parameters:
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/authapimodels.SendEmail'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Проверить почту
+      tags:
+      - Регистрация_организации
+  /api/auth/register:
+    post:
+      description: Отправляет письмо с подтверждением на почту
+      parameters:
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/authapimodels.SendEmail'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Отправить письмо с подтверждением на почту
+      tags:
+      - Регистрация_организации
+  /api/auth/verify-email:
+    get:
+      description: Подтверждение почты кодом
+      parameters:
+      - description: код подтверждения
+        in: query
+        name: code
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Подтверждение почты кодом
+      tags:
+      - Регистрация_организации
+  /api/organizations:
+    post:
+      description: Создание организации
+      parameters:
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/spaceapimodels.CreateOrganization'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Создание организации
+      tags:
+      - Организации
+  /api/organizations/retrieve:
+    post:
+      description: Запрос детальной информации через Дадата
+      parameters:
+      - description: параметры запроса в дадату
+        in: query
+        name: query
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Запрос детальной информации через Дадата
+      tags:
+      - Организации
+  /api/organizations/suggest:
+    get:
+      description: Поиск по ИНН через Дадата
+      parameters:
+      - description: параметры запроса в дадату
+        in: query
+        name: query
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Поиск по ИНН через Дадата
+      tags:
+      - Организации
+swagger: "2.0"
