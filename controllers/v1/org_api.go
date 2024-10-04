@@ -1,14 +1,16 @@
-package controllers
+package apiv1
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"hr-tools-backend/controllers"
+	"hr-tools-backend/lib/dadata"
 	spacehandler "hr-tools-backend/lib/space/handler"
 	apimodels "hr-tools-backend/models/api"
 	spaceapimodels "hr-tools-backend/models/api/space"
 )
 
 type orgApiController struct {
-	BaseAPIController
+	controllers.BaseAPIController
 }
 
 func InitOrgApiRouters(app *fiber.App) {
@@ -28,11 +30,14 @@ func InitOrgApiRouters(app *fiber.App) {
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/organizations/suggest [get]
+// @router /api/v1/organizations/suggest [get]
 func (c *orgApiController) orgSuggest(ctx *fiber.Ctx) error {
 	dadataQuery := ctx.Query("query", "")
-	//TODO: заглушка
-	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(dadataQuery))
+	response, err := dadataproxy.ProxySuggestRequest(dadataQuery)
+	if err != nil {
+		return ctx.Status(fiber.StatusOK).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(response)
 }
 
 // @Summary Запрос детальной информации через Дадата
@@ -43,7 +48,7 @@ func (c *orgApiController) orgSuggest(ctx *fiber.Ctx) error {
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/organizations/retrieve [post]
+// @router /api/v1/organizations/retrieve [post]
 func (c *orgApiController) orgDetails(ctx *fiber.Ctx) error {
 	daDataQuery := ctx.Query("query", "")
 	// проверить по ИНН базе и вернуть ошибку если такой уже есть
@@ -60,7 +65,7 @@ func (c *orgApiController) orgDetails(ctx *fiber.Ctx) error {
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/organizations [post]
+// @router /api/v1/organizations [post]
 func (c *orgApiController) createOrg(ctx *fiber.Ctx) error {
 	var payload spaceapimodels.CreateOrganization
 	if err := c.BodyParser(ctx, &payload); err != nil {

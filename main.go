@@ -9,7 +9,7 @@ import (
 	fiberRecover "github.com/gofiber/fiber/v2/middleware/recover"
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/config"
-	"hr-tools-backend/controllers"
+	apiv1 "hr-tools-backend/controllers/v1"
 	"hr-tools-backend/fiberlog"
 	"hr-tools-backend/initializers"
 	"os"
@@ -35,15 +35,16 @@ func main() {
 	app.Use(swagger.New(swaggerCfg))
 
 	//api
-	api := fiber.New()
-	api.Use(fiberlog.New(*initializers.LoggerConfig))
-	app.Mount("/api", api)
-	api.Use(cors.New(cors.Config{
+	apiV1 := fiber.New()
+	apiV1.Use(fiberlog.New(*initializers.LoggerConfig))
+	app.Mount("/api/v1", apiV1)
+	apiV1.Use(cors.New(cors.Config{
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 		AllowMethods: "GET, POST, PATCH, DELETE, PUT",
 	}))
-	controllers.InitRegRouters(api)
-	controllers.InitOrgApiRouters(api)
+	apiv1.InitRegRouters(apiV1)
+	apiv1.InitOrgApiRouters(apiV1)
+	apiv1.InitAuthApiRouters(apiV1)
 
 	app.Hooks().OnShutdown()
 
