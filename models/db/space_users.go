@@ -1,6 +1,9 @@
 package dbmodels
 
-import "time"
+import (
+	spaceapimodels "hr-tools-backend/models/api/space"
+	"time"
+)
 
 type SpaceUser struct {
 	BaseModel
@@ -14,4 +17,15 @@ type SpaceUser struct {
 	SpaceID     string
 	Role        string
 	LastLogin   time.Time
+}
+
+func (r SpaceUser) ToModel() spaceapimodels.SpaceUser {
+	return spaceapimodels.SpaceUser{
+		ID:          r.ID,
+		Email:       r.Email,
+		FirstName:   r.FirstName,
+		LastName:    r.LastName,
+		PhoneNumber: r.PhoneNumber,
+		IsAdmin:     r.IsAdmin,
+	}
 }

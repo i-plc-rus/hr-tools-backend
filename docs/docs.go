@@ -16,7 +16,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/auth/check-email": {
+        "/api/v1/auth/check-email": {
             "post": {
                 "description": "Проверить почту",
                 "tags": [
@@ -56,7 +56,158 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/auth/register": {
+        "/api/v1/auth/login": {
+            "post": {
+                "description": "Аутентификация пользователя",
+                "tags": [
+                    "Аутентификация пользователей"
+                ],
+                "summary": "Аутентификация пользователя",
+                "parameters": [
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authapimodels.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/authapimodels.JWTResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/me": {
+            "get": {
+                "description": "Получить информацию о текущем пользователе",
+                "tags": [
+                    "Аутентификация пользователей"
+                ],
+                "summary": "Получить информацию о текущем пользователе",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/spaceapimodels.SpaceUser"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/refresh-token": {
+            "post": {
+                "description": "Обновить JWT",
+                "tags": [
+                    "Аутентификация пользователей"
+                ],
+                "summary": "Обновить JWT",
+                "parameters": [
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authapimodels.JWTRefreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/authapimodels.JWTResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/register": {
             "post": {
                 "description": "Отправляет письмо с подтверждением на почту",
                 "tags": [
@@ -96,7 +247,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/auth/verify-email": {
+        "/api/v1/auth/verify-email": {
             "get": {
                 "description": "Подтверждение почты кодом",
                 "tags": [
@@ -133,7 +284,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/organizations": {
+        "/api/v1/organizations": {
             "post": {
                 "description": "Создание организации",
                 "tags": [
@@ -173,7 +324,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/organizations/retrieve": {
+        "/api/v1/organizations/retrieve": {
             "post": {
                 "description": "Запрос детальной информации через Дадата",
                 "tags": [
@@ -210,7 +361,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/organizations/suggest": {
+        "/api/v1/organizations/suggest": {
             "get": {
                 "description": "Поиск по ИНН через Дадата",
                 "tags": [
@@ -261,6 +412,36 @@ const docTemplate = `{
                 },
                 "status": {
                     "description": "результат обработки fail/success",
+                    "type": "string"
+                }
+            }
+        },
+        "authapimodels.JWTRefreshRequest": {
+            "type": "object",
+            "properties": {
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "authapimodels.JWTResponse": {
+            "type": "object",
+            "properties": {
+                "refresh_token": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "authapimodels.LoginRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
                     "type": "string"
                 }
             }
@@ -319,6 +500,29 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "organization_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "spaceapimodels.SpaceUser": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_admin": {
+                    "type": "boolean"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "phone_number": {
                     "type": "string"
                 }
             }

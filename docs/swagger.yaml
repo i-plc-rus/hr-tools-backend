@@ -10,6 +10,25 @@ definitions:
         description: результат обработки fail/success
         type: string
     type: object
+  authapimodels.JWTRefreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    type: object
+  authapimodels.JWTResponse:
+    properties:
+      refresh_token:
+        type: string
+      token:
+        type: string
+    type: object
+  authapimodels.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
   authapimodels.SendEmail:
     properties:
       email:
@@ -48,10 +67,25 @@ definitions:
       organization_type:
         type: string
     type: object
+  spaceapimodels.SpaceUser:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      is_admin:
+        type: boolean
+      last_name:
+        type: string
+      phone_number:
+        type: string
+    type: object
 info:
   contact: {}
 paths:
-  /api/auth/check-email:
+  /api/v1/auth/check-email:
     post:
       description: Проверить почту
       parameters:
@@ -77,7 +111,100 @@ paths:
       summary: Проверить почту
       tags:
       - Регистрация_организации
-  /api/auth/register:
+  /api/v1/auth/login:
+    post:
+      description: Аутентификация пользователя
+      parameters:
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/authapimodels.LoginRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/authapimodels.JWTResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Аутентификация пользователя
+      tags:
+      - Аутентификация пользователей
+  /api/v1/auth/me:
+    get:
+      description: Получить информацию о текущем пользователе
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/spaceapimodels.SpaceUser'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получить информацию о текущем пользователе
+      tags:
+      - Аутентификация пользователей
+  /api/v1/auth/refresh-token:
+    post:
+      description: Обновить JWT
+      parameters:
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/authapimodels.JWTRefreshRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/authapimodels.JWTResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Обновить JWT
+      tags:
+      - Аутентификация пользователей
+  /api/v1/auth/register:
     post:
       description: Отправляет письмо с подтверждением на почту
       parameters:
@@ -103,7 +230,7 @@ paths:
       summary: Отправить письмо с подтверждением на почту
       tags:
       - Регистрация_организации
-  /api/auth/verify-email:
+  /api/v1/auth/verify-email:
     get:
       description: Подтверждение почты кодом
       parameters:
@@ -127,7 +254,7 @@ paths:
       summary: Подтверждение почты кодом
       tags:
       - Регистрация_организации
-  /api/organizations:
+  /api/v1/organizations:
     post:
       description: Создание организации
       parameters:
@@ -153,7 +280,7 @@ paths:
       summary: Создание организации
       tags:
       - Организации
-  /api/organizations/retrieve:
+  /api/v1/organizations/retrieve:
     post:
       description: Запрос детальной информации через Дадата
       parameters:
@@ -177,7 +304,7 @@ paths:
       summary: Запрос детальной информации через Дадата
       tags:
       - Организации
-  /api/organizations/suggest:
+  /api/v1/organizations/suggest:
     get:
       description: Поиск по ИНН через Дадата
       parameters:

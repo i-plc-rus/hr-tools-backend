@@ -29,6 +29,14 @@ type Configuration struct {
 		EmailSendVerification string `default:"" env:"EMAIL_SEND_VERIFICATION"`
 		DomainForVerifyLink   string `default:"http://localhost:8000" env:"DOMAIN_FOR_VERIFY_LINK"`
 	}
+	DaData struct {
+		ApiKey string `default:"" env:"DADATA_API_KEY"`
+	}
+	Auth struct {
+		JWTExpireInSec        int64  `default:"2678400" env:"JWT_EXPIRE"`
+		JWTRefreshExpireInSec int64  `default:"5356800" env:"JWT_REFRESH_EXPIRE"`
+		JWTSecret             string `default:"secret-key-123" env:"JWT_SECRET"`
+	}
 }
 
 func configFiles() []string {

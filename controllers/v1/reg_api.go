@@ -1,14 +1,15 @@
-package controllers
+package apiv1
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"hr-tools-backend/controllers"
 	spaceauthhandler "hr-tools-backend/lib/space/auth"
 	apimodels "hr-tools-backend/models/api"
 	authapimodels "hr-tools-backend/models/api/auth"
 )
 
 type regController struct {
-	BaseAPIController
+	controllers.BaseAPIController
 }
 
 func InitRegRouters(app *fiber.App) {
@@ -28,7 +29,7 @@ func InitRegRouters(app *fiber.App) {
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/auth/register [post]
+// @router /api/v1/auth/register [post]
 func (c *regController) SendEmailConfirm(ctx *fiber.Ctx) error {
 	var payload authapimodels.SendEmail
 	if err := c.BodyParser(ctx, &payload); err != nil {
@@ -53,7 +54,7 @@ func (c *regController) SendEmailConfirm(ctx *fiber.Ctx) error {
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/auth/verify-email [get]
+// @router /api/v1/auth/verify-email [get]
 func (c *regController) VerifyEmail(ctx *fiber.Ctx) error {
 	verifyCode := ctx.Query("code", "")
 	err := spaceauthhandler.Instance.VerifyEmail(verifyCode)
@@ -71,7 +72,7 @@ func (c *regController) VerifyEmail(ctx *fiber.Ctx) error {
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/auth/check-email [post]
+// @router /api/v1/auth/check-email [post]
 func (c *regController) CheckEmail(ctx *fiber.Ctx) error {
 	var payload authapimodels.SendEmail
 	if err := c.BodyParser(ctx, &payload); err != nil {
