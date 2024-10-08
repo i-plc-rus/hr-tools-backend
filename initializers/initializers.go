@@ -4,6 +4,8 @@ import (
 	"context"
 	"hr-tools-backend/config"
 	"hr-tools-backend/fiberlog"
+	adminpanelhandler "hr-tools-backend/lib/admin-panel"
+	adminpanelauthhandler "hr-tools-backend/lib/admin-panel/auth"
 	spaceauthhandler "hr-tools-backend/lib/space/auth"
 	spacehandler "hr-tools-backend/lib/space/handler"
 )
@@ -17,4 +19,6 @@ func InitAllServices(ctx context.Context) {
 	InitSmtp()
 	spacehandler.NewHandler()
 	spaceauthhandler.NewHandler()
+	adminpanelauthhandler.NewHandler()
+	adminpanelhandler.NewHandler()
 }

@@ -1,0 +1,43 @@
+package db
+
+import (
+	log "github.com/sirupsen/logrus"
+	"hr-tools-backend/config"
+	adminpaneluserstore "hr-tools-backend/lib/admin-panel/store"
+	authutils "hr-tools-backend/lib/utils/auth-utils"
+	"hr-tools-backend/models"
+	dbmodels "hr-tools-backend/models/db"
+)
+
+func InitPreload() {
+	addSuperAdmin()
+}
+
+func addSuperAdmin() {
+	if config.Conf.Admin.Email == "" {
+		log.Warn("суперадмин не добавлен, отсутвует настройка ADMIN_EMAIL")
+		return
+	}
+	adminStore := adminpaneluserstore.NewInstance(DB)
+	existedRec, err := adminStore.FindByEmail(config.Conf.Admin.Email)
+	if err != nil {
+		log.WithError(err).Error("ошибка добавления суперадмина")
+		return
+	}
+	if existedRec != nil {
+		return
+	}
+	rec := dbmodels.AdminPanelUser{
+		IsActive:    true,
+		Role:        models.UserRoleSuperAdmin,
+		Password:    authutils.GetMD5Hash(config.Conf.Admin.Password),
+		FirstName:   config.Conf.Admin.FirstName,
+		LastName:    config.Conf.Admin.LastName,
+		Email:       config.Conf.Admin.Email,
+		PhoneNumber: config.Conf.Admin.PhoneNumber,
+	}
+	_, err = adminStore.Create(rec)
+	if err != nil {
+		log.WithError(err).Error("ошибка добавления суперадмина")
+	}
+}

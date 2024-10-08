@@ -37,6 +37,18 @@ type Configuration struct {
 		JWTRefreshExpireInSec int64  `default:"5356800" env:"JWT_REFRESH_EXPIRE"`
 		JWTSecret             string `default:"secret-key-123" env:"JWT_SECRET"`
 	}
+	AdminPanelAuth struct {
+		JWTExpireInSec        int64  `default:"2678400" env:"ADMIN_PANEL_JWT_EXPIRE"`
+		JWTRefreshExpireInSec int64  `default:"5356800" env:"ADMIN_PANEL_JWT_REFRESH_EXPIRE"`
+		JWTSecret             string `default:"secret-key-321" env:"ADMIN_PANEL_JWT_SECRET"`
+	}
+	Admin struct {
+		FirstName   string `default:"Admin" env:"SUPER_ADMIN_FIRST_NAME"`
+		LastName    string `default:"Admin" env:"SUPER_ADMIN_LAST_NAME"`
+		Email       string `default:"admin@admin.ad" env:"SUPER_ADMIN_EMAIL"`
+		PhoneNumber string `default:"" env:"SUPER_ADMIN_PHONE"`
+		Password    string `default:"123hygAS" env:"SUPER_ADMIN_PASSWORD"`
+	}
 }
 
 func configFiles() []string {
