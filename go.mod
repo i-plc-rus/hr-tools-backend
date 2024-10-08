@@ -1,6 +1,6 @@
 module hr-tools-backend
 
-go 1.21.1
+go 1.23.1
 
 require (
 	github.com/ekomobile/dadata/v2 v2.14.0
