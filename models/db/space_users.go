@@ -21,11 +21,14 @@ type SpaceUser struct {
 
 func (r SpaceUser) ToModel() spaceapimodels.SpaceUser {
 	return spaceapimodels.SpaceUser{
-		ID:          r.ID,
-		Email:       r.Email,
-		FirstName:   r.FirstName,
-		LastName:    r.LastName,
-		PhoneNumber: r.PhoneNumber,
-		IsAdmin:     r.IsAdmin,
+		ID: r.ID,
+		SpaceUserCommonData: spaceapimodels.SpaceUserCommonData{
+			Email:       r.Email,
+			FirstName:   r.FirstName,
+			LastName:    r.LastName,
+			PhoneNumber: r.PhoneNumber,
+			IsAdmin:     r.IsAdmin,
+			SpaceID:     r.SpaceID,
+		},
 	}
 }

@@ -15,3 +15,16 @@ func (c *BaseAPIController) BodyParser(ctx *fiber.Ctx, out interface{}) error {
 	}
 	return nil
 }
+
+func (c *BaseAPIController) GetIDByKey(ctx *fiber.Ctx, key string) (id string, err error) {
+
+	value := ctx.Params(key)
+	if value == "" {
+		return "", errors.New("не указан id")
+	}
+	return value, nil
+}
+
+func (c *BaseAPIController) GetID(ctx *fiber.Ctx) (id string, err error) {
+	return c.GetIDByKey(ctx, "id")
+}
