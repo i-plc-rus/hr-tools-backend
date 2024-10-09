@@ -32,8 +32,8 @@ func InitAdminApiRouters(app *fiber.App) {
 	user.Use(middleware.SuperAdminRole())
 	user.Get("get/:userID", controller.userGet)
 	user.Post("create", controller.userCreate)
-	user.Put("update", controller.userUpdate)
-	user.Delete("delete", controller.userDelete)
+	user.Put("update/:userID", controller.userUpdate)
+	user.Delete("delete/:userID", controller.userDelete)
 	user.Post("list", controller.userList)
 }
 
@@ -92,21 +92,24 @@ func (a *adminApiController) userCreate(ctx *fiber.Ctx) error {
 // @Tags Админ панель. Пользователи
 // @Description Изменение пользователя
 // @Param   Authorization		header		string	true	"Authorization token"
+// @Param   userID          		path    string  				    	true         "user ID"
 // @Param	body body	 adminpanelapimodels.UserUpdate	true	"request body"
 // @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/v1/admin_panel/user/update [put]
+// @router /api/v1/admin_panel/user/update/{userID} [put]
 func (a *adminApiController) userUpdate(ctx *fiber.Ctx) error {
+	value := ctx.Params("userID")
+	if value == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("ID пользователя не указан"))
+	}
 	var payload adminpanelapimodels.UserUpdate
 	if err := a.BodyParser(ctx, &payload); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
-	if err := payload.Validate(); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
-	}
-	err := handler.Instance.UpdateUser(payload)
+
+	err := handler.Instance.UpdateUser(value, payload)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
@@ -117,21 +120,18 @@ func (a *adminApiController) userUpdate(ctx *fiber.Ctx) error {
 // @Tags Админ панель. Пользователи
 // @Description Удаление пользователя
 // @Param   Authorization		header		string	true	"Authorization token"
-// @Param	body body	 adminpanelapimodels.UserID	true	"request body"
+// @Param   userID          		path    string  				    	true         "user ID"
 // @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/v1/admin_panel/user/delete [delete]
+// @router /api/v1/admin_panel/user/delete/{userID} [delete]
 func (a *adminApiController) userDelete(ctx *fiber.Ctx) error {
-	var payload adminpanelapimodels.UserID
-	if err := a.BodyParser(ctx, &payload); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	value := ctx.Params("userID")
+	if value == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("ID пользователя не указан"))
 	}
-	if err := payload.Validate(); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
-	}
-	err := handler.Instance.DeleteUser(payload)
+	err := handler.Instance.DeleteUser(value)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}

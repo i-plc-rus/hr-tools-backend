@@ -55,7 +55,6 @@ func UserConvert(rec dbmodels.AdminPanelUser) UserView {
 }
 
 type UserUpdate struct {
-	ID          string           `json:"id"`
 	Email       *string          `json:"email"`
 	FirstName   *string          `json:"first_name"`
 	LastName    *string          `json:"last_name"`
@@ -63,11 +62,4 @@ type UserUpdate struct {
 	Password    *string          `json:"password"`
 	Role        *models.UserRole `json:"role"`
 	IsActive    *bool            `json:"is_active"`
-}
-
-func (u UserUpdate) Validate() error {
-	if u.ID == "" {
-		return errors.New("ID пользователя не указан")
-	}
-	return nil
 }

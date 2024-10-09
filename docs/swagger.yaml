@@ -14,18 +14,11 @@ definitions:
       role:
         $ref: '#/definitions/models.UserRole'
     type: object
-  adminpanelapimodels.UserID:
-    properties:
-      id:
-        type: string
-    type: object
   adminpanelapimodels.UserUpdate:
     properties:
       email:
         type: string
       first_name:
-        type: string
-      id:
         type: string
       is_active:
         type: boolean
@@ -215,7 +208,7 @@ paths:
       summary: Создание пользователя
       tags:
       - Админ панель. Пользователи
-  /api/v1/admin_panel/user/delete:
+  /api/v1/admin_panel/user/delete/{userID}:
     delete:
       description: Удаление пользователя
       parameters:
@@ -224,12 +217,11 @@ paths:
         name: Authorization
         required: true
         type: string
-      - description: request body
-        in: body
-        name: body
+      - description: user ID
+        in: path
+        name: userID
         required: true
-        schema:
-          $ref: '#/definitions/adminpanelapimodels.UserID'
+        type: string
       responses:
         "200":
           description: OK
@@ -319,13 +311,18 @@ paths:
       summary: Получение списка пользователей
       tags:
       - Админ панель. Пользователи
-  /api/v1/admin_panel/user/update:
+  /api/v1/admin_panel/user/update/{userID}:
     put:
       description: Изменение пользователя
       parameters:
       - description: Authorization token
         in: header
         name: Authorization
+        required: true
+        type: string
+      - description: user ID
+        in: path
+        name: userID
         required: true
         type: string
       - description: request body

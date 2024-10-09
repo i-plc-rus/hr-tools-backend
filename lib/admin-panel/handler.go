@@ -13,8 +13,8 @@ import (
 
 type Provider interface {
 	CreateUser(request adminpanelapimodels.User) error
-	UpdateUser(request adminpanelapimodels.UserUpdate) error
-	DeleteUser(request adminpanelapimodels.UserID) error
+	UpdateUser(userID string, request adminpanelapimodels.UserUpdate) error
+	DeleteUser(userID string) error
 	GetUser(userID string) (adminpanelapimodels.UserView, error)
 	List() ([]adminpanelapimodels.UserView, error)
 }
@@ -56,7 +56,8 @@ func (i impl) CreateUser(request adminpanelapimodels.User) error {
 	return nil
 }
 
-func (i impl) UpdateUser(request adminpanelapimodels.UserUpdate) error {
+func (i impl) UpdateUser(userID string, request adminpanelapimodels.UserUpdate) error {
+	logger := log.WithField("user_id", userID)
 	updMap := map[string]interface{}{}
 	if request.Role != nil {
 		updMap["Role"] = *request.Role
@@ -79,32 +80,28 @@ func (i impl) UpdateUser(request adminpanelapimodels.UserUpdate) error {
 	if request.IsActive != nil {
 		updMap["IsActive"] = *request.IsActive
 	}
-	err := i.store.Update(request.ID, updMap)
+	err := i.store.Update(userID, updMap)
 	if err != nil {
-		log.
+		logger.
 			WithField("request", fmt.Sprintf("%+v", request)).
 			WithError(err).
 			Error("Ошибка обновления пользователя админки")
 		return err
 	}
-	log.
-		WithField("user_id", request.ID).
-		Info("Обновлен пользователь админки")
+	logger.Info("Обновлен пользователь админки")
 	return nil
 }
 
-func (i impl) DeleteUser(request adminpanelapimodels.UserID) error {
-	err := i.store.Delete(request.ID)
+func (i impl) DeleteUser(userID string) error {
+	logger := log.WithField("user_id", userID)
+	err := i.store.Delete(userID)
 	if err != nil {
-		log.
-			WithField("request", fmt.Sprintf("%+v", request)).
+		logger.
 			WithError(err).
 			Error("Ошибка удаления пользователя админки")
 		return err
 	}
-	log.
-		WithField("user_id", request.ID).
-		Info("Удален пользователь админки")
+	logger.Info("Удален пользователь админки")
 	return nil
 }
 

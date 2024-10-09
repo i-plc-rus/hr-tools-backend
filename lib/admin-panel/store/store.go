@@ -78,6 +78,9 @@ func (i impl) FindByEmail(email string) (*dbmodels.AdminPanelUser, error) {
 }
 
 func (i impl) Update(userID string, updMap map[string]interface{}) error {
+	if len(updMap) == 0 {
+		return nil
+	}
 	email, ok := updMap["Email"]
 	if ok {
 		existedRec, err := i.FindByEmail(email.(string))

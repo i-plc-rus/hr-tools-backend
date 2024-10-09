@@ -48,7 +48,7 @@ func main() {
 
 	//админка
 	adminPanel := fiber.New()
-	apiV1.Mount("/admin", adminPanel)
+	apiV1.Mount("/admin_panel", adminPanel)
 	//admin.Use(middleware.SuperAdminRole())
 	apiv1.InitAdminApiRouters(adminPanel)
 

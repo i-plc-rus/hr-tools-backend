@@ -120,7 +120,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/admin_panel/user/delete": {
+        "/api/v1/admin_panel/user/delete/{userID}": {
             "delete": {
                 "description": "Удаление пользователя",
                 "tags": [
@@ -136,13 +136,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "request body",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/adminpanelapimodels.UserID"
-                        }
+                        "type": "string",
+                        "description": "user ID",
+                        "name": "userID",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -286,7 +284,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/admin_panel/user/update": {
+        "/api/v1/admin_panel/user/update/{userID}": {
             "put": {
                 "description": "Изменение пользователя",
                 "tags": [
@@ -299,6 +297,13 @@ const docTemplate = `{
                         "description": "Authorization token",
                         "name": "Authorization",
                         "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "user ID",
+                        "name": "userID",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -743,14 +748,6 @@ const docTemplate = `{
                 }
             }
         },
-        "adminpanelapimodels.UserID": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "string"
-                }
-            }
-        },
         "adminpanelapimodels.UserUpdate": {
             "type": "object",
             "properties": {
@@ -758,9 +755,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "first_name": {
-                    "type": "string"
-                },
-                "id": {
                     "type": "string"
                 },
                 "is_active": {
