@@ -76,7 +76,7 @@ func (c *spaceUserController) DeleteUser(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
 
-// @Summary Обновить пользователя
+// UpdateUser @Summary Обновить пользователя
 // @Tags Пользователи space
 // @Description Обновить пользователя
 // @Param   Authorization		header		string	true	"Authorization token"
@@ -85,9 +85,13 @@ func (c *spaceUserController) DeleteUser(ctx *fiber.Ctx) error {
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/v1/users [post]
+// @router /api/v1/users/{id} [put]
 func (c *spaceUserController) UpdateUser(ctx *fiber.Ctx) error {
-	var payload spaceapimodels.CreateUser
+	userID, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	var payload spaceapimodels.UpdateUser
 	if err := c.BodyParser(ctx, &payload); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
@@ -95,7 +99,7 @@ func (c *spaceUserController) UpdateUser(ctx *fiber.Ctx) error {
 	if err := payload.Validate(); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
-	err := spaceusershander.Instance.CreateUser(payload)
+	err = spaceusershander.Instance.UpdateUser(userID, payload)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
@@ -135,7 +139,7 @@ func (c *spaceUserController) ListUsers(ctx *fiber.Ctx) error {
 // @Param 	id 				path 		string  true 	"space user ID"
 // @Success 200
 // @Failure 400 {object} apimodels.Response
-// @Failure 403x
+// @Failure 403
 // @Failure 500 {object} apimodels.Response
 // @router /api/v1/users/{id} [get]
 func (c *spaceUserController) GetUserByID(ctx *fiber.Ctx) error {
