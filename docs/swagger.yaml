@@ -93,6 +93,52 @@ definitions:
         description: Почта, на которую надо отправить письмо с подтверждением
         type: string
     type: object
+  dictapimodels.CompanyData:
+    properties:
+      name:
+        type: string
+    type: object
+  dictapimodels.CompanyView:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  dictapimodels.DepartmentData:
+    properties:
+      company_id:
+        type: string
+      name:
+        type: string
+      parent_id:
+        type: string
+    type: object
+  dictapimodels.DepartmentFind:
+    properties:
+      company_id:
+        type: string
+      name:
+        type: string
+    type: object
+  dictapimodels.DepartmentView:
+    properties:
+      company_id:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      parent_id:
+        type: string
+    type: object
+  dictapimodels.JobTitleData:
+    properties:
+      department_id:
+        type: string
+      name:
+        type: string
+    type: object
   models.UserRole:
     enum:
     - SUPER_ADMIN
@@ -548,6 +594,555 @@ paths:
       summary: Подтверждение почты кодом
       tags:
       - Регистрация_организации
+  /api/v1/dict/company:
+    post:
+      description: Создание
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dictapimodels.CompanyData'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Создание
+      tags:
+      - Справочник. Компания
+  /api/v1/dict/company/{id}:
+    delete:
+      description: Удаление
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Удаление
+      tags:
+      - Справочник. Компания
+    get:
+      description: Получение по ИД
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dictapimodels.CompanyView'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получение по ИД
+      tags:
+      - Справочник. Компания
+    put:
+      description: Обновление
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dictapimodels.CompanyData'
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Обновление
+      tags:
+      - Справочник. Компания
+  /api/v1/dict/company/find:
+    post:
+      description: Поиск по названию
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dictapimodels.CompanyData'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dictapimodels.CompanyView'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Поиск по названию
+      tags:
+      - Справочник. Компания
+  /api/v1/dict/department:
+    post:
+      description: Создание
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dictapimodels.DepartmentData'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Создание
+      tags:
+      - Справочник. Подразделение
+  /api/v1/dict/department/{id}:
+    delete:
+      description: Удаление
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Удаление
+      tags:
+      - Справочник. Подразделение
+    get:
+      description: Получение по ИД
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dictapimodels.DepartmentView'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получение по ИД
+      tags:
+      - Справочник. Подразделение
+    put:
+      description: Обновление
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dictapimodels.DepartmentData'
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Обновление
+      tags:
+      - Справочник. Подразделение
+  /api/v1/dict/department/find:
+    post:
+      description: Поиск по названию
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dictapimodels.DepartmentFind'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dictapimodels.DepartmentView'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Поиск по названию
+      tags:
+      - Справочник. Подразделение
+  /api/v1/dict/job_title:
+    post:
+      description: Создание
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dictapimodels.JobTitleData'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Создание
+      tags:
+      - Справочник. Штатные должности
+  /api/v1/dict/job_title/{id}:
+    delete:
+      description: Удаление
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Удаление
+      tags:
+      - Справочник. Штатные должности
+    get:
+      description: Получение по ИД
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dictapimodels.CompanyView'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получение по ИД
+      tags:
+      - Справочник. Штатные должности
+    put:
+      description: Обновление
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dictapimodels.JobTitleData'
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Обновление
+      tags:
+      - Справочник. Штатные должности
+  /api/v1/dict/job_title/find:
+    post:
+      description: Поиск по названию
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dictapimodels.JobTitleData'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dictapimodels.CompanyView'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Поиск по названию
+      tags:
+      - Справочник. Штатные должности
   /api/v1/organizations:
     post:
       description: Создание организации

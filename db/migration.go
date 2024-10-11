@@ -22,6 +22,16 @@ func AutoMigrateDB() error {
 	if err := DB.AutoMigrate(&dbmodels.AdminPanelUser{}); err != nil {
 		return errors.Wrap(err, "ошибка создания структуры AdminPanelUser")
 	}
+
+	if err := DB.AutoMigrate(&dbmodels.Company{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры Company")
+	}
+	if err := DB.AutoMigrate(&dbmodels.Department{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры Department")
+	}
+	if err := DB.AutoMigrate(&dbmodels.JobTitle{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры JobTitle")
+	}
 	log.Info("Миграция прошла успешно")
 	return nil
 }
