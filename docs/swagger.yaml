@@ -50,6 +50,13 @@ definitions:
       role:
         $ref: '#/definitions/models.UserRole'
     type: object
+  apimodels.Pagination:
+    properties:
+      limit:
+        type: integer
+      page:
+        type: integer
+    type: object
   apimodels.Response:
     properties:
       data:
@@ -92,23 +99,10 @@ definitions:
     type: string
     x-enum-varnames:
     - UserRoleSuperAdmin
-  spaceapimodels.CreateAdmin:
-    properties:
-      email:
-        type: string
-      first_name:
-        type: string
-      last_name:
-        type: string
-      password:
-        type: string
-      phone_number:
-        type: string
-    type: object
   spaceapimodels.CreateOrganization:
     properties:
       admin_data:
-        $ref: '#/definitions/spaceapimodels.CreateAdmin'
+        $ref: '#/definitions/spaceapimodels.CreateUser'
       director_name:
         type: string
       full_name:
@@ -124,6 +118,23 @@ definitions:
       organization_type:
         type: string
     type: object
+  spaceapimodels.CreateUser:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      is_admin:
+        type: boolean
+      last_name:
+        type: string
+      password:
+        type: string
+      phone_number:
+        type: string
+      space_id:
+        type: string
+    type: object
   spaceapimodels.SpaceUser:
     properties:
       email:
@@ -137,6 +148,25 @@ definitions:
       last_name:
         type: string
       phone_number:
+        type: string
+      space_id:
+        type: string
+    type: object
+  spaceapimodels.UpdateUser:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      is_admin:
+        type: boolean
+      last_name:
+        type: string
+      password:
+        type: string
+      phone_number:
+        type: string
+      space_id:
         type: string
     type: object
 info:
@@ -592,4 +622,155 @@ paths:
       summary: Поиск по ИНН через Дадата
       tags:
       - Организации
+  /api/v1/users:
+    post:
+      description: Создать нового пользователя
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/spaceapimodels.CreateUser'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Создать нового пользователя
+      tags:
+      - Пользователи space
+  /api/v1/users/{id}:
+    delete:
+      description: Создать нового пользователя
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/spaceapimodels.CreateUser'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Создать нового пользователя
+      tags:
+      - Пользователи space
+    get:
+      description: Получить пользователя space по ID
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: space user ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получить пользователя space по ID
+      tags:
+      - Пользователи space
+    put:
+      description: Обновить пользователя
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/spaceapimodels.UpdateUser'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      tags:
+      - Пользователи space
+  /api/v1/users/list:
+    post:
+      description: Получить список пользователей space
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/apimodels.Pagination'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получить список пользователей space
+      tags:
+      - Пользователи space
 swagger: "2.0"
