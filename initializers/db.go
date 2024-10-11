@@ -11,4 +11,6 @@ func InitDBConnection() {
 	if err != nil {
 		panic(err.Error())
 	}
+
+	db.InitPreload()
 }

@@ -16,3 +16,13 @@ func AuthorizationRequired() fiber.Handler {
 		},
 	})
 }
+
+func AdminPanelAuthorizationRequired() fiber.Handler {
+	return jwtware.New(jwtware.Config{
+		Claims: jwt.MapClaims{},
+		SigningKey: jwtware.SigningKey{
+			JWTAlg: "HS256",
+			Key:    []byte(config.Conf.AdminPanelAuth.JWTSecret),
+		},
+	})
+}

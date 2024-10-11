@@ -1,4 +1,55 @@
 definitions:
+  adminpanelapimodels.User:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      password:
+        type: string
+      phone_number:
+        type: string
+      role:
+        $ref: '#/definitions/models.UserRole'
+    type: object
+  adminpanelapimodels.UserUpdate:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      is_active:
+        type: boolean
+      last_name:
+        type: string
+      password:
+        type: string
+      phone_number:
+        type: string
+      role:
+        $ref: '#/definitions/models.UserRole'
+    type: object
+  adminpanelapimodels.UserView:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      last_login:
+        type: string
+      last_name:
+        type: string
+      password:
+        type: string
+      phone_number:
+        type: string
+      role:
+        $ref: '#/definitions/models.UserRole'
+    type: object
   apimodels.Response:
     properties:
       data:
@@ -35,6 +86,12 @@ definitions:
         description: Почта, на которую надо отправить письмо с подтверждением
         type: string
     type: object
+  models.UserRole:
+    enum:
+    - SUPER_ADMIN
+    type: string
+    x-enum-varnames:
+    - UserRoleSuperAdmin
   spaceapimodels.CreateAdmin:
     properties:
       email:
@@ -85,6 +142,213 @@ definitions:
 info:
   contact: {}
 paths:
+  /api/v1/admin_panel/login:
+    post:
+      description: Аутентификация пользователя
+      parameters:
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/authapimodels.LoginRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/authapimodels.JWTResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Аутентификация пользователя
+      tags:
+      - Админ панель
+  /api/v1/admin_panel/user/create:
+    post:
+      description: Создание пользователя
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/adminpanelapimodels.User'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Создание пользователя
+      tags:
+      - Админ панель. Пользователи
+  /api/v1/admin_panel/user/delete/{userID}:
+    delete:
+      description: Удаление пользователя
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: user ID
+        in: path
+        name: userID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Удаление пользователя
+      tags:
+      - Админ панель. Пользователи
+  /api/v1/admin_panel/user/get/{userID}:
+    get:
+      description: Получение пользователя
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: user ID
+        in: path
+        name: userID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/adminpanelapimodels.UserView'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получение пользователя
+      tags:
+      - Админ панель. Пользователи
+  /api/v1/admin_panel/user/list:
+    post:
+      description: Получение списка пользователей
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/adminpanelapimodels.UserView'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получение списка пользователей
+      tags:
+      - Админ панель. Пользователи
+  /api/v1/admin_panel/user/update/{userID}:
+    put:
+      description: Изменение пользователя
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: user ID
+        in: path
+        name: userID
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/adminpanelapimodels.UserUpdate'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Изменение пользователя
+      tags:
+      - Админ панель. Пользователи
   /api/v1/auth/check-email:
     post:
       description: Проверить почту

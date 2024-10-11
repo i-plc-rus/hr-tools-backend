@@ -18,6 +18,10 @@ func AutoMigrateDB() error {
 	if err := DB.AutoMigrate(&dbmodels.SpaceUser{}); err != nil {
 		return errors.Wrap(err, "ошибка создания структуры EmailVerify")
 	}
+
+	if err := DB.AutoMigrate(&dbmodels.AdminPanelUser{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры AdminPanelUser")
+	}
 	log.Info("Миграция прошла успешно")
 	return nil
 }

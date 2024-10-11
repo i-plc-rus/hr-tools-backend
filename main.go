@@ -46,6 +46,12 @@ func main() {
 	apiv1.InitOrgApiRouters(apiV1)
 	apiv1.InitAuthApiRouters(apiV1)
 
+	//админка
+	adminPanel := fiber.New()
+	apiV1.Mount("/admin_panel", adminPanel)
+	//admin.Use(middleware.SuperAdminRole())
+	apiv1.InitAdminApiRouters(adminPanel)
+
 	app.Hooks().OnShutdown()
 
 	// gracefully shutdown
