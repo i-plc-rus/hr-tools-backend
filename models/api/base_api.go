@@ -19,3 +19,12 @@ func NewResponse(data interface{}) Response {
 		Data:   data,
 	}
 }
+
+type Pagination struct {
+	Limit int `json:"limit"`
+	Page  int `json:"page"`
+}
+
+func (r Pagination) Validate() error {
+	return nil
+}
