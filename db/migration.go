@@ -33,5 +33,14 @@ func AutoMigrateDB() error {
 		return errors.Wrap(err, "ошибка создания структуры JobTitle")
 	}
 	log.Info("Миграция прошла успешно")
+
+	if err := DB.AutoMigrate(&dbmodels.City{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры City")
+	}
+
+	if err := DB.AutoMigrate(&dbmodels.CompanyStruct{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры CompanyStruct")
+	}
+	log.Info("Миграция прошла успешно")
 	return nil
 }
