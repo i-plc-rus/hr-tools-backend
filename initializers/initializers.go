@@ -7,6 +7,7 @@ import (
 	adminpanelhandler "hr-tools-backend/lib/admin-panel"
 	adminpanelauthhandler "hr-tools-backend/lib/admin-panel/auth"
 	companyprovider "hr-tools-backend/lib/dicts/company"
+	companystructprovider "hr-tools-backend/lib/dicts/company-struct"
 	departmentprovider "hr-tools-backend/lib/dicts/department"
 	jobtitleprovider "hr-tools-backend/lib/dicts/job-title"
 	spaceauthhandler "hr-tools-backend/lib/space/auth"
@@ -27,4 +28,5 @@ func InitAllServices(ctx context.Context) {
 	companyprovider.NewHandler()
 	departmentprovider.NewHandler()
 	jobtitleprovider.NewHandler()
+	companystructprovider.NewHandler()
 }

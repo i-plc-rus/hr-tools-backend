@@ -55,6 +55,7 @@ func main() {
 	dict.InitCompanyDictApiRouters(dicts)
 	dict.InitDepartmentDictApiRouters(dicts)
 	dict.InitJobTitleDictApiRouters(dicts)
+	dict.InitCompanyStructDictApiRouters(dicts)
 
 	//админка
 	adminPanel := fiber.New()
