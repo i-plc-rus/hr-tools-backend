@@ -57,6 +57,12 @@ func main() {
 	dict.InitJobTitleDictApiRouters(dicts)
 	dict.InitCompanyStructDictApiRouters(dicts)
 
+	//space
+	space := fiber.New()
+	apiV1.Mount("/space", space)
+	space.Use(middleware.AuthorizationRequired())
+	apiv1.InitVacancyRequestApiRouters(space)
+
 	//админка
 	adminPanel := fiber.New()
 	apiV1.Mount("/admin_panel", adminPanel)
