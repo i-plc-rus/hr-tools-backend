@@ -10,8 +10,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/config"
 	apiv1 "hr-tools-backend/controllers/v1"
+	"hr-tools-backend/controllers/v1/dict"
 	"hr-tools-backend/fiberlog"
 	"hr-tools-backend/initializers"
+	"hr-tools-backend/middleware"
 	"os"
 	"os/signal"
 	"sync"
@@ -45,6 +47,15 @@ func main() {
 	apiv1.InitRegRouters(apiV1)
 	apiv1.InitOrgApiRouters(apiV1)
 	apiv1.InitAuthApiRouters(apiV1)
+
+	//dict
+	dicts := fiber.New()
+	apiV1.Mount("/dict", dicts)
+	dicts.Use(middleware.AuthorizationRequired())
+	dict.InitCompanyDictApiRouters(dicts)
+	dict.InitDepartmentDictApiRouters(dicts)
+	dict.InitJobTitleDictApiRouters(dicts)
+	dict.InitCompanyStructDictApiRouters(dicts)
 
 	//админка
 	adminPanel := fiber.New()

@@ -18,3 +18,20 @@ func SuperAdminRole() fiber.Handler {
 		return ctx.Next()
 	}
 }
+
+func GetUserSpace(ctx *fiber.Ctx) string {
+	token := ctx.Locals("user").(*jwt.Token)
+	claims := token.Claims.(jwt.MapClaims)
+	return claims["space"].(string)
+}
+
+func SpaceAdminUser() fiber.Handler {
+	return func(ctx *fiber.Ctx) (err error) {
+		token := ctx.Locals("user").(*jwt.Token)
+		claims := token.Claims.(jwt.MapClaims)
+		if !claims["admin"].(bool) {
+			return ctx.Status(fiber.StatusForbidden).JSON(apimodels.NewError("операция недоступна"))
+		}
+		return ctx.Next()
+	}
+}

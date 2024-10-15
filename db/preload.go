@@ -11,6 +11,7 @@ import (
 
 func InitPreload() {
 	addSuperAdmin()
+	fillCities()
 }
 
 func addSuperAdmin() {

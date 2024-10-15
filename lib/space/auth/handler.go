@@ -114,6 +114,7 @@ func (i impl) Login(email, password string) (response authapimodels.JWTResponse,
 		"name":  fmt.Sprintf("%s %s", user.FirstName, user.LastName),
 		"sub":   user.ID,
 		"admin": user.IsAdmin,
+		"space": user.SpaceID,
 		"exp":   time.Now().Add(time.Second * time.Duration(config.Conf.Auth.JWTExpireInSec)).Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

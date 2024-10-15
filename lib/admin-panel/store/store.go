@@ -1,7 +1,6 @@
 package adminpaneluserstore
 
 import (
-	"fmt"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	dbmodels "hr-tools-backend/models/db"
@@ -35,7 +34,6 @@ func (i impl) Create(rec dbmodels.AdminPanelUser) (userID string, err error) {
 		return "", err
 	}
 	if r != nil {
-		fmt.Println(r.ID)
 		return "", errors.New("пользователь уже сущетсвует")
 	}
 	err = i.db.
