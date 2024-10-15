@@ -10,6 +10,7 @@ import (
 type Provider interface {
 	List(address string) ([]dbmodels.City, error)
 	Add(rec dbmodels.City, skipDuplicate bool) error
+	GetByID(id string) (*dbmodels.City, error)
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -55,6 +56,19 @@ func (i impl) Add(rec dbmodels.City, skipDuplicate bool) error {
 		return errors.Wrap(tx.Error, "ошибка добавления города")
 	}
 	return nil
+}
+
+func (i impl) GetByID(id string) (*dbmodels.City, error) {
+	rec := dbmodels.City{BaseModel: dbmodels.BaseModel{ID: id}}
+	err := i.db.First(&rec).
+		Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &rec, nil
 }
 
 func (i impl) isUnique(selfID string, item dbmodels.City) (bool, error) {

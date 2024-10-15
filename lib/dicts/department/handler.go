@@ -92,7 +92,7 @@ func (i impl) Get(spaceID, id string) (item dictapimodels.DepartmentView, err er
 		return dictapimodels.DepartmentView{}, err
 	}
 	if rec == nil {
-		return dictapimodels.DepartmentView{}, errors.New("подразделение не найдена")
+		return dictapimodels.DepartmentView{}, errors.New("подразделение не найдено")
 	}
 	return dictapimodels.DepartmentConvert(*rec), nil
 }

@@ -6,12 +6,14 @@ import (
 	"hr-tools-backend/fiberlog"
 	adminpanelhandler "hr-tools-backend/lib/admin-panel"
 	adminpanelauthhandler "hr-tools-backend/lib/admin-panel/auth"
+	aprovalstageshandler "hr-tools-backend/lib/aproval-stages"
 	companyprovider "hr-tools-backend/lib/dicts/company"
 	companystructprovider "hr-tools-backend/lib/dicts/company-struct"
 	departmentprovider "hr-tools-backend/lib/dicts/department"
 	jobtitleprovider "hr-tools-backend/lib/dicts/job-title"
 	spaceauthhandler "hr-tools-backend/lib/space/auth"
 	spacehandler "hr-tools-backend/lib/space/handler"
+	vacancyreqhandler "hr-tools-backend/lib/vacancy-req"
 )
 
 var LoggerConfig *fiberlog.Config
@@ -29,4 +31,6 @@ func InitAllServices(ctx context.Context) {
 	departmentprovider.NewHandler()
 	jobtitleprovider.NewHandler()
 	companystructprovider.NewHandler()
+	vacancyreqhandler.NewHandler()
+	aprovalstageshandler.NewHandler()
 }

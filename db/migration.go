@@ -32,7 +32,6 @@ func AutoMigrateDB() error {
 	if err := DB.AutoMigrate(&dbmodels.JobTitle{}); err != nil {
 		return errors.Wrap(err, "ошибка создания структуры JobTitle")
 	}
-	log.Info("Миграция прошла успешно")
 
 	if err := DB.AutoMigrate(&dbmodels.City{}); err != nil {
 		return errors.Wrap(err, "ошибка создания структуры City")
@@ -40,6 +39,14 @@ func AutoMigrateDB() error {
 
 	if err := DB.AutoMigrate(&dbmodels.CompanyStruct{}); err != nil {
 		return errors.Wrap(err, "ошибка создания структуры CompanyStruct")
+	}
+
+	if err := DB.AutoMigrate(&dbmodels.ApprovalStage{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры ApprovalStage")
+	}
+
+	if err := DB.AutoMigrate(&dbmodels.VacancyRequest{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры VacancyRequest")
 	}
 	log.Info("Миграция прошла успешно")
 	return nil
