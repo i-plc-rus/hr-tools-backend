@@ -47,6 +47,7 @@ func main() {
 	apiv1.InitRegRouters(apiV1)
 	apiv1.InitOrgApiRouters(apiV1)
 	apiv1.InitAuthApiRouters(apiV1)
+	apiv1.InitSpaceUserRouters(apiV1)
 
 	//dict
 	dicts := fiber.New()
@@ -62,6 +63,7 @@ func main() {
 	apiV1.Mount("/space", space)
 	space.Use(middleware.AuthorizationRequired())
 	apiv1.InitVacancyRequestApiRouters(space)
+	apiv1.InitVacancyApiRouters(space)
 
 	//админка
 	adminPanel := fiber.New()

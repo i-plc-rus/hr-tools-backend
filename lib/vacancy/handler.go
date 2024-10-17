@@ -1,4 +1,4 @@
-package vacancyreqhandler
+package vacancyhandler
 
 import (
 	"fmt"
@@ -10,24 +10,27 @@ import (
 	companystructprovider "hr-tools-backend/lib/dicts/company-struct"
 	departmentprovider "hr-tools-backend/lib/dicts/department"
 	jobtitleprovider "hr-tools-backend/lib/dicts/job-title"
-	vacancyreqstore "hr-tools-backend/lib/vacancy-req/store"
+	vacancystore "hr-tools-backend/lib/vacancy/store"
+	"hr-tools-backend/models"
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
 )
 
 type Provider interface {
-	Create(spaceID, userID string, data vacancyapimodels.VacancyRequestData) (id string, err error)
-	GetByID(spaceID, id string) (item vacancyapimodels.VacancyRequestView, err error)
-	Update(spaceID, id string, data vacancyapimodels.VacancyRequestData) error
+	Create(spaceID, userID string, data vacancyapimodels.VacancyData) (id string, err error)
+	GetByID(spaceID, id string) (item vacancyapimodels.VacancyView, err error)
+	Update(spaceID, id string, data vacancyapimodels.VacancyData) error
 	Delete(spaceID, id string) error
-	List(spaceID string) (list []vacancyapimodels.VacancyRequestView, err error)
+	List(spaceID, userID string, filter dbmodels.VacancyFilter) (list []vacancyapimodels.VacancyView, err error)
+	ToPin(id, userID string, isSet bool) error
+	ToFavorite(id, userID string, isSet bool) error
 }
 
 var Instance Provider
 
 func NewHandler() {
 	Instance = impl{
-		store:                 vacancyreqstore.NewInstance(db.DB),
+		store:                 vacancystore.NewInstance(db.DB),
 		companyProvider:       companyprovider.Instance,
 		departmentProvider:    departmentprovider.Instance,
 		jobTitleProvider:      jobtitleprovider.Instance,
@@ -37,7 +40,7 @@ func NewHandler() {
 }
 
 type impl struct {
-	store                 vacancyreqstore.Provider
+	store                 vacancystore.Provider
 	companyProvider       companyprovider.Provider
 	departmentProvider    departmentprovider.Provider
 	jobTitleProvider      jobtitleprovider.Provider
@@ -45,7 +48,7 @@ type impl struct {
 	companyStructProvider companystructprovider.Provider
 }
 
-func (i impl) checkDependency(spaceID string, data vacancyapimodels.VacancyRequestData) (err error) {
+func (i impl) checkDependency(spaceID string, data vacancyapimodels.VacancyData) (err error) {
 	if data.CompanyID != "" {
 		_, err = i.companyProvider.Get(spaceID, data.CompanyID)
 		if err != nil {
@@ -82,31 +85,35 @@ func (i impl) checkDependency(spaceID string, data vacancyapimodels.VacancyReque
 	return nil
 }
 
-func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyRequestData) (id string, err error) {
+func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyData) (id string, err error) {
 	logger := log.WithField("space_id", spaceID)
 	err = i.checkDependency(spaceID, data)
 	if err != nil {
 		return "", err
 	}
-	rec := dbmodels.VacancyRequest{
+	rec := dbmodels.Vacancy{
 		BaseSpaceModel: dbmodels.BaseSpaceModel{
 			SpaceID: spaceID,
 		},
-		AuthorID:        userID,
 		VacancyName:     data.VacancyName,
-		Confidential:    data.Confidential,
 		OpenedPositions: data.OpenedPositions,
 		Urgency:         data.Urgency,
 		RequestType:     data.RequestType,
 		SelectionType:   data.SelectionType,
 		PlaceOfWork:     data.PlaceOfWork,
 		ChiefFio:        data.ChiefFio,
-		Interviewer:     data.Interviewer,
-		ShortInfo:       data.ShortInfo,
 		Requirements:    data.Requirements,
-		Description:     data.Description,
-		OutInteraction:  data.OutInteraction,
-		InInteraction:   data.InInteraction,
+		Salary: dbmodels.Salary{
+			From:     data.Salary.From,
+			To:       data.Salary.To,
+			ByResult: data.Salary.ByResult,
+			InHand:   data.Salary.InHand,
+		},
+		AuthorID: userID,
+		Status:   models.VacancyStatusOpened,
+	}
+	if data.VacancyRequestID != "" {
+		rec.VacancyRequestID = &data.VacancyRequestID
 	}
 	if data.CompanyID != "" {
 		rec.CompanyID = &data.CompanyID
@@ -128,32 +135,37 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyReques
 		logger.
 			WithField("request", fmt.Sprintf("%+v", data)).
 			WithError(err).
-			Error("Ошибка создания заявки")
+			Error("Ошибка создания вакансии")
 		return "", err
 	}
 	logger.
 		WithField("rec_id", recID).
-		Info("Создана заявка")
+		Info("Создана вакансия")
 	return recID, nil
 }
 
-func (i impl) GetByID(spaceID, id string) (item vacancyapimodels.VacancyRequestView, err error) {
+func (i impl) GetByID(spaceID, id string) (item vacancyapimodels.VacancyView, err error) {
 	logger := log.WithField("space_id", spaceID).
 		WithField("rec_id", id)
 	rec, err := i.store.GetByID(spaceID, id)
 	if err != nil {
 		logger.
 			WithError(err).
-			Error("ошибка получения заявки")
-		return vacancyapimodels.VacancyRequestView{}, err
+			Error("ошибка получения вакансии")
+		return vacancyapimodels.VacancyView{}, err
 	}
 	if rec == nil {
-		return vacancyapimodels.VacancyRequestView{}, errors.New("заявка не найдена")
+		return vacancyapimodels.VacancyView{}, errors.New("вакансия не найдена")
 	}
-	return vacancyapimodels.VacancyRequestConvert(*rec), nil
+	recExt := dbmodels.VacancyExt{
+		Vacancy:  *rec,
+		Favorite: false,
+		Pinned:   false,
+	}
+	return vacancyapimodels.VacancyConvert(recExt), nil
 }
 
-func (i impl) Update(spaceID, id string, data vacancyapimodels.VacancyRequestData) error {
+func (i impl) Update(spaceID, id string, data vacancyapimodels.VacancyData) error {
 	logger := log.WithField("space_id", spaceID).
 		WithField("rec_id", id)
 	err := i.checkDependency(spaceID, data)
@@ -168,29 +180,27 @@ func (i impl) Update(spaceID, id string, data vacancyapimodels.VacancyRequestDat
 		"CityID":          data.CityID,
 		"CompanyStructID": data.CompanyStructID,
 		"VacancyName":     data.VacancyName,
-		"Confidential":    data.Confidential,
 		"OpenedPositions": data.OpenedPositions,
 		"Urgency":         data.Urgency,
 		"RequestType":     data.RequestType,
 		"SelectionType":   data.SelectionType,
 		"PlaceOfWork":     data.PlaceOfWork,
 		"ChiefFio":        data.ChiefFio,
-		"Interviewer":     data.Interviewer,
-		"ShortInfo":       data.ShortInfo,
 		"Requirements":    data.Requirements,
-		"Description":     data.Description,
-		"OutInteraction":  data.OutInteraction,
-		"InInteraction":   data.InInteraction,
+		"salary_from":     data.Salary.From,
+		"salary_to":       data.Salary.To,
+		"salary_result":   data.Salary.ByResult,
+		"salary_in_hand":  data.Salary.InHand,
 	}
 	err = i.store.Update(spaceID, id, updMap)
 	if err != nil {
 		logger.
 			WithField("request", fmt.Sprintf("%+v", data)).
 			WithError(err).
-			Error("ошибка обновления заявки")
+			Error("ошибка обновления вакансии")
 		return err
 	}
-	logger.Info("обновлена заявка")
+	logger.Info("обновлена вакансия")
 	return nil
 }
 
@@ -201,25 +211,39 @@ func (i impl) Delete(spaceID, id string) error {
 	if err != nil {
 		logger.
 			WithError(err).
-			Error("ошибка удаления заявки")
+			Error("ошибка удаления вакансии")
 		return err
 	}
-	logger.Info("удалена заявки")
+	logger.Info("удалена вакансия")
 	return nil
 }
 
-func (i impl) List(spaceID string) (list []vacancyapimodels.VacancyRequestView, err error) {
+func (i impl) List(spaceID, userID string, filter dbmodels.VacancyFilter) (list []vacancyapimodels.VacancyView, err error) {
 	logger := log.WithField("space_id", spaceID)
-	recList, err := i.store.List(spaceID)
+	recList, err := i.store.List(spaceID, userID, filter)
 	if err != nil {
 		logger.
 			WithError(err).
 			Error("ошибка получения списка заявок")
 		return nil, err
 	}
-	result := make([]vacancyapimodels.VacancyRequestView, 0, len(list))
+	result := make([]vacancyapimodels.VacancyView, 0, len(list))
 	for _, rec := range recList {
-		result = append(result, vacancyapimodels.VacancyRequestConvert(rec))
+		result = append(result, vacancyapimodels.VacancyConvert(rec))
 	}
 	return result, nil
+}
+
+func (i impl) ToPin(id, userID string, isSet bool) error {
+	if isSet {
+		return i.store.SetPin(id, userID)
+	}
+	return i.store.RemovePin(id, userID)
+}
+
+func (i impl) ToFavorite(id, userID string, isSet bool) error {
+	if isSet {
+		return i.store.SetFavorite(id, userID)
+	}
+	return i.store.RemoveFavorite(id, userID)
 }

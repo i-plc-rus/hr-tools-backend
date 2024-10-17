@@ -7,24 +7,25 @@ import (
 )
 
 type VacancyRequestData struct {
-	CompanyID       string           `json:"company_id"`        // ид компании
-	DepartmentID    string           `json:"department_id"`     //ид подразделения
-	JobTitleID      string           `json:"job_title_id"`      // ид штатной должности
-	CityID          string           `json:"city_id"`           // ид города
-	CompanyStructID string           `json:"company_struct_id"` // ид структуры компании
-	VacancyName     string           `json:"vacancy_name"`      // название вакансии
-	Confidential    bool             `json:"confidential"`      // конфиденциальная вакансия
-	OpenedPositions int              `json:"opened_positions"`  // кол-во открытых позиций
-	Urgency         models.VRUrgency `json:"urgency"`           // срочность
-	RequestType     models.VRType    `json:"request_type"`      // тип заявки
-	PlaceOfWork     string           `json:"place_of_work"`     // адрес места работы
-	ChiefFio        string           `json:"chief_fio"`         // фио непосредственного руководителя
-	Interviewer     string           `json:"interviewer"`       // сотрудник проводящий интервью
-	ShortInfo       string           `json:"short_info"`        // краткая информация о комманде отдела
-	Requirements    string           `json:"requirements"`      // требования/обязанности/условия
-	Description     string           `json:"description"`       // описание вакансии
-	OutInteraction  string           `json:"out_interaction"`   // внешнее взаимодействие
-	InInteraction   string           `json:"in_interaction"`    // внутреннее взаимодействие
+	CompanyID       string                 `json:"company_id"`        // ид компании
+	DepartmentID    string                 `json:"department_id"`     // ид подразделения
+	JobTitleID      string                 `json:"job_title_id"`      // ид штатной должности
+	CityID          string                 `json:"city_id"`           // ид города
+	CompanyStructID string                 `json:"company_struct_id"` // ид структуры компании
+	VacancyName     string                 `json:"vacancy_name"`      // название вакансии
+	Confidential    bool                   `json:"confidential"`      // конфиденциальная вакансия
+	OpenedPositions int                    `json:"opened_positions"`  // кол-во открытых позиций
+	Urgency         models.VRUrgency       `json:"urgency"`           // срочность
+	RequestType     models.VRType          `json:"request_type"`      // тип вакансии
+	SelectionType   models.VRSelectionType `json:"selection_type"`    // вид подбора
+	PlaceOfWork     string                 `json:"place_of_work"`     // адрес места работы
+	ChiefFio        string                 `json:"chief_fio"`         // фио непосредственного руководителя
+	Requirements    string                 `json:"requirements"`      // требования/обязанности/условия
+	Interviewer     string                 `json:"interviewer"`       // сотрудник проводящий интервью
+	ShortInfo       string                 `json:"short_info"`        // краткая информация о комманде отдела
+	Description     string                 `json:"description"`       // описание вакансии
+	OutInteraction  string                 `json:"out_interaction"`   // внешнее взаимодействие
+	InInteraction   string                 `json:"in_interaction"`    // внутреннее взаимодействие
 }
 
 func (v VacancyRequestData) Validate() error {
@@ -34,7 +35,18 @@ func (v VacancyRequestData) Validate() error {
 	if v.CityID == "" {
 		return errors.New("отсутсвует ссылка на город")
 	}
-
+	if v.OpenedPositions <= 0 {
+		return errors.New("не указано количество вакантных позиций")
+	}
+	if err := v.Urgency.Validate(); err != nil {
+		return err
+	}
+	if err := v.RequestType.Validate(); err != nil {
+		return err
+	}
+	if err := v.SelectionType.Validate(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -57,6 +69,7 @@ func VacancyRequestConvert(rec dbmodels.VacancyRequest) VacancyRequestView {
 			OpenedPositions: rec.OpenedPositions,
 			Urgency:         rec.Urgency,
 			RequestType:     rec.RequestType,
+			SelectionType:   rec.SelectionType,
 			PlaceOfWork:     rec.PlaceOfWork,
 			ChiefFio:        rec.ChiefFio,
 			Interviewer:     rec.Interviewer,

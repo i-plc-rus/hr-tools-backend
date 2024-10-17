@@ -8,6 +8,8 @@ import (
 
 type VacancyRequest struct {
 	BaseSpaceModel
+	AuthorID        string
+	Author          *SpaceUser `gorm:"foreignKey:AuthorID"`
 	Space           *Space
 	CompanyID       *string `gorm:"type:varchar(36);index:idx_company"`
 	Company         *Company
@@ -22,11 +24,12 @@ type VacancyRequest struct {
 	VacancyName     string `gorm:"type:varchar(255)"`
 	Confidential    bool
 	OpenedPositions int
-	Urgency         models.VRUrgency `gorm:"type:varchar(100)"`
-	RequestType     models.VRType    `gorm:"type:varchar(100)"`
-	PlaceOfWork     string           `gorm:"type:varchar(255)"`
-	ChiefFio        string           `gorm:"type:varchar(255)"`
-	Interviewer     string           `gorm:"type:varchar(255)"`
+	Urgency         models.VRUrgency       `gorm:"type:varchar(100)"`
+	RequestType     models.VRType          `gorm:"type:varchar(100)"`
+	SelectionType   models.VRSelectionType `gorm:"type:varchar(100)"`
+	PlaceOfWork     string                 `gorm:"type:varchar(255)"`
+	ChiefFio        string                 `gorm:"type:varchar(255)"`
+	Interviewer     string                 `gorm:"type:varchar(255)"`
 	ShortInfo       string
 	Requirements    string
 	Description     string
