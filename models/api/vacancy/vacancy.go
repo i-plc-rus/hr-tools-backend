@@ -25,7 +25,7 @@ type VacancyData struct {
 	Salary           Salary                 `json:"salary"`             // ожидания по зп
 }
 
-func (v VacancyData) Validate() error {
+func (v VacancyData) Validate(isFromRequest bool) error {
 	if v.VacancyName == "" {
 		return errors.New("не указано название вакансии")
 	}
@@ -39,16 +39,17 @@ func (v VacancyData) Validate() error {
 	if v.ChiefFio == "" {
 		return errors.New("не указано фио непосредственного руководителя")
 	}
-	if v.Salary.InHand == 0 {
-		return errors.New("не указана сумма заработной платы 'на руки'")
+	if !isFromRequest {
+		if v.Salary.InHand == 0 {
+			return errors.New("не указана сумма заработной платы 'на руки'")
+		}
+		if v.Salary.From == 0 {
+			return errors.New("не указана сумма заработной платы 'от'")
+		}
+		if v.Salary.To == 0 {
+			return errors.New("не указана сумма заработной платы 'до'")
+		}
 	}
-	if v.Salary.From == 0 {
-		return errors.New("не указана сумма заработной платы 'от'")
-	}
-	if v.Salary.To == 0 {
-		return errors.New("не указана сумма заработной платы 'до'")
-	}
-
 	if v.OpenedPositions <= 0 {
 		return errors.New("не указано количество вакантных позиций")
 	}
@@ -155,6 +156,9 @@ func VacancyConvert(rec dbmodels.VacancyExt) VacancyView {
 	}
 	if rec.CompanyStruct != nil {
 		result.CompanyStructName = rec.CompanyStruct.Name
+	}
+	if rec.VacancyRequestID != nil {
+		result.VacancyRequestID = *rec.VacancyRequestID
 	}
 
 	return result

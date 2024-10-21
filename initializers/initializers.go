@@ -34,7 +34,7 @@ func InitAllServices(ctx context.Context) {
 	departmentprovider.NewHandler()
 	jobtitleprovider.NewHandler()
 	companystructprovider.NewHandler()
-	vacancyreqhandler.NewHandler()
 	aprovalstageshandler.NewHandler()
 	vacancyhandler.NewHandler()
+	vacancyreqhandler.NewHandler()
 }

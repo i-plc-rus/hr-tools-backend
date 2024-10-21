@@ -45,7 +45,7 @@ func (c *vacancyApiController) create(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 
-	if err := payload.Validate(); err != nil {
+	if err := payload.Validate(false); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
@@ -79,7 +79,7 @@ func (c *vacancyApiController) update(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 
-	if err = payload.Validate(); err != nil {
+	if err = payload.Validate(false); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 

@@ -184,6 +184,9 @@ func (i impl) addSort(tx *gorm.DB, sort dbmodels.VacancySort) {
 }
 
 func (i impl) addFilter(tx *gorm.DB, filter dbmodels.VacancyFilter) {
+	if filter.VacancyRequestID != "" {
+		tx = tx.Where("vacancy_request_id = ?", filter.VacancyRequestID)
+	}
 	if filter.Favorite {
 		tx = tx.Where("f.selected = true")
 	}

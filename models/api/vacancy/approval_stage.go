@@ -3,6 +3,7 @@ package vacancyapimodels
 import (
 	"fmt"
 	"github.com/pkg/errors"
+	"hr-tools-backend/models"
 	dbmodels "hr-tools-backend/models/db"
 	"strings"
 )
@@ -22,9 +23,9 @@ func (v ApprovalStages) Validate() error {
 }
 
 type ApprovalStageData struct {
-	Stage          int    `json:"stage"`
-	SpaceUserID    string `json:"space_user_id"`
-	ApprovalStatus string `json:"approval_status"`
+	Stage          int                   `json:"stage"`
+	SpaceUserID    string                `json:"space_user_id"`
+	ApprovalStatus models.ApprovalStatus `json:"approval_status"`
 }
 
 func (a ApprovalStageData) Validate() error {

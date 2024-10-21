@@ -105,6 +105,8 @@ definitions:
         type: boolean
       request_author_id:
         type: string
+      request_id:
+        type: string
       request_type:
         $ref: '#/definitions/models.VRType'
       search:
@@ -184,6 +186,16 @@ definitions:
       name:
         type: string
     type: object
+  models.ApprovalStatus:
+    enum:
+    - Согласованно
+    - Не согласованно
+    - Ждет согласования
+    type: string
+    x-enum-varnames:
+    - AStatusApproved
+    - AStatusRejected
+    - AStatusAwaiting
   models.UserRole:
     enum:
     - SUPER_ADMIN
@@ -198,6 +210,22 @@ definitions:
     x-enum-varnames:
     - VRSelectionTypeMass
     - VRSelectionTypePersonal
+  models.VRStatus:
+    enum:
+    - Создана
+    - Отменена
+    - Не согласована
+    - Согласована
+    - На доработке
+    - На согласовании
+    type: string
+    x-enum-varnames:
+    - VRStatusCreated
+    - VRStatusCanceled
+    - VRStatusNotAccepted
+    - VRStatusAccepted
+    - VRStatusUnderRevision
+    - VRStatusUnderAccepted
   models.VRType:
     enum:
     - Новая позиция
@@ -299,7 +327,7 @@ definitions:
   vacancyapimodels.ApprovalStageData:
     properties:
       approval_status:
-        type: string
+        $ref: '#/definitions/models.ApprovalStatus'
       space_user_id:
         type: string
       stage:
@@ -308,7 +336,7 @@ definitions:
   vacancyapimodels.ApprovalStageView:
     properties:
       approval_status:
-        type: string
+        $ref: '#/definitions/models.ApprovalStatus'
       space_user_id:
         type: string
       space_user_name:
@@ -407,7 +435,74 @@ definitions:
         description: ид подразделения
         type: string
       description:
-        description: описание вакансии
+        description: Коментарий к заявке
+        type: string
+      in_interaction:
+        description: внутреннее взаимодействие
+        type: string
+      interviewer:
+        description: сотрудник проводящий интервью
+        type: string
+      job_title_id:
+        description: ид штатной должности
+        type: string
+      opened_positions:
+        description: кол-во открытых позиций
+        type: integer
+      out_interaction:
+        description: внешнее взаимодействие
+        type: string
+      place_of_work:
+        description: адрес места работы
+        type: string
+      request_type:
+        allOf:
+        - $ref: '#/definitions/models.VRType'
+        description: тип вакансии
+      requirements:
+        description: требования/обязанности/условия
+        type: string
+      selection_type:
+        allOf:
+        - $ref: '#/definitions/models.VRSelectionType'
+        description: вид подбора
+      short_info:
+        description: краткая информация о комманде отдела
+        type: string
+      urgency:
+        allOf:
+        - $ref: '#/definitions/models.VRUrgency'
+        description: срочность
+      vacancy_name:
+        description: название вакансии
+        type: string
+    type: object
+  vacancyapimodels.VacancyRequestEditData:
+    properties:
+      approval_stages:
+        items:
+          $ref: '#/definitions/vacancyapimodels.ApprovalStageData'
+        type: array
+      chief_fio:
+        description: фио непосредственного руководителя
+        type: string
+      city_id:
+        description: ид города
+        type: string
+      company_id:
+        description: ид компании
+        type: string
+      company_struct_id:
+        description: ид структуры компании
+        type: string
+      confidential:
+        description: конфиденциальная вакансия
+        type: boolean
+      department_id:
+        description: ид подразделения
+        type: string
+      description:
+        description: Коментарий к заявке
         type: string
       in_interaction:
         description: внутреннее взаимодействие
@@ -451,6 +546,10 @@ definitions:
     type: object
   vacancyapimodels.VacancyRequestView:
     properties:
+      approval_stage_current:
+        type: integer
+      approval_stage_is_last:
+        type: boolean
       approval_stages:
         items:
           $ref: '#/definitions/vacancyapimodels.ApprovalStageView'
@@ -476,13 +575,15 @@ definitions:
       confidential:
         description: конфиденциальная вакансия
         type: boolean
+      creation_date:
+        type: string
       department_id:
         description: ид подразделения
         type: string
       department_name:
         type: string
       description:
-        description: описание вакансии
+        description: Коментарий к заявке
         type: string
       id:
         type: string
@@ -520,6 +621,8 @@ definitions:
       short_info:
         description: краткая информация о комманде отдела
         type: string
+      status:
+        $ref: '#/definitions/models.VRStatus'
       urgency:
         allOf:
         - $ref: '#/definitions/models.VRUrgency'
@@ -1982,7 +2085,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/vacancyapimodels.VacancyRequestData'
+          $ref: '#/definitions/vacancyapimodels.VacancyRequestEditData'
       responses:
         "200":
           description: OK
@@ -2087,7 +2190,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/vacancyapimodels.VacancyRequestData'
+          $ref: '#/definitions/vacancyapimodels.VacancyRequestEditData'
       - description: rec ID
         in: path
         name: id
@@ -2149,6 +2252,178 @@ paths:
           schema:
             $ref: '#/definitions/apimodels.Response'
       summary: Обновление цепочки согласования
+      tags:
+      - Заявка
+  /api/v1/space/vacancy_request/{id}/approve:
+    put:
+      description: Согласовать
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/vacancyapimodels.VacancyRequestData'
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Согласовать
+      tags:
+      - Заявка
+  /api/v1/space/vacancy_request/{id}/cancel:
+    put:
+      description: Отменить заявку
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Отменить заявку
+      tags:
+      - Заявка
+  /api/v1/space/vacancy_request/{id}/on_approval:
+    put:
+      description: Отправить на согласование
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Отправить на согласование
+      tags:
+      - Заявка
+  /api/v1/space/vacancy_request/{id}/reject:
+    put:
+      description: Отклонить
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/vacancyapimodels.VacancyRequestData'
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Отклонить
+      tags:
+      - Заявка
+  /api/v1/space/vacancy_request/{id}/to_revision:
+    put:
+      description: На доработку
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: На доработку
       tags:
       - Заявка
   /api/v1/space/vacancy_request/list:

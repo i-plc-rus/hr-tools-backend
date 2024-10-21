@@ -4,23 +4,31 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 	"hr-tools-backend/db"
+	aprovalstageshandler "hr-tools-backend/lib/aproval-stages"
+	approvalstagestore "hr-tools-backend/lib/aproval-stages/store"
 	citystore "hr-tools-backend/lib/dicts/city/store"
 	companyprovider "hr-tools-backend/lib/dicts/company"
 	companystructprovider "hr-tools-backend/lib/dicts/company-struct"
 	departmentprovider "hr-tools-backend/lib/dicts/department"
 	jobtitleprovider "hr-tools-backend/lib/dicts/job-title"
+	vacancyhandler "hr-tools-backend/lib/vacancy"
 	vacancyreqstore "hr-tools-backend/lib/vacancy-req/store"
+	"hr-tools-backend/models"
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
 )
 
 type Provider interface {
-	Create(spaceID, userID string, data vacancyapimodels.VacancyRequestData) (id string, err error)
+	Create(spaceID, userID string, data vacancyapimodels.VacancyRequestEditData) (id string, err error)
 	GetByID(spaceID, id string) (item vacancyapimodels.VacancyRequestView, err error)
-	Update(spaceID, id string, data vacancyapimodels.VacancyRequestData) error
+	Update(spaceID, id string, data vacancyapimodels.VacancyRequestEditData) error
 	Delete(spaceID, id string) error
 	List(spaceID string) (list []vacancyapimodels.VacancyRequestView, err error)
+	ChangeStatus(spaceID, id, userID string, status models.VRStatus) error
+	Approve(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) error
+	Reject(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) error
 }
 
 var Instance Provider
@@ -28,21 +36,27 @@ var Instance Provider
 func NewHandler() {
 	Instance = impl{
 		store:                 vacancyreqstore.NewInstance(db.DB),
+		approvalStageStore:    approvalstagestore.NewInstance(db.DB),
 		companyProvider:       companyprovider.Instance,
 		departmentProvider:    departmentprovider.Instance,
 		jobTitleProvider:      jobtitleprovider.Instance,
 		cityStore:             citystore.NewInstance(db.DB),
 		companyStructProvider: companystructprovider.Instance,
+		vacancyHandler:        vacancyhandler.Instance,
+		aprovalStagesHandler:  aprovalstageshandler.Instance,
 	}
 }
 
 type impl struct {
 	store                 vacancyreqstore.Provider
+	approvalStageStore    approvalstagestore.Provider
 	companyProvider       companyprovider.Provider
 	departmentProvider    departmentprovider.Provider
 	jobTitleProvider      jobtitleprovider.Provider
 	cityStore             citystore.Provider
 	companyStructProvider companystructprovider.Provider
+	vacancyHandler        vacancyhandler.Provider
+	aprovalStagesHandler  aprovalstageshandler.Provider
 }
 
 func (i impl) checkDependency(spaceID string, data vacancyapimodels.VacancyRequestData) (err error) {
@@ -82,9 +96,9 @@ func (i impl) checkDependency(spaceID string, data vacancyapimodels.VacancyReque
 	return nil
 }
 
-func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyRequestData) (id string, err error) {
+func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyRequestEditData) (id string, err error) {
 	logger := log.WithField("space_id", spaceID)
-	err = i.checkDependency(spaceID, data)
+	err = i.checkDependency(spaceID, data.VacancyRequestData)
 	if err != nil {
 		return "", err
 	}
@@ -104,9 +118,9 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyReques
 		Interviewer:     data.Interviewer,
 		ShortInfo:       data.ShortInfo,
 		Requirements:    data.Requirements,
-		Description:     data.Description,
 		OutInteraction:  data.OutInteraction,
 		InInteraction:   data.InInteraction,
+		Status:          models.VRStatusCreated,
 	}
 	if data.CompanyID != "" {
 		rec.CompanyID = &data.CompanyID
@@ -123,71 +137,50 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyReques
 	if data.CompanyStructID != "" {
 		rec.CompanyStructID = &data.CompanyStructID
 	}
-	recID, err := i.store.Create(rec)
+
+	err = db.DB.Transaction(func(tx *gorm.DB) error {
+		store := vacancyreqstore.NewInstance(tx)
+		aprovalStagesHandler := aprovalstageshandler.NewHandlerWithTx(tx)
+		id, err = store.Create(rec)
+		if err != nil {
+			logger.
+				WithField("request", fmt.Sprintf("%+v", data)).
+				WithError(err).
+				Error("Ошибка создания заявки")
+			return err
+		}
+		return aprovalStagesHandler.Save(spaceID, id, data.ApprovalStages.ApprovalStages)
+	})
 	if err != nil {
-		logger.
-			WithField("request", fmt.Sprintf("%+v", data)).
-			WithError(err).
-			Error("Ошибка создания заявки")
 		return "", err
 	}
 	logger.
-		WithField("rec_id", recID).
+		WithField("rec_id", id).
 		Info("Создана заявка")
-	return recID, nil
+	return id, nil
 }
 
 func (i impl) GetByID(spaceID, id string) (item vacancyapimodels.VacancyRequestView, err error) {
-	logger := log.WithField("space_id", spaceID).
-		WithField("rec_id", id)
-	rec, err := i.store.GetByID(spaceID, id)
+	rec, err := i.getRec(spaceID, id)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения заявки")
 		return vacancyapimodels.VacancyRequestView{}, err
-	}
-	if rec == nil {
-		return vacancyapimodels.VacancyRequestView{}, errors.New("заявка не найдена")
 	}
 	return vacancyapimodels.VacancyRequestConvert(*rec), nil
 }
 
-func (i impl) Update(spaceID, id string, data vacancyapimodels.VacancyRequestData) error {
+func (i impl) Update(spaceID, id string, data vacancyapimodels.VacancyRequestEditData) error {
 	logger := log.WithField("space_id", spaceID).
 		WithField("rec_id", id)
-	err := i.checkDependency(spaceID, data)
+	err := db.DB.Transaction(func(tx *gorm.DB) error {
+		store := vacancyreqstore.NewInstance(tx)
+		aprovalStagesHandler := aprovalstageshandler.NewHandlerWithTx(tx)
+		err := i.updateVr(store, spaceID, id, data.VacancyRequestData)
+		if err != nil {
+			return err
+		}
+		return aprovalStagesHandler.Save(spaceID, id, data.ApprovalStages.ApprovalStages)
+	})
 	if err != nil {
-		return err
-	}
-	updMap := map[string]interface{}{
-		"SpaceID":         spaceID,
-		"CompanyID":       data.CompanyID,
-		"DepartmentID":    data.DepartmentID,
-		"JobTitleID":      data.JobTitleID,
-		"CityID":          data.CityID,
-		"CompanyStructID": data.CompanyStructID,
-		"VacancyName":     data.VacancyName,
-		"Confidential":    data.Confidential,
-		"OpenedPositions": data.OpenedPositions,
-		"Urgency":         data.Urgency,
-		"RequestType":     data.RequestType,
-		"SelectionType":   data.SelectionType,
-		"PlaceOfWork":     data.PlaceOfWork,
-		"ChiefFio":        data.ChiefFio,
-		"Interviewer":     data.Interviewer,
-		"ShortInfo":       data.ShortInfo,
-		"Requirements":    data.Requirements,
-		"Description":     data.Description,
-		"OutInteraction":  data.OutInteraction,
-		"InInteraction":   data.InInteraction,
-	}
-	err = i.store.Update(spaceID, id, updMap)
-	if err != nil {
-		logger.
-			WithField("request", fmt.Sprintf("%+v", data)).
-			WithError(err).
-			Error("ошибка обновления заявки")
 		return err
 	}
 	logger.Info("обновлена заявка")
@@ -222,4 +215,219 @@ func (i impl) List(spaceID string) (list []vacancyapimodels.VacancyRequestView, 
 		result = append(result, vacancyapimodels.VacancyRequestConvert(rec))
 	}
 	return result, nil
+}
+
+func (i impl) ChangeStatus(spaceID, id, userID string, status models.VRStatus) error {
+	logger := log.
+		WithField("space_id", spaceID).
+		WithField("rec_id", id).
+		WithField("new_status", status)
+	rec, err := i.GetByID(spaceID, id)
+	if err != nil {
+		return err
+	}
+	if !rec.Status.IsAllowChange(status) {
+		return errors.Errorf("изменение статуса на %v недопустимо", status)
+	}
+	updMap := map[string]interface{}{
+		"status": status,
+	}
+	err = i.store.Update(spaceID, id, updMap)
+	if err != nil {
+		logger.
+			WithError(err).
+			Error("ошибка обновления статуса")
+		return err
+	}
+	logger.Info("статус заявки обновлен")
+	return nil
+}
+
+func (i impl) checkVacancyExist(spaceID, id, userID string) (bool, error) {
+	filter := dbmodels.VacancyFilter{
+		VacancyRequestID: id,
+	}
+	list, err := i.vacancyHandler.List(spaceID, userID, filter)
+	if err != nil {
+		return false, err
+	}
+	return len(list) > 0, nil
+}
+
+func (i impl) Approve(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) error {
+	logger := log.
+		WithField("space_id", spaceID).
+		WithField("rec_id", id).
+		WithField("user_id", userID)
+	rec, err := i.getRec(spaceID, id)
+	if err != nil {
+		return err
+	}
+	if !rec.Status.AllowAccept() {
+		return errors.Errorf("невозможно согласовать заявку в текущем статусе: %v", rec.Status)
+	}
+	if rec.Status == models.VRStatusAccepted {
+		exist, err := i.checkVacancyExist(spaceID, id, userID)
+		if err != nil {
+			return err
+		}
+		if exist {
+			return errors.New("невозможно согласовать заявку, вакансия по заявке уже создана")
+		}
+	}
+
+	isLastStage, stage := rec.GetCurrentApprovalStage()
+	if stage != nil {
+		if userID != stage.SpaceUserID {
+			return errors.New("за текущий этап отвечает другой сотрудник")
+		}
+		err = i.updateVr(i.store, spaceID, id, data)
+		if err != nil {
+			logger.WithError(err).Error("ошибка обновления данных заявки при согласовании")
+			return err
+		}
+		updMap := map[string]interface{}{
+			"ApprovalStatus": models.AStatusApproved,
+		}
+		err = i.approvalStageStore.Update(spaceID, stage.ID, updMap)
+		if err != nil {
+			logger.WithError(err).Error("ошибка обновления статуса согласования")
+			return err
+		}
+	}
+	if isLastStage {
+		err = i.ChangeStatus(spaceID, id, userID, models.VRStatusAccepted)
+		if err != nil {
+			return err
+		}
+		return i.publish(spaceID, id, userID)
+	}
+	return nil
+}
+
+func (i impl) Reject(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) error {
+	logger := log.
+		WithField("space_id", spaceID).
+		WithField("rec_id", id).
+		WithField("user_id", userID)
+	rec, err := i.getRec(spaceID, id)
+	if err != nil {
+		return err
+	}
+	if !rec.Status.AllowReject() {
+		return errors.Errorf("невозможно согласовать заявку в текущем статусе: %v", rec.Status)
+	}
+	_, stage := rec.GetCurrentApprovalStage()
+	if stage != nil {
+		if userID != stage.SpaceUserID {
+			return errors.New("за текущий этап отвечает другой сотрудник")
+		}
+		err = i.updateVr(i.store, spaceID, id, data)
+		if err != nil {
+			logger.WithError(err).Error("ошибка обновления данных заявки при согласовании")
+			return err
+		}
+		updMap := map[string]interface{}{
+			"ApprovalStatus": models.AStatusRejected,
+		}
+		err = i.approvalStageStore.Update(spaceID, stage.ID, updMap)
+		if err != nil {
+			logger.WithError(err).Error("ошибка обновления статуса согласования")
+			return err
+		}
+	}
+	return nil
+}
+
+func (i impl) getRec(spaceID, id string) (item *dbmodels.VacancyRequest, err error) {
+	logger := log.WithField("space_id", spaceID).
+		WithField("rec_id", id)
+	rec, err := i.store.GetByID(spaceID, id)
+	if err != nil {
+		logger.
+			WithError(err).
+			Error("ошибка получения заявки")
+		return nil, err
+	}
+	if rec == nil {
+		return nil, errors.New("заявка не найдена")
+	}
+	return rec, nil
+}
+
+func (i impl) updateVr(store vacancyreqstore.Provider, spaceID, id string, data vacancyapimodels.VacancyRequestData) error {
+	logger := log.WithField("space_id", spaceID).
+		WithField("rec_id", id)
+	err := i.checkDependency(spaceID, data)
+	if err != nil {
+		return err
+	}
+	updMap := map[string]interface{}{
+		"SpaceID":         spaceID,
+		"CompanyID":       data.CompanyID,
+		"DepartmentID":    data.DepartmentID,
+		"JobTitleID":      data.JobTitleID,
+		"CityID":          data.CityID,
+		"CompanyStructID": data.CompanyStructID,
+		"VacancyName":     data.VacancyName,
+		"Confidential":    data.Confidential,
+		"OpenedPositions": data.OpenedPositions,
+		"Urgency":         data.Urgency,
+		"RequestType":     data.RequestType,
+		"SelectionType":   data.SelectionType,
+		"PlaceOfWork":     data.PlaceOfWork,
+		"ChiefFio":        data.ChiefFio,
+		"Interviewer":     data.Interviewer,
+		"ShortInfo":       data.ShortInfo,
+		"Requirements":    data.Requirements,
+		"Description":     data.Description,
+		"OutInteraction":  data.OutInteraction,
+		"InInteraction":   data.InInteraction,
+	}
+	err = store.Update(spaceID, id, updMap)
+	if err != nil {
+		logger.
+			WithField("request", fmt.Sprintf("%+v", data)).
+			WithError(err).
+			Error("ошибка обновления заявки")
+		return err
+	}
+	logger.Info("обновлена заявка")
+	return nil
+}
+
+func (i impl) publish(spaceID, id, userID string) error {
+	rec, err := i.getRec(spaceID, id)
+	if err != nil {
+		return err
+	}
+	if rec.Status != models.VRStatusAccepted {
+		return errors.New("необходимо согласовать заявку")
+	}
+	data := vacancyapimodels.VacancyData{
+		VacancyRequestID: rec.ID,
+		CompanyID:        *rec.CompanyID,
+		DepartmentID:     *rec.DepartmentID,
+		JobTitleID:       *rec.JobTitleID,
+		CityID:           *rec.CityID,
+		CompanyStructID:  *rec.CompanyStructID,
+		VacancyName:      rec.VacancyName,
+		OpenedPositions:  rec.OpenedPositions,
+		Urgency:          rec.Urgency,
+		RequestType:      rec.RequestType,
+		SelectionType:    rec.SelectionType,
+		PlaceOfWork:      rec.PlaceOfWork,
+		ChiefFio:         rec.ChiefFio,
+		Requirements:     rec.Requirements,
+		Salary:           vacancyapimodels.Salary{},
+	}
+	err = data.Validate(true)
+	if err != nil {
+		return err
+	}
+	_, err = i.vacancyHandler.Create(spaceID, userID, data)
+	if err != nil {
+		return err
+	}
+	return nil
 }
