@@ -24,6 +24,11 @@ func GetUserSpace(ctx *fiber.Ctx) string {
 	claims := token.Claims.(jwt.MapClaims)
 	return claims["space"].(string)
 }
+func GetUserID(ctx *fiber.Ctx) string {
+	token := ctx.Locals("user").(*jwt.Token)
+	claims := token.Claims.(jwt.MapClaims)
+	return claims["sub"].(string)
+}
 
 func SpaceAdminUser() fiber.Handler {
 	return func(ctx *fiber.Ctx) (err error) {

@@ -1875,6 +1875,402 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/space/vacancy": {
+            "post": {
+                "description": "Создание",
+                "tags": [
+                    "Вакансия"
+                ],
+                "summary": "Создание",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/vacancyapimodels.VacancyData"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/vacancy/list": {
+            "post": {
+                "description": "Список",
+                "tags": [
+                    "Вакансия"
+                ],
+                "summary": "Список",
+                "parameters": [
+                    {
+                        "description": "request filter body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dbmodels.VacancyFilter"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/vacancyapimodels.VacancyRequestView"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/vacancy/{id}": {
+            "get": {
+                "description": "Получение по ИД",
+                "tags": [
+                    "Вакансия"
+                ],
+                "summary": "Получение по ИД",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "rec ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/vacancyapimodels.VacancyRequestView"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Обновление",
+                "tags": [
+                    "Вакансия"
+                ],
+                "summary": "Обновление",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/vacancyapimodels.VacancyData"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "rec ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Удаление",
+                "tags": [
+                    "Вакансия"
+                ],
+                "summary": "Удаление",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "rec ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/vacancy/{id}/favorite": {
+            "put": {
+                "description": "В избранное",
+                "tags": [
+                    "Вакансия"
+                ],
+                "summary": "В избранное",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "выбрано/не выбрано",
+                        "name": "set",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "rec ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/vacancy/{id}/pin": {
+            "put": {
+                "description": "Закрепить",
+                "tags": [
+                    "Вакансия"
+                ],
+                "summary": "Закрепить",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "выбрано/не выбрано",
+                        "name": "set",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "rec ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/space/vacancy_request": {
             "post": {
                 "description": "Создание",
@@ -1896,7 +2292,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/vacancyapimodels.VacancyRequestData"
+                            "$ref": "#/definitions/vacancyapimodels.VacancyRequestEditData"
                         }
                     }
                 ],
@@ -2072,7 +2468,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/vacancyapimodels.VacancyRequestData"
+                            "$ref": "#/definitions/vacancyapimodels.VacancyRequestEditData"
                         }
                     },
                     {
@@ -2180,6 +2576,264 @@ const docTemplate = `{
                                 "$ref": "#/definitions/vacancyapimodels.ApprovalStages"
                             }
                         }
+                    },
+                    {
+                        "type": "string",
+                        "description": "rec ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/vacancy_request/{id}/approve": {
+            "put": {
+                "description": "Согласовать",
+                "tags": [
+                    "Заявка"
+                ],
+                "summary": "Согласовать",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/vacancyapimodels.VacancyRequestData"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "rec ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/vacancy_request/{id}/cancel": {
+            "put": {
+                "description": "Отменить заявку",
+                "tags": [
+                    "Заявка"
+                ],
+                "summary": "Отменить заявку",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "rec ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/vacancy_request/{id}/on_approval": {
+            "put": {
+                "description": "Отправить на согласование",
+                "tags": [
+                    "Заявка"
+                ],
+                "summary": "Отправить на согласование",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "rec ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/vacancy_request/{id}/reject": {
+            "put": {
+                "description": "Отклонить",
+                "tags": [
+                    "Заявка"
+                ],
+                "summary": "Отклонить",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/vacancyapimodels.VacancyRequestData"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "rec ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/vacancy_request/{id}/to_revision": {
+            "put": {
+                "description": "На доработку",
+                "tags": [
+                    "Заявка"
+                ],
+                "summary": "На доработку",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
                     },
                     {
                         "type": "string",
@@ -2588,6 +3242,59 @@ const docTemplate = `{
                 }
             }
         },
+        "dbmodels.VacancyFilter": {
+            "type": "object",
+            "properties": {
+                "author_id": {
+                    "type": "string"
+                },
+                "city_id": {
+                    "type": "string"
+                },
+                "department_id": {
+                    "type": "string"
+                },
+                "favorite": {
+                    "type": "boolean"
+                },
+                "request_author_id": {
+                    "type": "string"
+                },
+                "request_id": {
+                    "type": "string"
+                },
+                "request_type": {
+                    "$ref": "#/definitions/models.VRType"
+                },
+                "search": {
+                    "type": "string"
+                },
+                "selection_type": {
+                    "$ref": "#/definitions/models.VRSelectionType"
+                },
+                "sort": {
+                    "$ref": "#/definitions/dbmodels.VacancySort"
+                },
+                "statuses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.VacancyStatus"
+                    }
+                },
+                "urgency": {
+                    "$ref": "#/definitions/models.VRUrgency"
+                }
+            }
+        },
+        "dbmodels.VacancySort": {
+            "type": "object",
+            "properties": {
+                "created_at_desc": {
+                    "description": "порядок сортировки false = ASC/ true = DESC",
+                    "type": "boolean"
+                }
+            }
+        },
         "dictapimodels.CompanyData": {
             "type": "object",
             "properties": {
@@ -2679,6 +3386,19 @@ const docTemplate = `{
                 }
             }
         },
+        "models.ApprovalStatus": {
+            "type": "string",
+            "enum": [
+                "Согласованно",
+                "Не согласованно",
+                "Ждет согласования"
+            ],
+            "x-enum-varnames": [
+                "AStatusApproved",
+                "AStatusRejected",
+                "AStatusAwaiting"
+            ]
+        },
         "models.UserRole": {
             "type": "string",
             "enum": [
@@ -2688,28 +3408,71 @@ const docTemplate = `{
                 "UserRoleSuperAdmin"
             ]
         },
+        "models.VRSelectionType": {
+            "type": "string",
+            "enum": [
+                "Массовый",
+                "Индивидуальный"
+            ],
+            "x-enum-varnames": [
+                "VRSelectionTypeMass",
+                "VRSelectionTypePersonal"
+            ]
+        },
+        "models.VRStatus": {
+            "type": "string",
+            "enum": [
+                "Создана",
+                "Отменена",
+                "Не согласована",
+                "Согласована",
+                "На доработке",
+                "На согласовании"
+            ],
+            "x-enum-varnames": [
+                "VRStatusCreated",
+                "VRStatusCanceled",
+                "VRStatusNotAccepted",
+                "VRStatusAccepted",
+                "VRStatusUnderRevision",
+                "VRStatusUnderAccepted"
+            ]
+        },
         "models.VRType": {
             "type": "string",
             "enum": [
-                "массовый подбор",
-                "коммерческий",
-                "персональный"
+                "Новая позиция",
+                "Замена"
             ],
             "x-enum-varnames": [
-                "VRTypeMass",
-                "VRTypeCommercial",
-                "VRTypePersonal"
+                "VRTypeNew",
+                "VRTypeReplace"
             ]
         },
         "models.VRUrgency": {
             "type": "string",
             "enum": [
-                "срочный",
-                "несрочный"
+                "Срочно",
+                "В плановом порядке"
             ],
             "x-enum-varnames": [
                 "VRTypeUrgent",
                 "VRTypeNonUrgent"
+            ]
+        },
+        "models.VacancyStatus": {
+            "type": "string",
+            "enum": [
+                "Открыта",
+                "Отменена",
+                "Приостановлена",
+                "Закрыта"
+            ],
+            "x-enum-varnames": [
+                "VacancyStatusOpened",
+                "VacancyStatusCanceled",
+                "VacancyStatusSuspended",
+                "VacancyStatusClosed"
             ]
         },
         "spaceapimodels.CreateOrganization": {
@@ -2823,7 +3586,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "approval_status": {
-                    "type": "string"
+                    "$ref": "#/definitions/models.ApprovalStatus"
                 },
                 "space_user_id": {
                     "type": "string"
@@ -2837,7 +3600,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "approval_status": {
-                    "type": "string"
+                    "$ref": "#/definitions/models.ApprovalStatus"
                 },
                 "space_user_id": {
                     "type": "string"
@@ -2858,6 +3621,104 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/vacancyapimodels.ApprovalStageData"
                     }
+                }
+            }
+        },
+        "vacancyapimodels.Salary": {
+            "type": "object",
+            "properties": {
+                "by_result": {
+                    "type": "integer"
+                },
+                "from": {
+                    "type": "integer"
+                },
+                "in_hand": {
+                    "type": "integer"
+                },
+                "to": {
+                    "type": "integer"
+                }
+            }
+        },
+        "vacancyapimodels.VacancyData": {
+            "type": "object",
+            "properties": {
+                "chief_fio": {
+                    "description": "фио непосредственного руководителя",
+                    "type": "string"
+                },
+                "city_id": {
+                    "description": "ид города",
+                    "type": "string"
+                },
+                "company_id": {
+                    "description": "ид компании",
+                    "type": "string"
+                },
+                "company_struct_id": {
+                    "description": "ид структуры компании",
+                    "type": "string"
+                },
+                "department_id": {
+                    "description": "ид подразделения",
+                    "type": "string"
+                },
+                "job_title_id": {
+                    "description": "ид штатной должности",
+                    "type": "string"
+                },
+                "opened_positions": {
+                    "description": "кол-во открытых позиций",
+                    "type": "integer"
+                },
+                "place_of_work": {
+                    "description": "адрес места работы",
+                    "type": "string"
+                },
+                "request_type": {
+                    "description": "тип вакансии",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.VRType"
+                        }
+                    ]
+                },
+                "requirements": {
+                    "description": "требования/обязанности/условия",
+                    "type": "string"
+                },
+                "salary": {
+                    "description": "ожидания по зп",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/vacancyapimodels.Salary"
+                        }
+                    ]
+                },
+                "selection_type": {
+                    "description": "вид подбора",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.VRSelectionType"
+                        }
+                    ]
+                },
+                "urgency": {
+                    "description": "срочность",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.VRUrgency"
+                        }
+                    ]
+                },
+                "vacancy_name": {
+                    "description": "название вакансии",
+                    "type": "string"
+                },
+                "vacancy_request_id": {
+                    "description": "ид заявки на вакансию",
+                    "type": "string"
                 }
             }
         },
@@ -2889,7 +3750,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "description": {
-                    "description": "описание вакансии",
+                    "description": "Коментарий к заявке",
                     "type": "string"
                 },
                 "in_interaction": {
@@ -2917,7 +3778,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "request_type": {
-                    "description": "тип заявки",
+                    "description": "тип вакансии",
                     "allOf": [
                         {
                             "$ref": "#/definitions/models.VRType"
@@ -2927,6 +3788,113 @@ const docTemplate = `{
                 "requirements": {
                     "description": "требования/обязанности/условия",
                     "type": "string"
+                },
+                "selection_type": {
+                    "description": "вид подбора",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.VRSelectionType"
+                        }
+                    ]
+                },
+                "short_info": {
+                    "description": "краткая информация о комманде отдела",
+                    "type": "string"
+                },
+                "urgency": {
+                    "description": "срочность",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.VRUrgency"
+                        }
+                    ]
+                },
+                "vacancy_name": {
+                    "description": "название вакансии",
+                    "type": "string"
+                }
+            }
+        },
+        "vacancyapimodels.VacancyRequestEditData": {
+            "type": "object",
+            "properties": {
+                "approval_stages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/vacancyapimodels.ApprovalStageData"
+                    }
+                },
+                "chief_fio": {
+                    "description": "фио непосредственного руководителя",
+                    "type": "string"
+                },
+                "city_id": {
+                    "description": "ид города",
+                    "type": "string"
+                },
+                "company_id": {
+                    "description": "ид компании",
+                    "type": "string"
+                },
+                "company_struct_id": {
+                    "description": "ид структуры компании",
+                    "type": "string"
+                },
+                "confidential": {
+                    "description": "конфиденциальная вакансия",
+                    "type": "boolean"
+                },
+                "department_id": {
+                    "description": "ид подразделения",
+                    "type": "string"
+                },
+                "description": {
+                    "description": "Коментарий к заявке",
+                    "type": "string"
+                },
+                "in_interaction": {
+                    "description": "внутреннее взаимодействие",
+                    "type": "string"
+                },
+                "interviewer": {
+                    "description": "сотрудник проводящий интервью",
+                    "type": "string"
+                },
+                "job_title_id": {
+                    "description": "ид штатной должности",
+                    "type": "string"
+                },
+                "opened_positions": {
+                    "description": "кол-во открытых позиций",
+                    "type": "integer"
+                },
+                "out_interaction": {
+                    "description": "внешнее взаимодействие",
+                    "type": "string"
+                },
+                "place_of_work": {
+                    "description": "адрес места работы",
+                    "type": "string"
+                },
+                "request_type": {
+                    "description": "тип вакансии",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.VRType"
+                        }
+                    ]
+                },
+                "requirements": {
+                    "description": "требования/обязанности/условия",
+                    "type": "string"
+                },
+                "selection_type": {
+                    "description": "вид подбора",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.VRSelectionType"
+                        }
+                    ]
                 },
                 "short_info": {
                     "description": "краткая информация о комманде отдела",
@@ -2949,6 +3917,12 @@ const docTemplate = `{
         "vacancyapimodels.VacancyRequestView": {
             "type": "object",
             "properties": {
+                "approval_stage_current": {
+                    "type": "integer"
+                },
+                "approval_stage_is_last": {
+                    "type": "boolean"
+                },
                 "approval_stages": {
                     "type": "array",
                     "items": {
@@ -2984,6 +3958,9 @@ const docTemplate = `{
                     "description": "конфиденциальная вакансия",
                     "type": "boolean"
                 },
+                "creation_date": {
+                    "type": "string"
+                },
                 "department_id": {
                     "description": "ид подразделения",
                     "type": "string"
@@ -2992,7 +3969,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "description": {
-                    "description": "описание вакансии",
+                    "description": "Коментарий к заявке",
                     "type": "string"
                 },
                 "id": {
@@ -3026,7 +4003,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "request_type": {
-                    "description": "тип заявки",
+                    "description": "тип вакансии",
                     "allOf": [
                         {
                             "$ref": "#/definitions/models.VRType"
@@ -3037,9 +4014,20 @@ const docTemplate = `{
                     "description": "требования/обязанности/условия",
                     "type": "string"
                 },
+                "selection_type": {
+                    "description": "вид подбора",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.VRSelectionType"
+                        }
+                    ]
+                },
                 "short_info": {
                     "description": "краткая информация о комманде отдела",
                     "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.VRStatus"
                 },
                 "urgency": {
                     "description": "срочность",

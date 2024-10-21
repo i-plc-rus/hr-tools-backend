@@ -48,6 +48,18 @@ func AutoMigrateDB() error {
 	if err := DB.AutoMigrate(&dbmodels.VacancyRequest{}); err != nil {
 		return errors.Wrap(err, "ошибка создания структуры VacancyRequest")
 	}
+
+	if err := DB.AutoMigrate(&dbmodels.Vacancy{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры Vacancy")
+	}
+
+	if err := DB.AutoMigrate(&dbmodels.Favorite{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры Favorite")
+	}
+
+	if err := DB.AutoMigrate(&dbmodels.Pinned{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры Pinned")
+	}
 	log.Info("Миграция прошла успешно")
 	return nil
 }

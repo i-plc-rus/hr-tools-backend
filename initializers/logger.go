@@ -21,7 +21,7 @@ func InitLogger() *fiberlog.Config {
 			log.FieldKeyMsg:  "message",
 		},
 	})
-	logger.SetLevel(log.InfoLevel)
+	logger.SetLevel(log.DebugLevel)
 	return &fiberlog.Config{
 		Logger: logger,
 		Tags: []string{
