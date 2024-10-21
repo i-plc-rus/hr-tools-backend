@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 	"hr-tools-backend/models"
 	dbmodels "hr-tools-backend/models/db"
+	"time"
 )
 
 type VacancyRequestData struct {
@@ -23,7 +24,7 @@ type VacancyRequestData struct {
 	Requirements    string                 `json:"requirements"`      // требования/обязанности/условия
 	Interviewer     string                 `json:"interviewer"`       // сотрудник проводящий интервью
 	ShortInfo       string                 `json:"short_info"`        // краткая информация о комманде отдела
-	Description     string                 `json:"description"`       // описание вакансии
+	Description     string                 `json:"description"`       // Коментарий к заявке
 	OutInteraction  string                 `json:"out_interaction"`   // внешнее взаимодействие
 	InInteraction   string                 `json:"in_interaction"`    // внутреннее взаимодействие
 }
@@ -50,15 +51,32 @@ func (v VacancyRequestData) Validate() error {
 	return nil
 }
 
+type VacancyRequestEditData struct {
+	VacancyRequestData
+	ApprovalStages
+}
+
+func (v VacancyRequestEditData) Validate() error {
+	err := v.VacancyRequestData.Validate()
+	if err != nil {
+		return err
+	}
+	return v.ApprovalStages.Validate()
+}
+
 type VacancyRequestView struct {
 	VacancyRequestData
-	ID                string              `json:"id"`
-	CompanyName       string              `json:"company_name"`
-	DepartmentName    string              `json:"department_name"`
-	JobTitleName      string              `json:"job_title_name"`
-	City              string              `json:"city"`
-	CompanyStructName string              `json:"company_struct_name"`
-	ApprovalStages    []ApprovalStageView `json:"approval_stages"`
+	ID                   string              `json:"id"`
+	CreationDate         time.Time           `json:"creation_date"`
+	Status               models.VRStatus     `json:"status"`
+	CompanyName          string              `json:"company_name"`
+	DepartmentName       string              `json:"department_name"`
+	JobTitleName         string              `json:"job_title_name"`
+	City                 string              `json:"city"`
+	CompanyStructName    string              `json:"company_struct_name"`
+	ApprovalStages       []ApprovalStageView `json:"approval_stages"`
+	ApprovalStageCurrent int                 `json:"approval_stage_current"`
+	ApprovalStageIsLast  bool                `json:"approval_stage_is_last"`
 }
 
 func VacancyRequestConvert(rec dbmodels.VacancyRequest) VacancyRequestView {
@@ -79,7 +97,9 @@ func VacancyRequestConvert(rec dbmodels.VacancyRequest) VacancyRequestView {
 			OutInteraction:  rec.OutInteraction,
 			InInteraction:   rec.InInteraction,
 		},
-		ID: rec.ID,
+		ID:           rec.ID,
+		CreationDate: rec.CreatedAt,
+		Status:       rec.Status,
 	}
 	if rec.CompanyID != nil {
 		result.CompanyID = *rec.CompanyID
@@ -114,6 +134,11 @@ func VacancyRequestConvert(rec dbmodels.VacancyRequest) VacancyRequestView {
 	approvalStages := []ApprovalStageView{}
 	for _, item := range rec.ApprovalStages {
 		approvalStages = append(approvalStages, ApprovalStageConvert(*item))
+	}
+	isLast, stage := rec.GetCurrentApprovalStage()
+	if stage != nil {
+		result.ApprovalStageCurrent = stage.Stage
+		result.ApprovalStageIsLast = isLast
 	}
 	result.ApprovalStages = approvalStages
 	return result

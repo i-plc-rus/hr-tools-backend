@@ -61,3 +61,49 @@ const (
 	VacancyStatusSuspended VacancyStatus = "Приостановлена"
 	VacancyStatusClosed    VacancyStatus = "Закрыта"
 )
+
+type VRStatus string
+
+const (
+	VRStatusCreated       VRStatus = "Создана"
+	VRStatusCanceled      VRStatus = "Отменена"
+	VRStatusNotAccepted   VRStatus = "Не согласована"
+	VRStatusAccepted      VRStatus = "Согласована"
+	VRStatusUnderRevision VRStatus = "На доработке"
+	VRStatusUnderAccepted VRStatus = "На согласовании"
+)
+
+func (v VRStatus) IsAllowChange(newStatus VRStatus) bool {
+	if v == newStatus {
+		return true
+	}
+	switch newStatus {
+	case VRStatusCanceled:
+		return true
+	case VRStatusNotAccepted:
+		return v == VRStatusCreated || v == VRStatusUnderRevision || v == VRStatusUnderAccepted
+	case VRStatusAccepted:
+		return v == VRStatusUnderAccepted
+	case VRStatusUnderRevision:
+		return v == VRStatusUnderAccepted || v == VRStatusNotAccepted
+	case VRStatusUnderAccepted:
+		return v == VRStatusCreated || v == VRStatusUnderRevision
+	}
+	return false
+}
+
+func (v VRStatus) AllowAccept() bool {
+	return v == VRStatusUnderAccepted || v == VRStatusAccepted
+}
+
+func (v VRStatus) AllowReject() bool {
+	return v == VRStatusUnderAccepted
+}
+
+type ApprovalStatus string
+
+const (
+	AStatusApproved ApprovalStatus = "Согласованно"
+	AStatusRejected ApprovalStatus = "Не согласованно"
+	AStatusAwaiting ApprovalStatus = "Ждет согласования"
+)
