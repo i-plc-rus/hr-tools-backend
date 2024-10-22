@@ -4,8 +4,6 @@ WORKDIR /app/
 COPY go.mod ./
 COPY go.sum ./
 
-WORKDIR /app/
-
 RUN go mod download
 COPY . .
 
@@ -15,8 +13,8 @@ FROM alpine:3.14 as RUNNER
 
 WORKDIR /app/
 
-COPY --from=BUILDER /app/ht-tools-backend ht-tools-backend
-COPY --from=BUILDER /app/.env .env
+COPY --from=BUILDER /app/ht-tools-backend .
+COPY --from=BUILDER /app/env .
 
 RUN chmod +x ./ht-tools-backend
 
