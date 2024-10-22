@@ -1,21 +1,23 @@
-FROM golang:1.23.1-bullseye as BUILDER
+FROM golang:1.23.1-bullseye as build
 
-WORKDIR /app/
+WORKDIR /app
+
 COPY go.mod ./
 COPY go.sum ./
 
 RUN go mod download
+
 COPY . .
 
-RUN go build -o ht-tools-backend main.go
+RUN go install github.com/swaggo/swag/cmd/swag@latest \
+    && swag init \
+    && go build
 
-FROM alpine:3.14 as RUNNER
+FROM golang:1.23.1-bullseye as runner
 
-WORKDIR /app/
+WORKDIR /app
 
-COPY --from=BUILDER /app/ht-tools-backend .
-COPY --from=BUILDER /app/env .
+COPY --from=build /app/hr-tools-backend .
+COPY --from=build /app/docs docs
 
-RUN chmod +x ./ht-tools-backend
-
-CMD ["/app/ht-tools-backend"]
+CMD ["/app/hr-tools-backend"]
