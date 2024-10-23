@@ -18,9 +18,9 @@ services:
     container_name: hr-tools-backend
     env_file:
       - env
-    expose:
-      #- 127.0.0.1:8080:8080
-      - "8080"
+    ports:
+      - 127.0.0.1:8080:8080
+      #- "30128:8080"
   nginx:
     image: nginx:latest
     restart: unless-stopped
