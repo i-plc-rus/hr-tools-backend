@@ -58,6 +58,7 @@ func (c *spaceUserController) CreateUser(ctx *fiber.Ctx) error {
 // @Tags Пользователи space
 // @Description Создать нового пользователя
 // @Param   Authorization		header		string	true	"Authorization token"
+// @Param 	id 				path 		string  true 	"space user ID"
 // @Param	body				body		spaceapimodels.CreateUser	true	"request body"
 // @Success 200
 // @Failure 400 {object} apimodels.Response
@@ -80,6 +81,7 @@ func (c *spaceUserController) DeleteUser(ctx *fiber.Ctx) error {
 // @Tags Пользователи space
 // @Description Обновить пользователя
 // @Param   Authorization		header		string	true	"Authorization token"
+// @Param 	id 				path 		string  true 	"space user ID"
 // @Param	body				body		spaceapimodels.UpdateUser	true	"request body"
 // @Success 200
 // @Failure 400 {object} apimodels.Response

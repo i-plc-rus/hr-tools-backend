@@ -60,6 +60,10 @@ func AutoMigrateDB() error {
 	if err := DB.AutoMigrate(&dbmodels.Pinned{}); err != nil {
 		return errors.Wrap(err, "ошибка создания структуры Pinned")
 	}
+
+	if err := DB.AutoMigrate(&dbmodels.SpaceSetting{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры SpaceSetting")
+	}
 	log.Info("Миграция прошла успешно")
 	return nil
 }
