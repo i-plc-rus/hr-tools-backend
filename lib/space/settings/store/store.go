@@ -7,6 +7,7 @@ import (
 )
 
 type Provider interface {
+	Create(rec dbmodels.SpaceSetting) error
 	Update(spaceID, code, value string) error
 	List(spaceID string) (settingsList []dbmodels.SpaceSetting, err error)
 	GetValueByCode(spaceID, code string) (value string, err error)
@@ -20,6 +21,12 @@ func NewInstance(DB *gorm.DB) Provider {
 
 type impl struct {
 	db *gorm.DB
+}
+
+func (i impl) Create(rec dbmodels.SpaceSetting) error {
+	return i.db.
+		Save(&rec).
+		Error
 }
 
 func (i impl) GetValueByCode(spaceID, code string) (value string, err error) {
