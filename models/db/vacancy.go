@@ -42,6 +42,8 @@ type Vacancy struct {
 	ChiefFio         string                 `gorm:"type:varchar(255)"`
 	Requirements     string
 	Status           models.VacancyStatus
+	HhID             string `gorm:"type:varchar(255)"`
+	HhUri            string `gorm:"type:varchar(500)"`
 }
 
 type Salary struct {
