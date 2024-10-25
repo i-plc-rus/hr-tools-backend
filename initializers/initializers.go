@@ -15,6 +15,7 @@ import (
 	hhclient "hr-tools-backend/lib/external-services/hh/client"
 	spaceauthhandler "hr-tools-backend/lib/space/auth"
 	spacehandler "hr-tools-backend/lib/space/handler"
+	spacesettingshandler "hr-tools-backend/lib/space/settings/handler"
 	spaceusershander "hr-tools-backend/lib/space/users/hander"
 	vacancyhandler "hr-tools-backend/lib/vacancy"
 	vacancyreqhandler "hr-tools-backend/lib/vacancy-req"
@@ -40,5 +41,6 @@ func InitAllServices(ctx context.Context) {
 	aprovalstageshandler.NewHandler()
 	vacancyhandler.NewHandler()
 	vacancyreqhandler.NewHandler()
+	spacesettingshandler.NewHandler()
 	hhhandler.NewHandler()
 }

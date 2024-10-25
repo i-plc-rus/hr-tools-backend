@@ -66,6 +66,7 @@ func main() {
 	space.Use(middleware.AuthorizationRequired())
 	apiv1.InitVacancyRequestApiRouters(space)
 	apiv1.InitVacancyApiRouters(space)
+	apiv1.InitSpaceSettingRouters(space)
 
 	ext := fiber.New()
 	space.Mount("/ext", ext)
