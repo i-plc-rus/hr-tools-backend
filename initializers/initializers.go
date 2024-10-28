@@ -28,8 +28,7 @@ func InitAllServices(ctx context.Context) {
 	config.InitConfig()
 	InitDBConnection()
 	InitSmtp()
-	//hhclient.NewProvider(config.Conf.HH.Host, config.Conf.HH.RedirectUri)//todo
-	hhclient.NewProviderMock(config.Conf.HH.Host, config.Conf.HH.RedirectUri)
+	hhclient.NewProvider(config.Conf.HH.Host, config.Conf.HH.RedirectUri) //todo
 	spaceusershander.NewHandler()
 	spacehandler.NewHandler()
 	spaceauthhandler.NewHandler()
