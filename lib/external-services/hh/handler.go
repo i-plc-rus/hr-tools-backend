@@ -9,8 +9,10 @@ import (
 	"hr-tools-backend/db"
 	hhclient "hr-tools-backend/lib/external-services/hh/client"
 	extservicestore "hr-tools-backend/lib/external-services/store"
+	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
+	"hr-tools-backend/models"
 	hhapimodels "hr-tools-backend/models/api/hh"
 	dbmodels "hr-tools-backend/models/db"
 	"strings"
@@ -25,53 +27,59 @@ type Provider interface {
 	VacancyPublish(ctx context.Context, spaceID, vacancyID string) (vacancyUrl string, err error)
 	VacancyUpdate(ctx context.Context, spaceID, vacancyID string) error
 	VacancyClose(ctx context.Context, spaceID, vacancyID string) error
+	VacancyAttach(ctx context.Context, spaceID, vacancyID, hhID string) error
 }
 
 var Instance Provider
 
 func NewHandler() {
 	Instance = &impl{
-		client:         hhclient.Instance,
-		spaceUserStore: spaceusersstore.NewInstance(db.DB),
-		vacancyStore:   vacancystore.NewInstance(db.DB),
-		tokenMap:       sync.Map{},
-		cityMap:        map[string]string{},
+		client:             hhclient.Instance,
+		extStore:           extservicestore.NewInstance(db.DB),
+		spaceUserStore:     spaceusersstore.NewInstance(db.DB),
+		vacancyStore:       vacancystore.NewInstance(db.DB),
+		spaceSettingsStore: spacesettingsstore.NewInstance(db.DB),
+		tokenMap:           sync.Map{},
+		cityMap:            map[string]string{},
 	}
 }
 
 type impl struct {
-	client         hhclient.Provider
-	extStore       extservicestore.Provider
-	spaceUserStore spaceusersstore.Provider
-	vacancyStore   vacancystore.Provider
-	tokenMap       sync.Map
-	cityMap        map[string]string
+	client             hhclient.Provider
+	extStore           extservicestore.Provider
+	spaceUserStore     spaceusersstore.Provider
+	vacancyStore       vacancystore.Provider
+	spaceSettingsStore spacesettingsstore.Provider
+	tokenMap           sync.Map
+	cityMap            map[string]string
 }
 
 const (
-	CLIENT_ID       = "ClientID"
-	CLIENT_SECRET   = "ClientSecret"
-	TOKEN_CODE      = "HH_TOKEN"
-	VACANCY_URI_TPL = "https://hh.ru/vacancy/%v"
+	TokenCode     = "HH_TOKEN"
+	VacancyUriTpl = "https://hh.ru/vacancy/%v"
 )
 
 func (i *impl) GetConnectUri(spaceID string) (uri string, err error) {
-	clientID, err := i.getValue(spaceID, CLIENT_ID)
+	clientID, err := i.getValue(spaceID, models.HhClientIDSetting)
 	if err != nil {
-		return "", err
+		return "", errors.New("ошибка получения настройки ClientID для HH")
+	}
+	_, err = i.getValue(spaceID, models.HhClientSecretSetting)
+	if err != nil {
+		return "", errors.New("ошибка получения настройки ClientSecret для HH")
 	}
 	return i.client.GetLoginUri(clientID, spaceID)
 }
 
 func (i *impl) RequestToken(spaceID, code string) {
 	logger := log.WithField("space_id", spaceID)
-	clientID, err := i.getValue(spaceID, CLIENT_ID)
+	clientID, err := i.getValue(spaceID, models.HhClientIDSetting)
 	if err != nil {
 		logger.WithError(err).Error("ошибка получения настройки ClientID для HH")
 		return
 	}
 
-	clientSecret, err := i.getValue(spaceID, CLIENT_SECRET)
+	clientSecret, err := i.getValue(spaceID, models.HhClientSecretSetting)
 	if err != nil {
 		logger.WithError(err).Error("ошибка получения настройки ClientSecret для HH")
 		return
@@ -99,8 +107,8 @@ func (i *impl) CheckConnected(spaceID string) bool {
 	if ok {
 		return true
 	}
-	data, err := i.extStore.Get(spaceID, TOKEN_CODE)
-	if err != nil {
+	data, ok, err := i.extStore.Get(spaceID, TokenCode)
+	if err != nil || !ok {
 		return false
 	}
 	token := hhapimodels.ResponseToken{}
@@ -129,6 +137,11 @@ func (i *impl) VacancyPublish(ctx context.Context, spaceID, vacancyID string) (v
 	if rec == nil {
 		return "", errors.New("вакансия не найдена")
 	}
+
+	if models.VacancyStatusOpened != rec.Status {
+		return "", errors.Errorf("неподходящей статус вакансии %v, для публикации в НН", rec.Status)
+	}
+
 	if rec.HhID != "" {
 		return "", errors.New("вакансия уже опубликованна")
 	}
@@ -139,13 +152,16 @@ func (i *impl) VacancyPublish(ctx context.Context, spaceID, vacancyID string) (v
 	}
 
 	id, err := i.client.VacancyPublish(ctx, accessToken, *request)
-	vacancyUrl = fmt.Sprintf(VACANCY_URI_TPL, id)
+	if err != nil {
+		return "", err
+	}
+	vacancyUrl = fmt.Sprintf(VacancyUriTpl, id)
 	updMap := map[string]interface{}{
 		"hh_id":  id,
 		"hh_uri": vacancyUrl,
 	}
 	err = i.vacancyStore.Update(spaceID, vacancyID, updMap)
-	if rec != nil {
+	if err != nil {
 		err = errors.Errorf("не удалось сохранить идентификатор опубликованной вакансии (%v)", id)
 		logger.Error(err)
 		return vacancyUrl, err
@@ -190,9 +206,39 @@ func (i *impl) VacancyClose(ctx context.Context, spaceID, vacancyID string) erro
 	return i.client.VacancyClose(ctx, accessToken, meResp.Employer.ID, vacancyID)
 }
 
-func (i *impl) getValue(spaceID, code string) (string, error) {
-	//todo получение настроек
-	return "", nil
+func (i *impl) VacancyAttach(ctx context.Context, spaceID, vacancyID, hhID string) error {
+	rec, err := i.vacancyStore.GetByID(spaceID, vacancyID)
+	if err != nil {
+		return err
+	}
+	if rec == nil {
+		return errors.New("вакансия не найдена")
+	}
+	if rec.HhID != "" {
+		return errors.New("ссылка на вакансию уже добавлена")
+	}
+	if models.VacancyStatusOpened != rec.Status {
+		return errors.Errorf("неподходящей статус вакансии: %v", rec.Status)
+	}
+	vacancyUrl := fmt.Sprintf(VacancyUriTpl, hhID)
+	updMap := map[string]interface{}{
+		"hh_id":  hhID,
+		"hh_uri": vacancyUrl,
+	}
+	logger := log.
+		WithField("space_id", spaceID).
+		WithField("vacancy_id", vacancyID)
+	err = i.vacancyStore.Update(spaceID, vacancyID, updMap)
+	if err != nil {
+		err = errors.Errorf("не удалось сохранить идентификатор опубликованной вакансии (%v)", hhID)
+		logger.Error(err)
+		return err
+	}
+	return nil
+}
+
+func (i *impl) getValue(spaceID string, code models.SpaceSettingCode) (string, error) {
+	return i.spaceSettingsStore.GetValueByCode(spaceID, string(code))
 }
 
 func (i *impl) fillAreas(areas []hhapimodels.Area) {
@@ -241,7 +287,7 @@ func (i *impl) storeToken(spaceID string, token hhapimodels.ResponseToken, inDb 
 	i.tokenMap.Store(spaceID, tokenData)
 	if inDb {
 		data, err := json.Marshal(token)
-		err = i.extStore.Set(spaceID, TOKEN_CODE, data)
+		err = i.extStore.Set(spaceID, TokenCode, data)
 		if err != nil {
 			return errors.Wrap(err, "ошибка сохранения токена HH в бд")
 		}

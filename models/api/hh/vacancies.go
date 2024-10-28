@@ -1,5 +1,37 @@
 package hhapimodels
 
+import (
+	"github.com/pkg/errors"
+	"strings"
+)
+
+type VacancyAttach struct {
+	URL string `json:"url"` // ссылка на вакансию в виде: https://izhevsk.hh.ru/vacancy/108984166
+}
+
+func (v VacancyAttach) Validate() error {
+	id, err := v.GetID()
+	if err != nil {
+		return err
+	}
+	if id == "" {
+		return errors.New("не указана ссылка на вакансию")
+	}
+	return nil
+}
+
+func (v VacancyAttach) GetID() (string, error) {
+	//варианты ссылок
+	//https://kazan.hh.ru/vacancy/108984166?from=main&utm_source=headhunter&utm_medium=main_page_bottom&utm_campaign=vacancy_of_the_day_to
+	//https://izhevsk.hh.ru/vacancy/108984166
+	parts := strings.Split(v.URL, "hh.ru/vacancy/")
+	if len(parts) != 2 {
+		return "", errors.New("некорректная ссылка на вакансию")
+	}
+	id, _, _ := strings.Cut(parts[1], "?")
+	return id, nil
+}
+
 type VacancyPubRequest struct {
 	Description       string     `json:"description"`
 	Name              string     `json:"name"`

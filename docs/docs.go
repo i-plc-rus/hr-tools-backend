@@ -1761,6 +1761,66 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/oauth/callback/hh": {
+            "get": {
+                "description": "Аутентификация HH",
+                "tags": [
+                    "Аутентификация OAuth"
+                ],
+                "summary": "Аутентификация HH",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space ID",
+                        "name": "state",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "authorization_code",
+                        "name": "code",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/authapimodels.JWTResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/organizations": {
             "post": {
                 "description": "Создание организации",
@@ -1851,6 +1911,399 @@ const docTemplate = `{
                         "description": "параметры запроса в дадату",
                         "name": "query",
                         "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/ext/hh/check_connected": {
+            "get": {
+                "description": "Проверка подключения к HH",
+                "tags": [
+                    "Интеграция HeadHunter"
+                ],
+                "summary": "Проверка подключения к HH",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/ext/hh/connect_uri": {
+            "get": {
+                "description": "Получение ссылки для авторизации",
+                "tags": [
+                    "Интеграция HeadHunter"
+                ],
+                "summary": "Получение ссылки для авторизации",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/ext/hh/{id}/attach": {
+            "put": {
+                "description": "Привязать существующую вакансию",
+                "tags": [
+                    "Интеграция HeadHunter"
+                ],
+                "summary": "Привязать существующую вакансию",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "идентификатор вакансии",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/hhapimodels.VacancyAttach"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/ext/hh/{id}/close": {
+            "put": {
+                "description": "Удаление вакансии",
+                "tags": [
+                    "Интеграция HeadHunter"
+                ],
+                "summary": "Удаление вакансии",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "идентификатор вакансии",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/ext/hh/{id}/publish": {
+            "put": {
+                "description": "Публикация вакансии",
+                "tags": [
+                    "Интеграция HeadHunter"
+                ],
+                "summary": "Публикация вакансии",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "идентификатор вакансии",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/ext/hh/{id}/update": {
+            "put": {
+                "description": "Публикация обновления по вакансии",
+                "tags": [
+                    "Интеграция HeadHunter"
+                ],
+                "summary": "Публикация обновления по вакансии",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "идентификатор вакансии",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/settings/list": {
+            "get": {
+                "description": "Список настроек",
+                "tags": [
+                    "Настройки space"
+                ],
+                "summary": "Список настроек",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/spaceapimodels.SpaceSettingView"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/settings/{code}": {
+            "put": {
+                "description": "Обновить значение настройки пространства",
+                "tags": [
+                    "Настройки space"
+                ],
+                "summary": "Обновить значение настройки пространства",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "space setting code",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/spaceapimodels.UpdateSpaceSettingValue"
+                        }
                     }
                 ],
                 "responses": {
@@ -3020,6 +3473,13 @@ const docTemplate = `{
                         "required": true
                     },
                     {
+                        "type": "string",
+                        "description": "space user ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
                         "description": "request body",
                         "name": "body",
                         "in": "body",
@@ -3062,6 +3522,13 @@ const docTemplate = `{
                         "description": "Authorization token",
                         "name": "Authorization",
                         "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "space user ID",
+                        "name": "id",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -3386,6 +3853,15 @@ const docTemplate = `{
                 }
             }
         },
+        "hhapimodels.VacancyAttach": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "description": "ссылка на вакансию в виде: https://izhevsk.hh.ru/vacancy/108984166",
+                    "type": "string"
+                }
+            }
+        },
         "models.ApprovalStatus": {
             "type": "string",
             "enum": [
@@ -3530,6 +4006,31 @@ const docTemplate = `{
                 }
             }
         },
+        "spaceapimodels.SpaceSettingView": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "Код настройки",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "идентификтор Настройки",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "Название настройки",
+                    "type": "string"
+                },
+                "space_id": {
+                    "description": "идентификатор пространства, которому принадлежит настройка",
+                    "type": "string"
+                },
+                "value": {
+                    "description": "Значение настройки",
+                    "type": "string"
+                }
+            }
+        },
         "spaceapimodels.SpaceUser": {
             "type": "object",
             "properties": {
@@ -3552,6 +4053,15 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "space_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "spaceapimodels.UpdateSpaceSettingValue": {
+            "type": "object",
+            "properties": {
+                "value": {
+                    "description": "Новое значение настройки",
                     "type": "string"
                 }
             }

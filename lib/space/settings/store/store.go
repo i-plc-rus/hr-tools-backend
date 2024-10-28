@@ -30,9 +30,10 @@ func (i impl) Create(rec dbmodels.SpaceSetting) error {
 }
 
 func (i impl) GetValueByCode(spaceID, code string) (value string, err error) {
-	err = i.db.
+	err = i.db.Model(dbmodels.SpaceSetting{}).
+		Select("value").
 		Where("space_id = ? AND code = ?", spaceID, code).
-		Pluck("value", value).
+		First(&value).
 		Error
 	if err != nil {
 		return "", err

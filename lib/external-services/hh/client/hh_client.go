@@ -27,6 +27,7 @@ type Provider interface {
 	VacancyUpdate(ctx context.Context, accessToken string, vacancyID string, request hhapimodels.VacancyPubRequest) error
 
 	//https://api.hh.ru/openapi/redoc#tag/Upravlenie-vakansiyami/operation/add-vacancy-to-hidden
+	//https://api.hh.ru/openapi/redoc#tag/Upravlenie-vakansiyami/operation/add-vacancy-to-archive
 	VacancyClose(ctx context.Context, accessToken string, employerID, vacancyID string) error
 
 	//https://api.hh.ru/openapi/redoc#tag/Otklikipriglasheniya-rabotodatelya/operation/get-negotiations
@@ -63,10 +64,11 @@ const (
 	vPublishPath              string = "/vacancies"
 	vUpdatePath               string = "/vacancies/%v"
 	vDeletePath               string = "/employers/%v/vacancies/%v"
+	vArchivePath              string = "/employers/%v/vacancies/archived/%v"
 	negotiationCollectionPath string = "/negotiations?vacancy_id=%v"
 	negotiationCollectionTpl  string = "%v&page=%v&per_page=%v"
 	negotiationReadPath       string = "/negotiations/read"
-	areasPath                 string = "areas"
+	areasPath                 string = "/areas"
 )
 
 func (i impl) GetLoginUri(clientID, spaceID string) (string, error) {
@@ -181,7 +183,7 @@ func (i impl) VacancyUpdate(ctx context.Context, accessToken, vacancyID string, 
 }
 
 func (i impl) VacancyClose(ctx context.Context, accessToken, employerID, vacancyID string) error {
-	uri := i.host + fmt.Sprintf(vDeletePath, employerID, vacancyID)
+	uri := i.host + fmt.Sprintf(vArchivePath, employerID, vacancyID)
 	logger := log.
 		WithField("vacancy_id", vacancyID).
 		WithField("employer_id", employerID).

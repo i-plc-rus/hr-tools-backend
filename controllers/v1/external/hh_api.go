@@ -6,6 +6,7 @@ import (
 	hhhandler "hr-tools-backend/lib/external-services/hh"
 	"hr-tools-backend/middleware"
 	apimodels "hr-tools-backend/models/api"
+	hhapimodels "hr-tools-backend/models/api/hh"
 )
 
 type hhApiController struct {
@@ -18,20 +19,20 @@ func InitHHApiRouters(app *fiber.App) {
 		router.Get("check_connected", controller.isConnect)
 		router.Get("connect_uri", controller.connect)
 		router.Route(":id", func(vacancyRoute fiber.Router) {
-			router.Put("publish", controller.publish)
-			router.Put("update", controller.update)
-			router.Put("close", controller.close)
-			router.Get("negotiations", controller.negotiations) //todo загрузка через воркер?
+			vacancyRoute.Put("publish", controller.publish)
+			vacancyRoute.Put("update", controller.update)
+			vacancyRoute.Put("close", controller.close)
+			vacancyRoute.Put("attach", controller.attach)
+			vacancyRoute.Get("negotiations", controller.negotiations) //todo загрузка через воркер?
 		})
-		router.Get("get_resume", controller.getResume)
+		router.Get("get_resume", controller.getResume) //todo загрузка через воркер?
 	})
 }
 
-// @Summary Получение ссылки для авторизации
+// @Summary Проверка подключения к HH
 // @Tags Интеграция HeadHunter
-// @Description Получение ссылки для авторизации
+// @Description Проверка подключения к HH
 // @Param   Authorization		header		string	true	"Authorization token"
-// @Param   id          		path    string  				    	true         "rec ID"
 // @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
@@ -43,16 +44,15 @@ func (c *hhApiController) isConnect(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(connected))
 }
 
-// @Summary Проверка подключения к HH
+// @Summary Получение ссылки для авторизации
 // @Tags Интеграция HeadHunter
-// @Description Проверка подключения к HH
+// @Description Получение ссылки для авторизации
 // @Param   Authorization		header		string	true	"Authorization token"
-// @Param   id          		path    string  				    	true         "rec ID"
 // @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/v1/space/ext/hh/connect [get]
+// @router /api/v1/space/ext/hh/connect_uri [get]
 func (c *hhApiController) connect(ctx *fiber.Ctx) error {
 
 	spaceID := middleware.GetUserSpace(ctx)
@@ -67,7 +67,7 @@ func (c *hhApiController) connect(ctx *fiber.Ctx) error {
 // @Tags Интеграция HeadHunter
 // @Description Публикация вакансии
 // @Param   Authorization		header		string	true	"Authorization token"
-// @Param   id          		path    string  				    	true         "rec ID"
+// @Param   id          		path    string  				    	true         "идентификатор вакансии"
 // @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
@@ -86,11 +86,11 @@ func (c *hhApiController) publish(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(vacancyUrl))
 }
 
-// @Summary Редактирование вакансии
+// @Summary Публикация обновления по вакансии
 // @Tags Интеграция HeadHunter
-// @Description Редактирование вакансии
+// @Description Публикация обновления по вакансии
 // @Param   Authorization		header		string	true	"Authorization token"
-// @Param   id          		path    string  				    	true         "rec ID"
+// @Param   id          		path    string  				    	true         "идентификатор вакансии"
 // @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
@@ -113,7 +113,7 @@ func (c *hhApiController) update(ctx *fiber.Ctx) error {
 // @Tags Интеграция HeadHunter
 // @Description Удаление вакансии
 // @Param   Authorization		header		string	true	"Authorization token"
-// @Param   id          		path    string  				    	true         "rec ID"
+// @Param   id          		path    string  				    	true         "идентификатор вакансии"
 // @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
@@ -132,13 +132,46 @@ func (c *hhApiController) close(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
 
-// @router  /api/v1/space/ext/hh/{id}/negotiations [get]
+// @Summary Привязать существующую вакансию
+// @Tags Интеграция HeadHunter
+// @Description Привязать существующую вакансию
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    string  				    	true         "идентификатор вакансии"
+// @Param	body body	 hhapimodels.VacancyAttach	true	"request body"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/ext/hh/{id}/attach [put]
+func (c *hhApiController) attach(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	var payload hhapimodels.VacancyAttach
+	if err = c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	if err = payload.Validate(); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	hhID, err := payload.GetID()
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	spaceID := middleware.GetUserSpace(ctx)
+	err = hhhandler.Instance.VacancyAttach(ctx.UserContext(), spaceID, id, hhID)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
 func (c *hhApiController) negotiations(ctx *fiber.Ctx) error {
 	//todo impl
 	return nil
 }
 
-// @router  /api/v1/space/ext/hh/get_resume [put]
 func (c *hhApiController) getResume(ctx *fiber.Ctx) error {
 	//todo impl
 	return nil
