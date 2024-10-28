@@ -10,7 +10,7 @@ type SpaceSetting struct {
 	SpaceID string                  `gorm:"type:varchar(36);index:idx_setting_code"`
 	Name    string                  `gorm:"type:varchar(255)"`
 	Code    models.SpaceSettingCode `gorm:"type:varchar(255);index:idx_setting_code"`
-	Value   string                  `gorm:"type:varchar(255)"`
+	Value   string                  `gorm:"type:varchar(500)"`
 }
 
 func (r SpaceSetting) ToModelView() spaceapimodels.SpaceSettingView {
