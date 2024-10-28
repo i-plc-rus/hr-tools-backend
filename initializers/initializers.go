@@ -11,6 +11,7 @@ import (
 	companystructprovider "hr-tools-backend/lib/dicts/company-struct"
 	departmentprovider "hr-tools-backend/lib/dicts/department"
 	jobtitleprovider "hr-tools-backend/lib/dicts/job-title"
+	gpthandler "hr-tools-backend/lib/gpt"
 	spaceauthhandler "hr-tools-backend/lib/space/auth"
 	spacehandler "hr-tools-backend/lib/space/handler"
 	spacesettingshandler "hr-tools-backend/lib/space/settings/handler"
@@ -39,4 +40,5 @@ func InitAllServices(ctx context.Context) {
 	vacancyhandler.NewHandler()
 	vacancyreqhandler.NewHandler()
 	spacesettingshandler.NewHandler()
+	gpthandler.NewHandler()
 }

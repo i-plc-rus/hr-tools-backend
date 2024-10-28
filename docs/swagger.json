@@ -1750,6 +1750,68 @@
                 }
             }
         },
+        "/api/v1/gpt/generate_vacancy_description": {
+            "post": {
+                "description": "Сгенерировать описание вакансии",
+                "tags": [
+                    "GPT"
+                ],
+                "summary": "Сгенерировать описание вакансии",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/gptmodels.GenVacancyDescRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/gptmodels.GenVacancyDescResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/organizations": {
             "post": {
                 "description": "Создание организации",
@@ -1840,6 +1902,116 @@
                         "description": "параметры запроса в дадату",
                         "name": "query",
                         "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/settings/list": {
+            "get": {
+                "description": "Список настроек",
+                "tags": [
+                    "Настройки space"
+                ],
+                "summary": "Список настроек",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/spaceapimodels.SpaceSettingView"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/settings/{code}": {
+            "put": {
+                "description": "Обновить значение настройки пространства",
+                "tags": [
+                    "Настройки space"
+                ],
+                "summary": "Обновить значение настройки пространства",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "space setting code",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/spaceapimodels.UpdateSpaceSettingValue"
+                        }
                     }
                 ],
                 "responses": {
@@ -3009,6 +3181,13 @@
                         "required": true
                     },
                     {
+                        "type": "string",
+                        "description": "space user ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
                         "description": "request body",
                         "name": "body",
                         "in": "body",
@@ -3051,6 +3230,13 @@
                         "description": "Authorization token",
                         "name": "Authorization",
                         "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "space user ID",
+                        "name": "id",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -3375,6 +3561,24 @@
                 }
             }
         },
+        "gptmodels.GenVacancyDescRequest": {
+            "type": "object",
+            "properties": {
+                "text": {
+                    "description": "Текст, на основе которого необходимо сгенерировать описание",
+                    "type": "string"
+                }
+            }
+        },
+        "gptmodels.GenVacancyDescResponse": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "description": "сгенерированное описание вакансии",
+                    "type": "string"
+                }
+            }
+        },
         "models.ApprovalStatus": {
             "type": "string",
             "enum": [
@@ -3519,6 +3723,31 @@
                 }
             }
         },
+        "spaceapimodels.SpaceSettingView": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "Код настройки",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "идентификтор Настройки",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "Название настройки",
+                    "type": "string"
+                },
+                "space_id": {
+                    "description": "идентификатор пространства, которому принадлежит настройка",
+                    "type": "string"
+                },
+                "value": {
+                    "description": "Значение настройки",
+                    "type": "string"
+                }
+            }
+        },
         "spaceapimodels.SpaceUser": {
             "type": "object",
             "properties": {
@@ -3541,6 +3770,15 @@
                     "type": "string"
                 },
                 "space_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "spaceapimodels.UpdateSpaceSettingValue": {
+            "type": "object",
+            "properties": {
+                "value": {
+                    "description": "Новое значение настройки",
                     "type": "string"
                 }
             }
