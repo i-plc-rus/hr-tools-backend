@@ -3,7 +3,6 @@ module hr-tools-backend
 go 1.23.1
 
 require (
-	github.com/ekomobile/dadata/v2 v2.14.0
 	github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43
 	github.com/emersion/go-smtp v0.21.3
 	github.com/gofiber/contrib/jwt v1.0.10

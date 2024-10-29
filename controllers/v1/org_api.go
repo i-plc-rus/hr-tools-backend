@@ -32,12 +32,14 @@ func InitOrgApiRouters(app *fiber.App) {
 // @Failure 500 {object} apimodels.Response
 // @router /api/v1/organizations/suggest [get]
 func (c *orgApiController) orgSuggest(ctx *fiber.Ctx) error {
-	dadataQuery := ctx.Query("query", "")
-	response, err := dadataproxy.ProxySuggestRequest(dadataQuery)
-	if err != nil {
-		return ctx.Status(fiber.StatusOK).JSON(apimodels.NewError(err.Error()))
+	daDataQuery := ctx.Query("query", "")
+	response, errs := dadataproxy.ProxySuggestRequest(daDataQuery)
+	if len(errs) != 0 {
+		return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+			"errs": errs,
+		})
 	}
-	return ctx.Status(fiber.StatusOK).JSON(response)
+	return ctx.Status(fiber.StatusOK).Send(response)
 }
 
 // @Summary Запрос детальной информации через Дадата
