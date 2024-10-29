@@ -107,3 +107,12 @@ const (
 	AStatusRejected ApprovalStatus = "Не согласованно"
 	AStatusAwaiting ApprovalStatus = "Ждет согласования"
 )
+
+type VacancyPubStatus string
+
+const (
+	VacancyPubStatusNone       ApprovalStatus = "Не размещена"
+	VacancyPubStatusModeration ApprovalStatus = "Публикуется"
+	VacancyPubStatusPublished  ApprovalStatus = "Опубликована"
+	VacancyPubStatusRejected   ApprovalStatus = "Отклонена"
+)

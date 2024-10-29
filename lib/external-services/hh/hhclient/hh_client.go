@@ -1,4 +1,4 @@
-package client
+package hhclient
 
 import (
 	"bytes"
@@ -50,7 +50,7 @@ type impl struct {
 	redirectUri string
 }
 
-func NewProvider(host, redirectUri string) {
+func NewProvider(redirectUri string) {
 	Instance = &impl{
 		host:        host,
 		redirectUri: redirectUri,
@@ -58,6 +58,7 @@ func NewProvider(host, redirectUri string) {
 }
 
 const (
+	host                      string = "https://api.hh.ru"
 	mePath                    string = "/me"
 	tokenPath                 string = "/token"
 	oAuthPattern              string = "https://hh.ru/oauth/authorize?response_type=code&client_id=%v&state=%v&redirect_uri=%v"
@@ -324,7 +325,7 @@ func (i impl) sendRequest(logger *log.Entry, r *http.Request, resp interface{}, 
 	logger.Error("ошибка отправки запроса в HH")
 	if response.StatusCode == 403 {
 		err = errors.Errorf("Ошибка: %v, Причины: %+v", errorResp.Error, errorResp.Errors)
-		return errors.New("Необходима повторная ааторизация")
+		return errors.New("Необходима повторная авторизация")
 	}
-	return errors.New("Некорректный запрос")
+	return errors.Errorf("Некорректный запрос. Ошибка: %+v", errorResp)
 }

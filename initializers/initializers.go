@@ -11,9 +11,9 @@ import (
 	companystructprovider "hr-tools-backend/lib/dicts/company-struct"
 	departmentprovider "hr-tools-backend/lib/dicts/department"
 	jobtitleprovider "hr-tools-backend/lib/dicts/job-title"
-	gpthandler "hr-tools-backend/lib/gpt"
 	hhhandler "hr-tools-backend/lib/external-services/hh"
-	hhclient "hr-tools-backend/lib/external-services/hh/client"
+	"hr-tools-backend/lib/external-services/hh/hhclient"
+	gpthandler "hr-tools-backend/lib/gpt"
 	spaceauthhandler "hr-tools-backend/lib/space/auth"
 	spacehandler "hr-tools-backend/lib/space/handler"
 	spacesettingshandler "hr-tools-backend/lib/space/settings/handler"
@@ -29,7 +29,7 @@ func InitAllServices(ctx context.Context) {
 	config.InitConfig()
 	InitDBConnection()
 	InitSmtp()
-	hhclient.NewProvider(config.Conf.HH.Host, config.Conf.HH.RedirectUri) //todo
+	hhclient.NewProvider(config.Conf.HH.RedirectUri)
 	spaceusershander.NewHandler()
 	spacehandler.NewHandler()
 	spaceauthhandler.NewHandler()

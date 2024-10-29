@@ -1,8 +1,9 @@
-package external
+package externalapiv1
 
 import (
 	"github.com/gofiber/fiber/v2"
 	"hr-tools-backend/controllers"
+	externalservices "hr-tools-backend/lib/external-services"
 	hhhandler "hr-tools-backend/lib/external-services/hh"
 	"hr-tools-backend/middleware"
 	apimodels "hr-tools-backend/models/api"
@@ -11,10 +12,13 @@ import (
 
 type hhApiController struct {
 	controllers.BaseAPIController
+	handler externalservices.JobSiteProvider
 }
 
 func InitHHApiRouters(app *fiber.App) {
-	controller := hhApiController{}
+	controller := hhApiController{
+		handler: hhhandler.Instance,
+	}
 	app.Route("hh", func(router fiber.Router) {
 		router.Get("check_connected", controller.isConnect)
 		router.Get("connect_uri", controller.connect)
@@ -23,9 +27,8 @@ func InitHHApiRouters(app *fiber.App) {
 			vacancyRoute.Put("update", controller.update)
 			vacancyRoute.Put("close", controller.close)
 			vacancyRoute.Put("attach", controller.attach)
-			vacancyRoute.Get("negotiations", controller.negotiations) //todo загрузка через воркер?
+			vacancyRoute.Get("status", controller.status)
 		})
-		router.Get("get_resume", controller.getResume) //todo загрузка через воркер?
 	})
 }
 
@@ -40,7 +43,7 @@ func InitHHApiRouters(app *fiber.App) {
 // @router /api/v1/space/ext/hh/check_connected [get]
 func (c *hhApiController) isConnect(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
-	connected := hhhandler.Instance.CheckConnected(spaceID)
+	connected := c.handler.CheckConnected(spaceID)
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(connected))
 }
 
@@ -56,7 +59,7 @@ func (c *hhApiController) isConnect(ctx *fiber.Ctx) error {
 func (c *hhApiController) connect(ctx *fiber.Ctx) error {
 
 	spaceID := middleware.GetUserSpace(ctx)
-	resp, err := hhhandler.Instance.GetConnectUri(spaceID)
+	resp, err := c.handler.GetConnectUri(spaceID)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
@@ -79,11 +82,11 @@ func (c *hhApiController) publish(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
-	vacancyUrl, err := hhhandler.Instance.VacancyPublish(ctx.UserContext(), spaceID, id)
+	err = c.handler.VacancyPublish(ctx.UserContext(), spaceID, id)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
-	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(vacancyUrl))
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
 
 // @Summary Публикация обновления по вакансии
@@ -102,7 +105,7 @@ func (c *hhApiController) update(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
-	err = hhhandler.Instance.VacancyUpdate(ctx.UserContext(), spaceID, id)
+	err = c.handler.VacancyUpdate(ctx.UserContext(), spaceID, id)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
@@ -125,7 +128,7 @@ func (c *hhApiController) close(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
-	err = hhhandler.Instance.VacancyClose(ctx.UserContext(), spaceID, id)
+	err = c.handler.VacancyClose(ctx.UserContext(), spaceID, id)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
@@ -160,19 +163,32 @@ func (c *hhApiController) attach(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
-	err = hhhandler.Instance.VacancyAttach(ctx.UserContext(), spaceID, id, hhID)
+	err = c.handler.VacancyAttach(ctx.UserContext(), spaceID, id, hhID)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
 
-func (c *hhApiController) negotiations(ctx *fiber.Ctx) error {
-	//todo impl
-	return nil
-}
-
-func (c *hhApiController) getResume(ctx *fiber.Ctx) error {
-	//todo impl
-	return nil
+// @Summary Статус размещения
+// @Tags Интеграция HeadHunter
+// @Description Статус размещения
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    string  				    	true         "идентификатор вакансии"
+// @Success 200 {object} apimodels.Response{data=vacancyapimodels.ExtVacancyInfo}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/ext/hh/{id}/status [put]
+func (c *hhApiController) status(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	spaceID := middleware.GetUserSpace(ctx)
+	info, err := c.handler.GetVacancyInfo(ctx.UserContext(), spaceID, id)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(info))
 }

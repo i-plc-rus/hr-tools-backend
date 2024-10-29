@@ -7,30 +7,22 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
-	hhclient "hr-tools-backend/lib/external-services/hh/client"
+	externalservices "hr-tools-backend/lib/external-services"
+	"hr-tools-backend/lib/external-services/hh/hhclient"
 	extservicestore "hr-tools-backend/lib/external-services/store"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	"hr-tools-backend/models"
 	hhapimodels "hr-tools-backend/models/api/hh"
+	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
 	"strings"
 	"sync"
 	"time"
 )
 
-type Provider interface {
-	GetConnectUri(spaceID string) (uri string, err error)
-	RequestToken(spaceID, code string)
-	CheckConnected(spaceID string) bool
-	VacancyPublish(ctx context.Context, spaceID, vacancyID string) (vacancyUrl string, err error)
-	VacancyUpdate(ctx context.Context, spaceID, vacancyID string) error
-	VacancyClose(ctx context.Context, spaceID, vacancyID string) error
-	VacancyAttach(ctx context.Context, spaceID, vacancyID, hhID string) error
-}
-
-var Instance Provider
+var Instance externalservices.JobSiteProvider
 
 func NewHandler() {
 	Instance = &impl{
@@ -120,42 +112,42 @@ func (i *impl) CheckConnected(spaceID string) bool {
 	return true
 }
 
-func (i *impl) VacancyPublish(ctx context.Context, spaceID, vacancyID string) (vacancyUrl string, err error) {
+func (i *impl) VacancyPublish(ctx context.Context, spaceID, vacancyID string) error {
 	logger := log.
 		WithField("space_id", spaceID).
 		WithField("vacancy_id", vacancyID)
 
 	accessToken, err := i.getToken(ctx, spaceID)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	rec, err := i.vacancyStore.GetByID(spaceID, vacancyID)
 	if err != nil {
-		return "", err
+		return err
 	}
 	if rec == nil {
-		return "", errors.New("вакансия не найдена")
+		return errors.New("вакансия не найдена")
 	}
 
 	if models.VacancyStatusOpened != rec.Status {
-		return "", errors.Errorf("неподходящей статус вакансии %v, для публикации в НН", rec.Status)
+		return errors.Errorf("неподходящей статус вакансии %v, для публикации в НН", rec.Status)
 	}
 
 	if rec.HhID != "" {
-		return "", errors.New("вакансия уже опубликованна")
+		return errors.New("вакансия уже опубликованна")
 	}
 
 	request, err := i.fillVacancyData(ctx, rec)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	id, err := i.client.VacancyPublish(ctx, accessToken, *request)
 	if err != nil {
-		return "", err
+		return err
 	}
-	vacancyUrl = fmt.Sprintf(VacancyUriTpl, id)
+	vacancyUrl := fmt.Sprintf(VacancyUriTpl, id)
 	updMap := map[string]interface{}{
 		"hh_id":  id,
 		"hh_uri": vacancyUrl,
@@ -164,9 +156,9 @@ func (i *impl) VacancyPublish(ctx context.Context, spaceID, vacancyID string) (v
 	if err != nil {
 		err = errors.Errorf("не удалось сохранить идентификатор опубликованной вакансии (%v)", id)
 		logger.Error(err)
-		return vacancyUrl, err
+		return err
 	}
-	return vacancyUrl, nil
+	return nil
 }
 
 func (i *impl) VacancyUpdate(ctx context.Context, spaceID, vacancyID string) error {
@@ -203,7 +195,17 @@ func (i *impl) VacancyClose(ctx context.Context, spaceID, vacancyID string) erro
 	if err != nil {
 		return errors.Wrap(err, "ошибка получения информации о токене HH")
 	}
-	return i.client.VacancyClose(ctx, accessToken, meResp.Employer.ID, vacancyID)
+	rec, err := i.vacancyStore.GetByID(spaceID, vacancyID)
+	if err != nil {
+		return err
+	}
+	if rec == nil {
+		return errors.New("вакансия не найдена")
+	}
+	if rec.HhID == "" {
+		return errors.New("вакансия еще не опубликованна")
+	}
+	return i.client.VacancyClose(ctx, accessToken, meResp.Employer.ID, rec.HhID)
 }
 
 func (i *impl) VacancyAttach(ctx context.Context, spaceID, vacancyID, hhID string) error {
@@ -235,6 +237,11 @@ func (i *impl) VacancyAttach(ctx context.Context, spaceID, vacancyID, hhID strin
 		return err
 	}
 	return nil
+}
+
+func (i *impl) GetVacancyInfo(ctx context.Context, spaceID, vacancyID string) (*vacancyapimodels.ExtVacancyInfo, error) {
+	//todo
+	return nil, nil
 }
 
 func (i *impl) getValue(spaceID string, code models.SpaceSettingCode) (string, error) {
