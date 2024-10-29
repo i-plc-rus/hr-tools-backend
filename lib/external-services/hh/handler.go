@@ -238,7 +238,7 @@ func (i *impl) VacancyAttach(ctx context.Context, spaceID, vacancyID, hhID strin
 }
 
 func (i *impl) getValue(spaceID string, code models.SpaceSettingCode) (string, error) {
-	return i.spaceSettingsStore.GetValueByCode(spaceID, string(code))
+	return i.spaceSettingsStore.GetValueByCode(spaceID, code)
 }
 
 func (i *impl) fillAreas(areas []hhapimodels.Area) {
