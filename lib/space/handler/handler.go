@@ -63,7 +63,6 @@ func (i impl) createSpace(tx *gorm.DB, request spaceapimodels.CreateOrganization
 	space := dbmodels.Space{
 		TypeBilling:      "",
 		IsActive:         true,
-		OrganizationType: request.OrganizationType,
 		OrganizationName: request.OrganizationName,
 		Inn:              request.Inn,
 		Kpp:              request.Kpp,

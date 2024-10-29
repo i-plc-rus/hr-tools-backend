@@ -11,7 +11,6 @@ type Space struct {
 	StartPay         time.Time
 	StopPay          time.Time
 	IsActive         bool
-	OrganizationType string `gorm:"type:varchar(3)"`
 	OrganizationName string `gorm:"type:varchar(255)"` // Юридическое название компании
 	Inn              string `gorm:"type:varchar(12)"`  // ИНН
 	Kpp              string `gorm:"type:varchar(9)"`   // КПП
