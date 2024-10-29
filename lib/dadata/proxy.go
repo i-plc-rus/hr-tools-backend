@@ -20,7 +20,7 @@ func ProxySuggestRequest(query string) (ret []byte, errs []error) {
 		Add(fiber.HeaderAuthorization, fmt.Sprintf("Token %s", config.Conf.DaData.ApiKey)).
 		Add(fiber.HeaderContentType, fiber.MIMEApplicationJSON).
 		Add(fiber.HeaderAccept, fiber.MIMEApplicationJSON).
-		Timeout(time.Second * 5).
+		Timeout(time.Second * time.Duration(config.Conf.DaData.Timeout)).
 		JSON(&request{Query: query}).
 		Bytes()
 	if len(errs) > 0 {
