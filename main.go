@@ -49,6 +49,7 @@ func main() {
 	apiv1.InitOrgApiRouters(apiV1)
 	apiv1.InitAuthApiRouters(apiV1)
 	apiv1.InitSpaceUserRouters(apiV1)
+	apiv1.InitGptApiRouters(apiV1)
 	apiv1.InitOAuthApiRouters(apiV1)
 
 	//dict

@@ -3,7 +3,6 @@ module hr-tools-backend
 go 1.23.1
 
 require (
-	github.com/ekomobile/dadata/v2 v2.14.0
 	github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43
 	github.com/emersion/go-smtp v0.21.3
 	github.com/gofiber/contrib/jwt v1.0.10
@@ -13,6 +12,7 @@ require (
 	github.com/gotify/configor v1.0.2
 	github.com/onrik/gorm-logrus v0.5.0
 	github.com/pkg/errors v0.9.1
+	github.com/sheeiavellie/go-yandexgpt v0.1.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/swaggo/swag v1.16.3
 	gorm.io/driver/postgres v1.5.9

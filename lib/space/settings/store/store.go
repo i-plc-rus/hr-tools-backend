@@ -3,6 +3,7 @@ package spacesettingsstore
 import (
 	"errors"
 	"gorm.io/gorm"
+	"hr-tools-backend/models"
 	dbmodels "hr-tools-backend/models/db"
 )
 
@@ -10,7 +11,7 @@ type Provider interface {
 	Create(rec dbmodels.SpaceSetting) error
 	Update(spaceID, code, value string) error
 	List(spaceID string) (settingsList []dbmodels.SpaceSetting, err error)
-	GetValueByCode(spaceID, code string) (value string, err error)
+	GetValueByCode(spaceID string, code models.SpaceSettingCode) (value string, err error)
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -29,7 +30,7 @@ func (i impl) Create(rec dbmodels.SpaceSetting) error {
 		Error
 }
 
-func (i impl) GetValueByCode(spaceID, code string) (value string, err error) {
+func (i impl) GetValueByCode(spaceID string, code models.SpaceSettingCode) (value string, err error) {
 	err = i.db.Model(dbmodels.SpaceSetting{}).
 		Select("value").
 		Where("space_id = ? AND code = ?", spaceID, code).

@@ -186,10 +186,16 @@ definitions:
       name:
         type: string
     type: object
-  hhapimodels.VacancyAttach:
+  gptmodels.GenVacancyDescRequest:
     properties:
-      url:
-        description: 'ссылка на вакансию в виде: https://izhevsk.hh.ru/vacancy/108984166'
+      text:
+        description: Текст, на основе которого необходимо сгенерировать описание
+        type: string
+    type: object
+  gptmodels.GenVacancyDescResponse:
+    properties:
+      description:
+        description: сгенерированное описание вакансии
         type: string
     type: object
   models.ApprovalStatus:
@@ -1772,20 +1778,21 @@ paths:
       summary: Поиск по названию
       tags:
       - Справочник. Штатные должности
-  /api/v1/oauth/callback/hh:
-    get:
-      description: Аутентификация HH
+  /api/v1/gpt/generate_vacancy_description:
+    post:
+      description: Сгенерировать описание вакансии
       parameters:
-      - description: space ID
-        in: query
-        name: state
+      - description: Authorization token
+        in: header
+        name: Authorization
         required: true
         type: string
-      - description: authorization_code
-        in: query
-        name: code
+      - description: request body
+        in: body
+        name: body
         required: true
-        type: string
+        schema:
+          $ref: '#/definitions/gptmodels.GenVacancyDescRequest'
       responses:
         "200":
           description: OK
@@ -1794,7 +1801,7 @@ paths:
             - $ref: '#/definitions/apimodels.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/authapimodels.JWTResponse'
+                  $ref: '#/definitions/gptmodels.GenVacancyDescResponse'
               type: object
         "400":
           description: Bad Request
@@ -1806,9 +1813,9 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apimodels.Response'
-      summary: Аутентификация HH
+      summary: Сгенерировать описание вакансии
       tags:
-      - Аутентификация OAuth
+      - GPT
   /api/v1/organizations:
     post:
       description: Создание организации
@@ -1883,194 +1890,6 @@ paths:
       summary: Поиск по ИНН через Дадата
       tags:
       - Организации
-  /api/v1/space/ext/hh/{id}/attach:
-    put:
-      description: Привязать существующую вакансию
-      parameters:
-      - description: Authorization token
-        in: header
-        name: Authorization
-        required: true
-        type: string
-      - description: идентификатор вакансии
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: request body
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/hhapimodels.VacancyAttach'
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-      summary: Привязать существующую вакансию
-      tags:
-      - Интеграция HeadHunter
-  /api/v1/space/ext/hh/{id}/close:
-    put:
-      description: Удаление вакансии
-      parameters:
-      - description: Authorization token
-        in: header
-        name: Authorization
-        required: true
-        type: string
-      - description: идентификатор вакансии
-        in: path
-        name: id
-        required: true
-        type: string
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-      summary: Удаление вакансии
-      tags:
-      - Интеграция HeadHunter
-  /api/v1/space/ext/hh/{id}/publish:
-    put:
-      description: Публикация вакансии
-      parameters:
-      - description: Authorization token
-        in: header
-        name: Authorization
-        required: true
-        type: string
-      - description: идентификатор вакансии
-        in: path
-        name: id
-        required: true
-        type: string
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-      summary: Публикация вакансии
-      tags:
-      - Интеграция HeadHunter
-  /api/v1/space/ext/hh/{id}/update:
-    put:
-      description: Публикация обновления по вакансии
-      parameters:
-      - description: Authorization token
-        in: header
-        name: Authorization
-        required: true
-        type: string
-      - description: идентификатор вакансии
-        in: path
-        name: id
-        required: true
-        type: string
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-      summary: Публикация обновления по вакансии
-      tags:
-      - Интеграция HeadHunter
-  /api/v1/space/ext/hh/check_connected:
-    get:
-      description: Проверка подключения к HH
-      parameters:
-      - description: Authorization token
-        in: header
-        name: Authorization
-        required: true
-        type: string
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-      summary: Проверка подключения к HH
-      tags:
-      - Интеграция HeadHunter
-  /api/v1/space/ext/hh/connect_uri:
-    get:
-      description: Получение ссылки для авторизации
-      parameters:
-      - description: Authorization token
-        in: header
-        name: Authorization
-        required: true
-        type: string
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-      summary: Получение ссылки для авторизации
-      tags:
-      - Интеграция HeadHunter
   /api/v1/space/settings/{code}:
     put:
       description: Обновить значение настройки пространства

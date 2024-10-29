@@ -49,6 +49,10 @@ type Configuration struct {
 		PhoneNumber string `default:"" env:"SUPER_ADMIN_PHONE"`
 		Password    string `default:"123hygAS" env:"SUPER_ADMIN_PASSWORD"`
 	}
+	YandexGPT struct {
+		IAMToken  string `default:"" env:"YANDEXGPT_IAM_TOKEN"`
+		CatalogID string `default:"" env:"YANDEXGPT_CATALOG_ID"`
+	}
 	HH struct {
 		Host        string `default:"https://api.hh.ru" env:"HH_HOST"`
 		RedirectUri string `default:"https://api.hr-tools.pro/api/v1/oauth/callback/hh" env:"HH_REDIRECT"`
