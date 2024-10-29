@@ -1,7 +1,6 @@
 package spaceapimodels
 
 type CreateOrganization struct {
-	OrganizationType string     `json:"organization_type"`
 	OrganizationName string     `json:"organization_name"`
 	Inn              string     `json:"inn"`
 	Kpp              string     `json:"kpp"`

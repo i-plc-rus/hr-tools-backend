@@ -30,7 +30,8 @@ type Configuration struct {
 		DomainForVerifyLink   string `default:"http://localhost:8000" env:"DOMAIN_FOR_VERIFY_LINK"`
 	}
 	DaData struct {
-		ApiKey string `default:"" env:"DADATA_API_KEY"`
+		ApiKey  string `default:"" env:"DADATA_API_KEY"`
+		Timeout int64  `default:"20" env:"DADATA_TIMEOUT_SEC"`
 	}
 	Auth struct {
 		JWTExpireInSec        int64  `default:"2678400" env:"JWT_EXPIRE"`
