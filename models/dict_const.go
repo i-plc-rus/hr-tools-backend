@@ -111,8 +111,38 @@ const (
 type VacancyPubStatus string
 
 const (
-	VacancyPubStatusNone       ApprovalStatus = "Не размещена"
-	VacancyPubStatusModeration ApprovalStatus = "Публикуется"
-	VacancyPubStatusPublished  ApprovalStatus = "Опубликована"
-	VacancyPubStatusRejected   ApprovalStatus = "Отклонена"
+	VacancyPubStatusNone       VacancyPubStatus = "Не размещена"
+	VacancyPubStatusModeration VacancyPubStatus = "Публикуется"
+	VacancyPubStatusPublished  VacancyPubStatus = "Опубликована"
+	VacancyPubStatusRejected   VacancyPubStatus = "Отклонена"
+	VacancyPubStatusClosed     VacancyPubStatus = "Закрыта"
+)
+
+type Employment string
+
+const (
+	EmploymentTemporary  Employment = "temporary"  //Временная
+	EmploymentFull       Employment = "full"       //Полная
+	EmploymentInternship Employment = "internship" //Стажировка
+	EmploymentPartial    Employment = "partial"    //partial
+)
+
+type Experience string
+
+const (
+	ExperienceNoMatter   Experience = "noMatter"   // Без опыта
+	ExperienceMoreThan1  Experience = "moreThan1"  // Более 1 года
+	ExperienceMoreThan3  Experience = "moreThan3"  // Более 3 лет
+	ExperienceMoreThan5  Experience = "moreThan5"  // Более 5 лет
+	ExperienceMoreThan10 Experience = "moreThan10" // Более 10 лет
+)
+
+type Schedule string
+
+const (
+	ScheduleFlyInFlyOut Schedule = "flyInFlyOut"
+	SchedulePartTime    Schedule = "partTime"
+	ScheduleFullDay     Schedule = "fullDay"
+	ScheduleFlexible    Schedule = "flexible"
+	ScheduleShift       Schedule = "shift" //Сменный
 )

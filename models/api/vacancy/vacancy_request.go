@@ -145,7 +145,7 @@ func VacancyRequestConvert(rec dbmodels.VacancyRequest) VacancyRequestView {
 }
 
 type ExtVacancyInfo struct {
-	Url    string                  `json:"url"`
-	Status models.VacancyPubStatus `json:"status"`
-	Error  string                  `json:"error"`
+	Url    string                  `json:"url"`    //урл вакансии
+	Status models.VacancyPubStatus `json:"status"` //статус публикации
+	Reason string                  `json:"reason"` //описание статуса/ошибки
 }

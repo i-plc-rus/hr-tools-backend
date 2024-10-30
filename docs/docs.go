@@ -1823,6 +1823,54 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/oauth/callback/avito": {
+            "get": {
+                "description": "Аутентификация Avito",
+                "tags": [
+                    "Аутентификация OAuth"
+                ],
+                "summary": "Аутентификация Avito",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space ID",
+                        "name": "state",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "authorization_code",
+                        "name": "code",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/oauth/callback/hh": {
             "get": {
                 "description": "Аутентификация HH",
@@ -1850,19 +1898,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/apimodels.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/authapimodels.JWTResponse"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/apimodels.Response"
                         }
                     },
                     "400": {
@@ -1978,6 +2014,349 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/ext/avito/check_connected": {
+            "get": {
+                "description": "Проверка подключения к Avito",
+                "tags": [
+                    "Интеграция Avito"
+                ],
+                "summary": "Проверка подключения к Avito",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/ext/avito/connect_uri": {
+            "get": {
+                "description": "Получение ссылки для авторизации",
+                "tags": [
+                    "Интеграция Avito"
+                ],
+                "summary": "Получение ссылки для авторизации",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/ext/avito/{id}/attach": {
+            "put": {
+                "description": "Привязать существующую вакансию",
+                "tags": [
+                    "Интеграция Avito"
+                ],
+                "summary": "Привязать существующую вакансию",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "идентификатор вакансии",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/avitoapimodels.VacancyAttach"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/ext/avito/{id}/close": {
+            "put": {
+                "description": "Удаление вакансии",
+                "tags": [
+                    "Интеграция Avito"
+                ],
+                "summary": "Удаление вакансии",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "идентификатор вакансии",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/ext/avito/{id}/publish": {
+            "put": {
+                "description": "Публикация вакансии",
+                "tags": [
+                    "Интеграция Avito"
+                ],
+                "summary": "Публикация вакансии",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "идентификатор вакансии",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/ext/avito/{id}/status": {
+            "put": {
+                "description": "Статус размещения",
+                "tags": [
+                    "Интеграция Avito"
+                ],
+                "summary": "Статус размещения",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "идентификатор вакансии",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/vacancyapimodels.ExtVacancyInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/ext/avito/{id}/update": {
+            "put": {
+                "description": "Публикация обновления по вакансии",
+                "tags": [
+                    "Интеграция Avito"
+                ],
+                "summary": "Публикация обновления по вакансии",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "идентификатор вакансии",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
                     },
                     "400": {
                         "description": "Bad Request",
@@ -2212,6 +2591,66 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/ext/hh/{id}/status": {
+            "put": {
+                "description": "Статус размещения",
+                "tags": [
+                    "Интеграция HeadHunter"
+                ],
+                "summary": "Статус размещения",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "идентификатор вакансии",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/vacancyapimodels.ExtVacancyInfo"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -3771,6 +4210,15 @@ const docTemplate = `{
                 }
             }
         },
+        "avitoapimodels.VacancyAttach": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "идентификатор вакансии в виде: 3364561973",
+                    "type": "integer"
+                }
+            }
+        },
         "dbmodels.VacancyFilter": {
             "type": "object",
             "properties": {
@@ -4016,6 +4464,23 @@ const docTemplate = `{
                 "VRTypeNonUrgent"
             ]
         },
+        "models.VacancyPubStatus": {
+            "type": "string",
+            "enum": [
+                "Не размещена",
+                "Публикуется",
+                "Опубликована",
+                "Отклонена",
+                "Закрыта"
+            ],
+            "x-enum-varnames": [
+                "VacancyPubStatusNone",
+                "VacancyPubStatusModeration",
+                "VacancyPubStatusPublished",
+                "VacancyPubStatusRejected",
+                "VacancyPubStatusClosed"
+            ]
+        },
         "models.VacancyStatus": {
             "type": "string",
             "enum": [
@@ -4053,9 +4518,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "organization_name": {
-                    "type": "string"
-                },
-                "organization_type": {
                     "type": "string"
                 }
             }
@@ -4211,6 +4673,27 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/vacancyapimodels.ApprovalStageData"
                     }
+                }
+            }
+        },
+        "vacancyapimodels.ExtVacancyInfo": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "description": "описание статуса/ошибки",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "статус публикации",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.VacancyPubStatus"
+                        }
+                    ]
+                },
+                "url": {
+                    "description": "урл вакансии",
+                    "type": "string"
                 }
             }
         },

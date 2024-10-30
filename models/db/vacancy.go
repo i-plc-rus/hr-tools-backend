@@ -42,8 +42,26 @@ type Vacancy struct {
 	ChiefFio         string                 `gorm:"type:varchar(255)"`
 	Requirements     string
 	Status           models.VacancyStatus
-	HhID             string `gorm:"type:varchar(255)"`
-	HhUri            string `gorm:"type:varchar(500)"`
+	HhData
+	AvitoData
+	//todo добавить заполнение в vacancyhandler
+	Employment models.Employment `gorm:"type:varchar(255)"` // Занятость
+	Experience models.Experience `gorm:"type:varchar(255)"` // Опыт работы
+	Schedule   models.Schedule   `gorm:"type:varchar(255)"` // Режим работы
+}
+
+type HhData struct {
+	HhID     string                  `gorm:"type:varchar(255)"`
+	HhUri    string                  `gorm:"type:varchar(500)"`
+	HhStatus models.VacancyPubStatus `gorm:"type:varchar(255)"` // статус публикации
+}
+
+type AvitoData struct {
+	AvitoPublishID string                  `gorm:"type:varchar(255)"` // ид публикации
+	AvitoID        int                     // ид вакансии
+	AvitoUri       string                  `gorm:"type:varchar(500)"` // урл вакансии на сайте авито
+	AvitoStatus    models.VacancyPubStatus `gorm:"type:varchar(255)"` // статус публикации
+	AvitoReasons   string                  `gorm:"type:varchar(500)"` // Расширенное описание статуса
 }
 
 type Salary struct {

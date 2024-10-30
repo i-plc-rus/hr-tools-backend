@@ -41,6 +41,8 @@ type Provider interface {
 	GetResume(ctx context.Context, accessToken, resumeUrl string) (hhapimodels.ResumeResponse, error)
 
 	GetAreas(ctx context.Context) ([]hhapimodels.Area, error)
+
+	GetVacancy(ctx context.Context, accessToken, vacancyID string) (*hhapimodels.VacancyInfo, error)
 }
 
 var Instance Provider
@@ -64,6 +66,7 @@ const (
 	oAuthPattern              string = "https://hh.ru/oauth/authorize?response_type=code&client_id=%v&state=%v&redirect_uri=%v"
 	vPublishPath              string = "/vacancies"
 	vUpdatePath               string = "/vacancies/%v"
+	vGetPath                  string = "/vacancies/%v"
 	vDeletePath               string = "/employers/%v/vacancies/%v"
 	vArchivePath              string = "/employers/%v/vacancies/archived/%v"
 	negotiationCollectionPath string = "/negotiations?vacancy_id=%v"
@@ -244,6 +247,22 @@ func (i impl) GetResume(ctx context.Context, accessToken, resumeUrl string) (hha
 		return hhapimodels.ResumeResponse{}, err
 	}
 	return resp, nil
+}
+
+func (i impl) GetVacancy(ctx context.Context, accessToken, vacancyID string) (*hhapimodels.VacancyInfo, error) {
+	uri := i.host + fmt.Sprintf(vGetPath, vacancyID)
+	logger := log.
+		WithField("external_request", uri)
+
+	r, _ := http.NewRequestWithContext(ctx, "GET", uri, nil)
+	r.Header.Add("Content-Type", "application/json")
+	resp := hhapimodels.VacancyInfo{}
+
+	err := i.sendRequest(logger, r, &resp, accessToken)
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }
 
 func (i impl) getNegotiations(ctx context.Context, accessToken, vacancyID string) (*hhapimodels.NegotiationCollections, error) {
