@@ -143,3 +143,9 @@ func VacancyRequestConvert(rec dbmodels.VacancyRequest) VacancyRequestView {
 	result.ApprovalStages = approvalStages
 	return result
 }
+
+type ExtVacancyInfo struct {
+	Url    string                  `json:"url"`
+	Status models.VacancyPubStatus `json:"status"`
+	Error  string                  `json:"error"`
+}

@@ -75,13 +75,15 @@ type VacancyInfo struct {
 	Status            models.VacancyStatus `json:"status"`
 	Pinned            bool                 `json:"pinned"`
 	Favorite          bool                 `json:"favorite"`
+	HH                ExternalLink         `json:"hh"`
 }
 
 type VacancyView struct {
 	VacancyData
 	VacancyInfo
-	ID           string    `json:"id"`
-	CreationDate time.Time `json:"creation_date"`
+	External     ExternalData `json:"external"`
+	ID           string       `json:"id"`
+	CreationDate time.Time    `json:"creation_date"`
 }
 
 type Salary struct {
@@ -89,6 +91,15 @@ type Salary struct {
 	To       int `json:"to"`
 	ByResult int `json:"by_result"`
 	InHand   int `json:"in_hand"`
+}
+
+type ExternalData struct {
+	HeadHunter ExternalLink `json:"head_hunter"`
+}
+
+type ExternalLink struct {
+	ID  string `json:"id"`
+	Url string `json:"url"`
 }
 
 func VacancyConvert(rec dbmodels.VacancyExt) VacancyView {
@@ -161,5 +172,9 @@ func VacancyConvert(rec dbmodels.VacancyExt) VacancyView {
 		result.VacancyRequestID = *rec.VacancyRequestID
 	}
 
+	if rec.HhID != "" {
+		result.External.HeadHunter.ID = rec.HhID
+		result.External.HeadHunter.Url = rec.HhUri
+	}
 	return result
 }

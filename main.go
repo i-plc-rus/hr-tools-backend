@@ -11,6 +11,7 @@ import (
 	"hr-tools-backend/config"
 	apiv1 "hr-tools-backend/controllers/v1"
 	"hr-tools-backend/controllers/v1/dict"
+	"hr-tools-backend/controllers/v1/external"
 	"hr-tools-backend/fiberlog"
 	"hr-tools-backend/initializers"
 	"hr-tools-backend/middleware"
@@ -49,6 +50,7 @@ func main() {
 	apiv1.InitAuthApiRouters(apiV1)
 	apiv1.InitSpaceUserRouters(apiV1)
 	apiv1.InitGptApiRouters(apiV1)
+	apiv1.InitOAuthApiRouters(apiV1)
 
 	//dict
 	dicts := fiber.New()
@@ -66,6 +68,10 @@ func main() {
 	apiv1.InitVacancyRequestApiRouters(space)
 	apiv1.InitVacancyApiRouters(space)
 	apiv1.InitSpaceSettingRouters(space)
+
+	ext := fiber.New()
+	space.Mount("/ext", ext)
+	externalapiv1.InitHHApiRouters(ext)
 
 	//админка
 	adminPanel := fiber.New()

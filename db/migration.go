@@ -64,6 +64,10 @@ func AutoMigrateDB() error {
 	if err := DB.AutoMigrate(&dbmodels.SpaceSetting{}); err != nil {
 		return errors.Wrap(err, "ошибка создания структуры SpaceSetting")
 	}
+
+	if err := DB.AutoMigrate(&dbmodels.ExtData{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры ExtData")
+	}
 	log.Info("Миграция прошла успешно")
 	return nil
 }
