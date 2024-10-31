@@ -61,11 +61,11 @@ func (i *impl) getLogger(spaceID, vacancyID string) *log.Entry {
 func (i *impl) GetConnectUri(spaceID string) (uri string, err error) {
 	clientID, err := i.getValue(spaceID, models.AvitoClientIDSetting)
 	if err != nil {
-		return "", errors.New("ошибка получения настройки ClientID для Avito")
+		return "", errors.Wrap(err, "ошибка получения настройки ClientID для Avito")
 	}
 	_, err = i.getValue(spaceID, models.AvitoClientSecretSetting)
 	if err != nil {
-		return "", errors.New("ошибка получения настройки ClientSecret для Avito")
+		return "", errors.Wrap(err, "ошибка получения настройки ClientSecret для Avito")
 	}
 	return i.client.GetLoginUri(clientID, spaceID)
 }
@@ -323,12 +323,12 @@ func (i *impl) getToken(ctx context.Context, spaceID string) (string, error) {
 	if time.Now().After(tokenData.ExpiresAt) {
 		clientID, err := i.getValue(spaceID, models.AvitoClientIDSetting)
 		if err != nil {
-			return "", errors.New("ошибка получения настройки ClientID для Avito")
+			return "", errors.Wrap(err, "ошибка получения настройки ClientID для Avito")
 		}
 
 		clientSecret, err := i.getValue(spaceID, models.AvitoClientSecretSetting)
 		if err != nil {
-			return "", errors.New("ошибка получения настройки ClientSecret для Avito")
+			return "", errors.Wrap(err, "ошибка получения настройки ClientSecret для Avito")
 		}
 		req := avitoapimodels.RefreshToken{
 			RefreshToken: tokenData.RefreshToken,

@@ -61,18 +61,18 @@ func NewProvider(redirectUri string) {
 
 const (
 	host                      string = "https://api.hh.ru"
-	mePath                    string = "/me"
-	tokenPath                 string = "/token"
+	mePath                    string = "%s/me"
+	tokenPath                 string = "%s/token"
 	oAuthPattern              string = "https://hh.ru/oauth/authorize?response_type=code&client_id=%v&state=%v&redirect_uri=%v"
-	vPublishPath              string = "/vacancies"
-	vUpdatePath               string = "/vacancies/%v"
-	vGetPath                  string = "/vacancies/%v"
-	vDeletePath               string = "/employers/%v/vacancies/%v"
-	vArchivePath              string = "/employers/%v/vacancies/archived/%v"
-	negotiationCollectionPath string = "/negotiations?vacancy_id=%v"
+	vPublishPath              string = "%s/vacancies"
+	vUpdatePath               string = "%s/vacancies/%v"
+	vGetPath                  string = "%s/vacancies/%v"
+	vDeletePath               string = "%s/employers/%v/vacancies/%v"
+	vArchivePath              string = "%s/employers/%v/vacancies/archived/%v"
+	negotiationCollectionPath string = "%s/negotiations?vacancy_id=%v"
 	negotiationCollectionTpl  string = "%v&page=%v&per_page=%v"
-	negotiationReadPath       string = "/negotiations/read"
-	areasPath                 string = "/areas"
+	negotiationReadPath       string = "%s/negotiations/read"
+	areasPath                 string = "%s/areas"
 )
 
 func (i impl) GetLoginUri(clientID, spaceID string) (string, error) {
@@ -89,7 +89,7 @@ func (i impl) RequestToken(ctx context.Context, req hhapimodels.RequestToken) (*
 	if err != nil {
 		return nil, errors.Wrap(err, "ошибка формирования ссылки")
 	}
-	uri := i.host + tokenPath
+	uri := fmt.Sprintf(tokenPath, i.host)
 	data := url.Values{}
 	data.Set("client_id", req.ClientID)
 	data.Set("client_secret", req.ClientSecret)
@@ -113,7 +113,7 @@ func (i impl) RequestToken(ctx context.Context, req hhapimodels.RequestToken) (*
 }
 
 func (i impl) RefreshToken(ctx context.Context, req hhapimodels.RefreshToken) (*hhapimodels.ResponseToken, error) {
-	uri := i.host + tokenPath
+	uri := fmt.Sprintf(tokenPath, i.host)
 	data := url.Values{}
 	data.Add("refresh_token", req.RefreshToken)
 	data.Set("grant_type", "refresh_token")
@@ -134,7 +134,7 @@ func (i impl) RefreshToken(ctx context.Context, req hhapimodels.RefreshToken) (*
 }
 
 func (i impl) Me(ctx context.Context, accessToken string) (*hhapimodels.MeResponse, error) {
-	uri := i.host + mePath
+	uri := fmt.Sprintf(mePath, i.host)
 	logger := log.
 		WithField("external_request", uri)
 	r, _ := http.NewRequestWithContext(ctx, "GET", uri, nil)
@@ -145,7 +145,7 @@ func (i impl) Me(ctx context.Context, accessToken string) (*hhapimodels.MeRespon
 }
 
 func (i impl) VacancyPublish(ctx context.Context, accessToken string, request hhapimodels.VacancyPubRequest) (vacancyID string, err error) {
-	uri := i.host + vPublishPath
+	uri := fmt.Sprintf(vPublishPath, i.host)
 	logger := log.
 		WithField("external_request", uri)
 	body, err := json.Marshal(request)
@@ -168,7 +168,7 @@ func (i impl) VacancyPublish(ctx context.Context, accessToken string, request hh
 }
 
 func (i impl) VacancyUpdate(ctx context.Context, accessToken, vacancyID string, request hhapimodels.VacancyPubRequest) error {
-	uri := i.host + fmt.Sprintf(vUpdatePath, vacancyID)
+	uri := fmt.Sprintf(vUpdatePath, i.host, vacancyID)
 	logger := log.
 		WithField("vacancy_id", vacancyID).
 		WithField("external_request", uri)
@@ -187,7 +187,7 @@ func (i impl) VacancyUpdate(ctx context.Context, accessToken, vacancyID string, 
 }
 
 func (i impl) VacancyClose(ctx context.Context, accessToken, employerID, vacancyID string) error {
-	uri := i.host + fmt.Sprintf(vArchivePath, employerID, vacancyID)
+	uri := fmt.Sprintf(vArchivePath, i.host, employerID, vacancyID)
 	logger := log.
 		WithField("vacancy_id", vacancyID).
 		WithField("employer_id", employerID).
@@ -209,7 +209,7 @@ func (i impl) Negotiations(ctx context.Context, accessToken, vacancyID string, p
 }
 
 func (i impl) NegotiationMarkRead(ctx context.Context, accessToken, vacancyID, negotiationID string) error {
-	uri := i.host + negotiationReadPath
+	uri := fmt.Sprintf(negotiationReadPath, i.host)
 	logger := log.
 		WithField("vacancy_id", vacancyID).
 		WithField("negotiation_id", negotiationID).
@@ -250,7 +250,7 @@ func (i impl) GetResume(ctx context.Context, accessToken, resumeUrl string) (hha
 }
 
 func (i impl) GetVacancy(ctx context.Context, accessToken, vacancyID string) (*hhapimodels.VacancyInfo, error) {
-	uri := i.host + fmt.Sprintf(vGetPath, vacancyID)
+	uri := fmt.Sprintf(vGetPath, i.host, vacancyID)
 	logger := log.
 		WithField("external_request", uri)
 
@@ -266,7 +266,7 @@ func (i impl) GetVacancy(ctx context.Context, accessToken, vacancyID string) (*h
 }
 
 func (i impl) getNegotiations(ctx context.Context, accessToken, vacancyID string) (*hhapimodels.NegotiationCollections, error) {
-	uri := i.host + fmt.Sprintf(negotiationCollectionPath, vacancyID)
+	uri := fmt.Sprintf(negotiationCollectionPath, i.host, vacancyID)
 	logger := log.
 		WithField("external_request", uri)
 
@@ -298,7 +298,7 @@ func (i impl) getNegotiationCollection(ctx context.Context, accessToken, originU
 }
 
 func (i impl) GetAreas(ctx context.Context) ([]hhapimodels.Area, error) {
-	uri := i.host + areasPath
+	uri := fmt.Sprintf(areasPath, i.host)
 	logger := log.
 		WithField("external_request", uri)
 

@@ -65,11 +65,11 @@ func (i *impl) getLogger(spaceID, vacancyID string) *log.Entry {
 func (i *impl) GetConnectUri(spaceID string) (uri string, err error) {
 	clientID, err := i.getValue(spaceID, models.HhClientIDSetting)
 	if err != nil {
-		return "", errors.New("ошибка получения настройки ClientID для HH")
+		return "", errors.Wrap(err, "ошибка получения настройки ClientID для HH")
 	}
 	_, err = i.getValue(spaceID, models.HhClientSecretSetting)
 	if err != nil {
-		return "", errors.New("ошибка получения настройки ClientSecret для HH")
+		return "", errors.Wrap(err, "ошибка получения настройки ClientSecret для HH")
 	}
 	return i.client.GetLoginUri(clientID, spaceID)
 }

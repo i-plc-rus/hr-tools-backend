@@ -50,13 +50,13 @@ func NewProvider() {
 
 const (
 	host               string = "https://api.avito.ru"
-	tokenPath          string = "/token"
+	tokenPath          string = "%s/token"
 	oAuthPattern       string = "https://avito.ru/oauth?response_type=code&client_id=%v&scope=job:cv,job:applications,job:vacancy,job:write&state=%v"
-	vPublishPath       string = "/job/v2/vacancies"
-	vPublishStatusPath string = "/job/v2/vacancies/statuses"
-	vUpdatePath        string = "/job/v2/vacancies/%v"
-	vArchivePath       string = "/job/v1/vacancies/archived/%v"
-	vGetPath           string = "/job/v2/vacancies/%v"
+	vPublishPath       string = "%s/job/v2/vacancies"
+	vPublishStatusPath string = "%s/job/v2/vacancies/statuses"
+	vUpdatePath        string = "%s/job/v2/vacancies/%v"
+	vArchivePath       string = "%s/job/v1/vacancies/archived/%v"
+	vGetPath           string = "%s/job/v2/vacancies/%v"
 )
 
 func (i impl) GetLoginUri(clientID, spaceID string) (string, error) {
@@ -65,7 +65,7 @@ func (i impl) GetLoginUri(clientID, spaceID string) (string, error) {
 }
 
 func (i impl) RequestToken(ctx context.Context, req avitoapimodels.RequestToken) (*avitoapimodels.ResponseToken, error) {
-	uri := i.host + tokenPath
+	uri := fmt.Sprintf(tokenPath, i.host)
 	data := url.Values{}
 	data.Set("client_id", req.ClientID)
 	data.Set("client_secret", req.ClientSecret)
@@ -88,7 +88,7 @@ func (i impl) RequestToken(ctx context.Context, req avitoapimodels.RequestToken)
 }
 
 func (i impl) RefreshToken(ctx context.Context, req avitoapimodels.RefreshToken) (*avitoapimodels.ResponseToken, error) {
-	uri := i.host + tokenPath
+	uri := fmt.Sprintf(tokenPath, i.host)
 	data := url.Values{}
 	data.Set("client_id", req.ClientID)
 	data.Set("client_secret", req.ClientSecret)
@@ -111,7 +111,7 @@ func (i impl) RefreshToken(ctx context.Context, req avitoapimodels.RefreshToken)
 }
 
 func (i impl) VacancyPublish(ctx context.Context, accessToken string, request avitoapimodels.VacancyPubRequest) (publishID string, err error) {
-	uri := i.host + vPublishPath
+	uri := fmt.Sprintf(vPublishPath, i.host)
 	logger := log.
 		WithField("external_request", uri)
 	body, err := json.Marshal(request)
@@ -134,7 +134,7 @@ func (i impl) VacancyPublish(ctx context.Context, accessToken string, request av
 }
 
 func (i impl) VacancyStatus(ctx context.Context, accessToken string, request avitoapimodels.StatusRequest) (resp *avitoapimodels.StatusResponse, err error) {
-	uri := i.host + vPublishStatusPath
+	uri := fmt.Sprintf(vPublishStatusPath, i.host)
 	logger := log.
 		WithField("external_request", uri)
 	body, err := json.Marshal(request)
@@ -157,7 +157,7 @@ func (i impl) VacancyStatus(ctx context.Context, accessToken string, request avi
 }
 
 func (i impl) VacancyUpdate(ctx context.Context, accessToken, vacancyPublishID string, vacancyID int, request avitoapimodels.VacancyPubRequest) (publishID string, err error) {
-	uri := i.host + fmt.Sprintf(vUpdatePath, vacancyPublishID)
+	uri := fmt.Sprintf(vUpdatePath, i.host, vacancyPublishID)
 	logger := log.
 		WithField("avito_vacancy_id", vacancyID).
 		WithField("vacancy_publish_id", vacancyPublishID).
@@ -181,7 +181,7 @@ func (i impl) VacancyUpdate(ctx context.Context, accessToken, vacancyPublishID s
 }
 
 func (i impl) VacancyClose(ctx context.Context, accessToken string, vacancyID int) error {
-	uri := i.host + fmt.Sprintf(vArchivePath, vacancyID)
+	uri := fmt.Sprintf(vArchivePath, i.host, vacancyID)
 	logger := log.
 		WithField("avito_vacancy_id", vacancyID).
 		WithField("external_request", uri)
@@ -191,7 +191,7 @@ func (i impl) VacancyClose(ctx context.Context, accessToken string, vacancyID in
 }
 
 func (i impl) GetVacancy(ctx context.Context, accessToken string, vacancyID int) (resp *avitoapimodels.VacancyInfo, err error) {
-	uri := i.host + fmt.Sprintf(vGetPath, vacancyID)
+	uri := fmt.Sprintf(vGetPath, i.host, vacancyID)
 	logger := log.
 		WithField("avito_vacancy_id", vacancyID).
 		WithField("external_request", uri)
