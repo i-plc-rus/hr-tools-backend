@@ -23,6 +23,9 @@ type VacancyData struct {
 	ChiefFio         string                 `json:"chief_fio"`          // фио непосредственного руководителя
 	Requirements     string                 `json:"requirements"`       // требования/обязанности/условия
 	Salary           Salary                 `json:"salary"`             // ожидания по зп
+	Employment       models.Employment      `json:"employment"`         // Занятость
+	Experience       models.Experience      `json:"experience"`         // Опыт работы
+	Schedule         models.Schedule        `json:"schedule"`           // Режим работы
 }
 
 func (v VacancyData) Validate(isFromRequest bool) error {
@@ -124,6 +127,9 @@ func VacancyConvert(rec dbmodels.VacancyExt) VacancyView {
 				ByResult: rec.ByResult,
 				InHand:   rec.InHand,
 			},
+			Employment: rec.Employment,
+			Experience: rec.Experience,
+			Schedule:   rec.Schedule,
 		},
 		ID:           rec.ID,
 		CreationDate: rec.CreatedAt,

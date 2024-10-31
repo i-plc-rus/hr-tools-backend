@@ -15,6 +15,7 @@ import (
 	avitoclient "hr-tools-backend/lib/external-services/avito/client"
 	hhhandler "hr-tools-backend/lib/external-services/hh"
 	"hr-tools-backend/lib/external-services/hh/hhclient"
+	externalserviceworker "hr-tools-backend/lib/external-services/worker"
 	gpthandler "hr-tools-backend/lib/gpt"
 	spaceauthhandler "hr-tools-backend/lib/space/auth"
 	spacehandler "hr-tools-backend/lib/space/handler"
@@ -49,4 +50,5 @@ func InitAllServices(ctx context.Context) {
 	gpthandler.NewHandler()
 	hhhandler.NewHandler()
 	avitohandler.NewHandler()
+	externalserviceworker.StartWorker(ctx)
 }

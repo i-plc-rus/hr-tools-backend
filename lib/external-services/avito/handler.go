@@ -3,6 +3,7 @@ package avitohandler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
@@ -11,6 +12,7 @@ import (
 	extservicestore "hr-tools-backend/lib/external-services/store"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
+	"hr-tools-backend/lib/utils/helpers"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	"hr-tools-backend/models"
 	avitoapimodels "hr-tools-backend/models/api/avito"
@@ -144,7 +146,7 @@ func (i *impl) VacancyPublish(ctx context.Context, spaceID, vacancyID string) er
 		}
 	}
 
-	request, err := i.fillVacancyData(ctx, rec)
+	request, err := i.fillVacancyData(rec)
 	if err != nil {
 		return err
 	}
@@ -185,7 +187,7 @@ func (i *impl) VacancyUpdate(ctx context.Context, spaceID, vacancyID string) err
 		return err
 	}
 
-	request, err := i.fillVacancyData(ctx, rec)
+	request, err := i.fillVacancyData(rec)
 	if err != nil {
 		return err
 	}
@@ -264,9 +266,9 @@ func (i *impl) VacancyAttach(ctx context.Context, spaceID, vacancyID string, ext
 	logger := i.getLogger(spaceID, vacancyID)
 	err = i.vacancyStore.Update(spaceID, vacancyID, updMap)
 	if err != nil {
-		err = errors.Errorf("не удалось обновить данные опубликованной вакансии (%v)", data.ID)
-		logger.Error(err)
-		return err
+		errMsg := errors.Errorf("не удалось обновить данные опубликованной вакансии (%v)", data.ID)
+		logger.WithError(err).Error(errMsg)
+		return errMsg
 	}
 	return nil
 }
@@ -347,18 +349,35 @@ func (i *impl) getToken(ctx context.Context, spaceID string) (string, error) {
 	return tokenData.AccessToken, nil
 }
 
-func (i *impl) fillVacancyData(ctx context.Context, rec *dbmodels.Vacancy) (*avitoapimodels.VacancyPubRequest, error) {
+func (i *impl) fillVacancyData(rec *dbmodels.Vacancy) (*avitoapimodels.VacancyPubRequest, error) {
 	if rec.City == nil {
 		return nil, errors.New("не указан город публикации")
 	}
 
-	businessArea := 0 //todo добавить заполение из справочника
+	if rec.Department == nil {
+		return nil, errors.New("для публикации на Avito, необходимо указать подразделение")
+	}
+	if rec.Experience == "" {
+		return nil, errors.New("для публикации на Avito, необходимо указать опыт работы")
+	}
+	if rec.Schedule == "" {
+		return nil, errors.New("для публикации на Avito, необходимо указать режим работы")
+	}
+	if rec.Employment == "" {
+		return nil, errors.New("для публикации на Avito, необходимо указать занятость")
+	}
+	if len(rec.VacancyName) > 50 {
+		return nil, errors.New("для публикации на Avito, название вакансии не должно превышать 50 символов")
+	}
+	if len(rec.Requirements) < 200 {
+		return nil, errors.New("для публикации на Avito, необходимо указать описание не более 5000 символов")
+	}
 	request := avitoapimodels.VacancyPubRequest{
 		ApplyProcessing: avitoapimodels.ApplyProcessing{
 			ApplyType: avitoapimodels.ApplyTypeWithResume,
 		},
 		BillingType:  "package",
-		BusinessArea: businessArea,
+		BusinessArea: rec.Department.BusinessAreaID,
 		Description:  rec.Requirements,
 		Employment:   rec.Employment,
 		Experience:   rec.Experience,
@@ -399,6 +418,93 @@ func allowChange(rec *dbmodels.Vacancy, isEdit bool) error {
 
 	if isEdit && rec.AvitoPublishID == "" {
 		return errors.New("вакансия недоступна для редактирования")
+	}
+	return nil
+}
+
+func (i *impl) GetCheckList(ctx context.Context, spaceID string, status models.VacancyPubStatus) ([]dbmodels.Vacancy, error) {
+	return i.vacancyStore.ListAvitoByStatus(spaceID, status)
+}
+
+func (i *impl) CheckIsModerationDone(ctx context.Context, spaceID string, list []dbmodels.Vacancy) error {
+	accessToken, err := i.getToken(ctx, spaceID)
+	if err != nil {
+		return err
+	}
+	ids := make([]string, 0, len(list))
+	vacancyMap := map[string]dbmodels.Vacancy{}
+	for _, rec := range list {
+		ids = append(ids, rec.AvitoPublishID)
+		vacancyMap[rec.AvitoPublishID] = rec
+	}
+	req := avitoapimodels.StatusRequest{
+		IDs: nil,
+	}
+	logger := i.getLogger(spaceID, "")
+	statusResp, err := i.client.VacancyStatus(ctx, accessToken, req)
+	if err != nil {
+		return err
+	}
+	if statusResp == nil {
+		return nil
+	}
+	for _, status := range *statusResp {
+		if helpers.IsContextDone(ctx) {
+			return nil
+		}
+		rec, ok := vacancyMap[status.ID]
+		if !ok {
+			continue
+		}
+		newStatus := status.Vacancy.GetPubStatus()
+		if newStatus == rec.AvitoStatus {
+			continue
+		}
+		updMap := map[string]interface{}{
+			"avito_id":      status.Vacancy.ID,
+			"avito_uri":     status.Vacancy.Url,
+			"avito_reasons": fmt.Sprintf("%+v", status.Vacancy.Reasons),
+			"avito_status":  newStatus,
+		}
+		err = i.vacancyStore.Update(spaceID, rec.ID, updMap)
+		if err != nil {
+			logger.
+				WithError(err).
+				Error("ошибка обновления статуса публикации")
+		}
+	}
+	return nil
+}
+
+func (i *impl) CheckIsActivePublications(ctx context.Context, spaceID string, list []dbmodels.Vacancy) error {
+	logger := i.getLogger(spaceID, "")
+	accessToken, err := i.getToken(ctx, spaceID)
+	if err != nil {
+		return err
+	}
+	for _, rec := range list {
+		if helpers.IsContextDone(ctx) {
+			return nil
+		}
+		vacancyInfo, err := i.client.GetVacancy(ctx, accessToken, rec.AvitoID)
+		if err != nil {
+			i.getLogger(spaceID, rec.ID).
+				WithError(err).
+				WithField("avito_vacancy_id", rec.AvitoID).
+				Error("не удалось проверить статус публикации вакансии")
+			continue
+		}
+		if !vacancyInfo.IsActive {
+			updMap := map[string]interface{}{
+				"avito_status": models.VacancyPubStatusClosed,
+			}
+			err = i.vacancyStore.Update(spaceID, rec.ID, updMap)
+			if err != nil {
+				logger.
+					WithError(err).
+					Error("ошибка обновления статуса публикации")
+			}
+		}
 	}
 	return nil
 }

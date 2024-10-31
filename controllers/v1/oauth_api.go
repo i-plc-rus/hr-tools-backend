@@ -25,7 +25,7 @@ func InitOAuthApiRouters(app *fiber.App) {
 // @Tags Аутентификация OAuth
 // @Description Аутентификация HH
 // @Param   state     query     string  				true   "space ID"
-// @Param   code      query    string  				    true       "authorization_code"
+// @Param   code      query    string  				    false       "authorization_code"
 // @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
@@ -35,7 +35,7 @@ func (c *oAuthApiController) hhCallBack(ctx *fiber.Ctx) error {
 
 	spaceID := ctx.Query("state", "")
 	code := ctx.Query("code", "")
-	log.Infof("hhCallBack (code: %v) (state: %v)", code, spaceID)
+	log.Infof("hhCallBack (code: %v) (state: %v) (uri: %v)", code, spaceID, ctx.Request().URI().String())
 
 	if code != "" && spaceID != "" {
 		go hhclient.Instance.RequestToken(spaceID, code)
@@ -49,7 +49,7 @@ func (c *oAuthApiController) hhCallBack(ctx *fiber.Ctx) error {
 // @Tags Аутентификация OAuth
 // @Description Аутентификация Avito
 // @Param   state     query     string  				true   "space ID"
-// @Param   code      query     string  				true       "authorization_code"
+// @Param   code      query     string  				false  "authorization_code"
 // @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
@@ -58,7 +58,7 @@ func (c *oAuthApiController) hhCallBack(ctx *fiber.Ctx) error {
 func (c *oAuthApiController) avitoCallBack(ctx *fiber.Ctx) error {
 	spaceID := ctx.Query("state", "")
 	code := ctx.Query("code", "")
-	log.Infof("avitoCallBack (code: %v) (state: %v)", code, spaceID)
+	log.Infof("avitoCallBack (code: %v) (state: %v) (uri: %v)", code, spaceID, ctx.Request().URI().String())
 
 	if code != "" && spaceID != "" {
 		go hhclient.Instance.RequestToken(spaceID, code)

@@ -116,3 +116,15 @@ type VacancyInfo struct {
 	Url      string `json:"url"`
 	IsActive bool   `json:"is_active"`
 }
+
+type VacancyListResponse struct {
+	Meta      interface{} `json:"meta"`
+	Resources []Resources `json:"resources"`
+}
+
+type Resources struct {
+	ID     int    `json:"id"`
+	Status string `json:"status"`
+	Title  string `json:"title"`
+	Url    string `json:"url"`
+}

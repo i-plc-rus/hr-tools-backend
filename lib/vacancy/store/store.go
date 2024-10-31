@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"hr-tools-backend/models"
 	dbmodels "hr-tools-backend/models/db"
 	"strings"
 )
@@ -18,6 +19,8 @@ type Provider interface {
 	RemovePin(vacancyID, userID string) error
 	SetFavorite(vacancyID, userID string) error
 	RemoveFavorite(vacancyID, userID string) error
+	ListAvitoByStatus(spaceID string, status models.VacancyPubStatus) (list []dbmodels.Vacancy, err error)
+	ListHhByStatus(spaceID string, status models.VacancyPubStatus) (list []dbmodels.Vacancy, err error)
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -172,6 +175,38 @@ func (i impl) RemoveFavorite(vacancyID, userID string) error {
 		return errors.Wrap(err, "ошибка удаления из избранного")
 	}
 	return nil
+}
+
+func (i impl) ListAvitoByStatus(spaceID string, status models.VacancyPubStatus) (list []dbmodels.Vacancy, err error) {
+	list = []dbmodels.Vacancy{}
+	tx := i.db.
+		Model(dbmodels.Vacancy{}).
+		Where("space_id = ?", spaceID).
+		Where("avito_status = ?", status)
+	err = tx.Find(&list).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return list, nil
+}
+
+func (i impl) ListHhByStatus(spaceID string, status models.VacancyPubStatus) (list []dbmodels.Vacancy, err error) {
+	list = []dbmodels.Vacancy{}
+	tx := i.db.
+		Model(dbmodels.Vacancy{}).
+		Where("space_id = ?", spaceID).
+		Where("hh_status = ?", status)
+	err = tx.Find(&list).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return list, nil
 }
 
 func (i impl) addSort(tx *gorm.DB, sort dbmodels.VacancySort) {

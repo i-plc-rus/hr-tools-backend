@@ -6,6 +6,7 @@ type JobTitle struct {
 	BaseSpaceModel
 	DepartmentID string `gorm:"type:varchar(36);index"`
 	Name         string `gorm:"type:varchar(255)"`
+	HhRoleID     string `gorm:"type:varchar(255)"`
 }
 
 func (j JobTitle) Validate() error {

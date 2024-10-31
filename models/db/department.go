@@ -8,9 +8,10 @@ import (
 
 type Department struct {
 	BaseSpaceModel
-	CompanyID string `gorm:"type:varchar(36);index:idx_company"`
-	ParentID  string `gorm:"type:varchar(36);index:idx_company"`
-	Name      string `gorm:"type:varchar(255)"`
+	CompanyID      string `gorm:"type:varchar(36);index:idx_company"`
+	ParentID       string `gorm:"type:varchar(36);index:idx_company"`
+	Name           string `gorm:"type:varchar(255)"`
+	BusinessAreaID int
 }
 
 func (d *Department) AfterDelete(tx *gorm.DB) (err error) {

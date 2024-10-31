@@ -11,9 +11,8 @@ type Provider interface {
 	UpdateSpace(spaceID string, updMap map[string]interface{}) error
 	DeleteSpace(spaceID string) error
 	SpaceWithInnExist(inn string) (bool, error)
+	GetActiveIds() ([]string, error)
 }
-
-var Instance Provider
 
 func NewInstance(DB *gorm.DB) Provider {
 	return &impl{
@@ -72,4 +71,18 @@ func (i impl) CreateSpace(rec dbmodels.Space) (spaceID string, err error) {
 		return "", err
 	}
 	return rec.ID, nil
+}
+
+func (i impl) GetActiveIds() ([]string, error) {
+	list := []string{}
+	tx := i.db.
+		Model(dbmodels.Space{}).
+		Select("id").
+		Where("is_active = ?", true)
+	err := tx.Find(&list).Error
+
+	if err != nil {
+		return nil, err
+	}
+	return list, nil
 }

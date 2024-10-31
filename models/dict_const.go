@@ -124,7 +124,7 @@ const (
 	EmploymentTemporary  Employment = "temporary"  //Временная
 	EmploymentFull       Employment = "full"       //Полная
 	EmploymentInternship Employment = "internship" //Стажировка
-	EmploymentPartial    Employment = "partial"    //partial
+	EmploymentPartial    Employment = "partial"    //Частичная
 )
 
 type Experience string
@@ -140,9 +140,9 @@ const (
 type Schedule string
 
 const (
-	ScheduleFlyInFlyOut Schedule = "flyInFlyOut"
-	SchedulePartTime    Schedule = "partTime"
-	ScheduleFullDay     Schedule = "fullDay"
-	ScheduleFlexible    Schedule = "flexible"
-	ScheduleShift       Schedule = "shift" //Сменный
+	ScheduleFlyInFlyOut Schedule = "flyInFlyOut" // Вахта
+	SchedulePartTime    Schedule = "partTime"    // Неполный день
+	ScheduleFullDay     Schedule = "fullDay"     // Полный день
+	ScheduleFlexible    Schedule = "flexible"    // Гибкий
+	ScheduleShift       Schedule = "shift"       // Сменный
 )
