@@ -2,6 +2,7 @@ package hhapimodels
 
 import (
 	"github.com/pkg/errors"
+	"hr-tools-backend/models"
 	"strings"
 )
 
@@ -71,4 +72,21 @@ type Salary struct {
 
 type DictItem struct {
 	ID string `json:"id"`
+}
+
+type VacancyInfo struct {
+	ID       string `json:"id"`
+	Approved bool   `json:"approved"`
+	Archived bool   `json:"archived"`
+}
+
+func (v VacancyInfo) GetPubStatus() models.VacancyPubStatus {
+	if v.Archived {
+		return models.VacancyPubStatusClosed
+	}
+	if v.Approved {
+		return models.VacancyPubStatusPublished
+	}
+
+	return models.VacancyPubStatusModeration
 }

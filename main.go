@@ -72,6 +72,7 @@ func main() {
 	ext := fiber.New()
 	space.Mount("/ext", ext)
 	externalapiv1.InitHHApiRouters(ext)
+	externalapiv1.InitAvitoApiRouters(ext)
 
 	//админка
 	adminPanel := fiber.New()
