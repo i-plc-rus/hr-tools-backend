@@ -3,7 +3,6 @@ package spaceusershander
 import (
 	"errors"
 	"fmt"
-	"github.com/gofiber/fiber/v2"
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
@@ -16,7 +15,7 @@ type Provider interface {
 	CreateUser(request spaceapimodels.CreateUser) error
 	UpdateUser(userID string, request spaceapimodels.UpdateUser) error
 	DeleteUser(userID string) error
-	GetListUsers(ctx *fiber.Ctx, page, limit int) (usersList []spaceapimodels.SpaceUser, err error)
+	GetListUsers(spaceID string, page, limit int) (usersList []spaceapimodels.SpaceUser, err error)
 	GetByID(userID string) (user spaceapimodels.SpaceUser, err error)
 }
 
@@ -112,9 +111,7 @@ func (i impl) DeleteUser(userID string) error {
 	return nil
 }
 
-func (i impl) GetListUsers(ctx *fiber.Ctx, page, limit int) (usersList []spaceapimodels.SpaceUser, err error) {
-	//TODO get space id from ctx (from jwt)
-	spaceID := "ctx"
+func (i impl) GetListUsers(spaceID string, page, limit int) (usersList []spaceapimodels.SpaceUser, err error) {
 	list, err := i.spaceUserStore.GetList(spaceID, page, limit)
 	if err != nil {
 		log.WithField("space_id", spaceID).WithError(err).Error("ошибка получения списка пользователей space")

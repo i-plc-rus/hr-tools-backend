@@ -3255,7 +3255,7 @@ paths:
       - Пользователи space
   /api/v1/users/{id}:
     delete:
-      description: Создать нового пользователя
+      description: Удалить пользователя
       parameters:
       - description: Authorization token
         in: header
@@ -3286,7 +3286,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apimodels.Response'
-      summary: Создать нового пользователя
+      summary: Удалить пользователя
       tags:
       - Пользователи space
     get:
@@ -3350,6 +3350,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apimodels.Response'
+      summary: Обновить пользователя
       tags:
       - Пользователи space
   /api/v1/users/list:
