@@ -481,6 +481,18 @@ definitions:
         description: урл вакансии
         type: string
     type: object
+  vacancyapimodels.ExternalData:
+    properties:
+      head_hunter:
+        $ref: '#/definitions/vacancyapimodels.ExternalLink'
+    type: object
+  vacancyapimodels.ExternalLink:
+    properties:
+      id:
+        type: string
+      url:
+        type: string
+    type: object
   vacancyapimodels.Salary:
     properties:
       by_result:
@@ -771,6 +783,94 @@ definitions:
         description: срочность
       vacancy_name:
         description: название вакансии
+        type: string
+    type: object
+  vacancyapimodels.VacancyView:
+    properties:
+      chief_fio:
+        description: фио непосредственного руководителя
+        type: string
+      city:
+        type: string
+      city_id:
+        description: ид города
+        type: string
+      company_id:
+        description: ид компании
+        type: string
+      company_name:
+        type: string
+      company_struct_id:
+        description: ид структуры компании
+        type: string
+      company_struct_name:
+        type: string
+      creation_date:
+        type: string
+      department_id:
+        description: ид подразделения
+        type: string
+      department_name:
+        type: string
+      employment:
+        allOf:
+        - $ref: '#/definitions/models.Employment'
+        description: Занятость
+      experience:
+        allOf:
+        - $ref: '#/definitions/models.Experience'
+        description: Опыт работы
+      external:
+        $ref: '#/definitions/vacancyapimodels.ExternalData'
+      favorite:
+        type: boolean
+      hh:
+        $ref: '#/definitions/vacancyapimodels.ExternalLink'
+      id:
+        type: string
+      job_title_id:
+        description: ид штатной должности
+        type: string
+      job_title_name:
+        type: string
+      opened_positions:
+        description: кол-во открытых позиций
+        type: integer
+      pinned:
+        type: boolean
+      place_of_work:
+        description: адрес места работы
+        type: string
+      request_type:
+        allOf:
+        - $ref: '#/definitions/models.VRType'
+        description: тип вакансии
+      requirements:
+        description: требования/обязанности/условия
+        type: string
+      salary:
+        allOf:
+        - $ref: '#/definitions/vacancyapimodels.Salary'
+        description: ожидания по зп
+      schedule:
+        allOf:
+        - $ref: '#/definitions/models.Schedule'
+        description: Режим работы
+      selection_type:
+        allOf:
+        - $ref: '#/definitions/models.VRSelectionType'
+        description: вид подбора
+      status:
+        $ref: '#/definitions/models.VacancyStatus'
+      urgency:
+        allOf:
+        - $ref: '#/definitions/models.VRUrgency'
+        description: срочность
+      vacancy_name:
+        description: название вакансии
+        type: string
+      vacancy_request_id:
+        description: ид заявки на вакансию
         type: string
     type: object
 info:
@@ -2669,7 +2769,7 @@ paths:
             - $ref: '#/definitions/apimodels.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/vacancyapimodels.VacancyRequestView'
+                  $ref: '#/definitions/vacancyapimodels.VacancyView'
               type: object
         "400":
           description: Bad Request
@@ -2817,7 +2917,7 @@ paths:
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/vacancyapimodels.VacancyRequestView'
+                    $ref: '#/definitions/vacancyapimodels.VacancyView'
                   type: array
               type: object
         "400":

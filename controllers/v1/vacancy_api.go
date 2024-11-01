@@ -96,7 +96,7 @@ func (c *vacancyApiController) update(ctx *fiber.Ctx) error {
 // @Description Получение по ИД
 // @Param   Authorization		header		string	true	"Authorization token"
 // @Param   id          		path    string  				    	true         "rec ID"
-// @Success 200 {object} apimodels.Response{data=vacancyapimodels.VacancyRequestView}
+// @Success 200 {object} apimodels.Response{data=vacancyapimodels.VacancyView}
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
@@ -144,7 +144,7 @@ func (c *vacancyApiController) delete(ctx *fiber.Ctx) error {
 // @Description Список
 // @Param	body body	 dbmodels.VacancyFilter	true	"request filter body"
 // @Param   Authorization		header		string	true	"Authorization token"
-// @Success 200 {object} apimodels.Response{data=[]vacancyapimodels.VacancyRequestView}
+// @Success 200 {object} apimodels.Response{data=[]vacancyapimodels.VacancyView}
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response

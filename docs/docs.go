@@ -2928,7 +2928,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/vacancyapimodels.VacancyRequestView"
+                                                "$ref": "#/definitions/vacancyapimodels.VacancyView"
                                             }
                                         }
                                     }
@@ -2989,7 +2989,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/vacancyapimodels.VacancyRequestView"
+                                            "$ref": "#/definitions/vacancyapimodels.VacancyView"
                                         }
                                     }
                                 }
@@ -4764,6 +4764,25 @@ const docTemplate = `{
                 }
             }
         },
+        "vacancyapimodels.ExternalData": {
+            "type": "object",
+            "properties": {
+                "head_hunter": {
+                    "$ref": "#/definitions/vacancyapimodels.ExternalLink"
+                }
+            }
+        },
+        "vacancyapimodels.ExternalLink": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
         "vacancyapimodels.Salary": {
             "type": "object",
             "properties": {
@@ -5203,6 +5222,147 @@ const docTemplate = `{
                 },
                 "vacancy_name": {
                     "description": "название вакансии",
+                    "type": "string"
+                }
+            }
+        },
+        "vacancyapimodels.VacancyView": {
+            "type": "object",
+            "properties": {
+                "chief_fio": {
+                    "description": "фио непосредственного руководителя",
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "city_id": {
+                    "description": "ид города",
+                    "type": "string"
+                },
+                "company_id": {
+                    "description": "ид компании",
+                    "type": "string"
+                },
+                "company_name": {
+                    "type": "string"
+                },
+                "company_struct_id": {
+                    "description": "ид структуры компании",
+                    "type": "string"
+                },
+                "company_struct_name": {
+                    "type": "string"
+                },
+                "creation_date": {
+                    "type": "string"
+                },
+                "department_id": {
+                    "description": "ид подразделения",
+                    "type": "string"
+                },
+                "department_name": {
+                    "type": "string"
+                },
+                "employment": {
+                    "description": "Занятость",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Employment"
+                        }
+                    ]
+                },
+                "experience": {
+                    "description": "Опыт работы",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Experience"
+                        }
+                    ]
+                },
+                "external": {
+                    "$ref": "#/definitions/vacancyapimodels.ExternalData"
+                },
+                "favorite": {
+                    "type": "boolean"
+                },
+                "hh": {
+                    "$ref": "#/definitions/vacancyapimodels.ExternalLink"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "job_title_id": {
+                    "description": "ид штатной должности",
+                    "type": "string"
+                },
+                "job_title_name": {
+                    "type": "string"
+                },
+                "opened_positions": {
+                    "description": "кол-во открытых позиций",
+                    "type": "integer"
+                },
+                "pinned": {
+                    "type": "boolean"
+                },
+                "place_of_work": {
+                    "description": "адрес места работы",
+                    "type": "string"
+                },
+                "request_type": {
+                    "description": "тип вакансии",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.VRType"
+                        }
+                    ]
+                },
+                "requirements": {
+                    "description": "требования/обязанности/условия",
+                    "type": "string"
+                },
+                "salary": {
+                    "description": "ожидания по зп",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/vacancyapimodels.Salary"
+                        }
+                    ]
+                },
+                "schedule": {
+                    "description": "Режим работы",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Schedule"
+                        }
+                    ]
+                },
+                "selection_type": {
+                    "description": "вид подбора",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.VRSelectionType"
+                        }
+                    ]
+                },
+                "status": {
+                    "$ref": "#/definitions/models.VacancyStatus"
+                },
+                "urgency": {
+                    "description": "срочность",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.VRUrgency"
+                        }
+                    ]
+                },
+                "vacancy_name": {
+                    "description": "название вакансии",
+                    "type": "string"
+                },
+                "vacancy_request_id": {
+                    "description": "ид заявки на вакансию",
                     "type": "string"
                 }
             }
