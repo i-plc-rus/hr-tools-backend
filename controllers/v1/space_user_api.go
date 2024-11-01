@@ -18,7 +18,7 @@ func InitSpaceUserRouters(app *fiber.App) {
 	app.Route("users", func(usersRootRoute fiber.Router) {
 		usersRootRoute.Use(middleware.AuthorizationRequired())
 		usersRootRoute.Post("", controller.CreateUser)
-		usersRootRoute.Get("list", controller.ListUsers)
+		usersRootRoute.Post("list", controller.ListUsers)
 		usersRootRoute.Route(":id", func(usersIDRoute fiber.Router) {
 			usersIDRoute.Delete("", controller.DeleteUser)
 			usersIDRoute.Put("", controller.UpdateUser)
@@ -54,9 +54,9 @@ func (c *spaceUserController) CreateUser(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusCreated).JSON(apimodels.NewResponse(nil))
 }
 
-// @Summary Создать нового пользователя
+// @Summary Удалить пользователя
 // @Tags Пользователи space
-// @Description Создать нового пользователя
+// @Description Удалить пользователя
 // @Param   Authorization		header		string	true	"Authorization token"
 // @Param 	id 				path 		string  true 	"space user ID"
 // @Param	body				body		spaceapimodels.CreateUser	true	"request body"
@@ -77,7 +77,7 @@ func (c *spaceUserController) DeleteUser(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
 
-// UpdateUser @Summary Обновить пользователя
+// @Summary Обновить пользователя
 // @Tags Пользователи space
 // @Description Обновить пользователя
 // @Param   Authorization		header		string	true	"Authorization token"
@@ -127,7 +127,8 @@ func (c *spaceUserController) ListUsers(ctx *fiber.Ctx) error {
 	if err := payload.Validate(); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
-	users, err := spaceusershander.Instance.GetListUsers(ctx, payload.Page, payload.Limit)
+	spaceID := middleware.GetUserSpace(ctx)
+	users, err := spaceusershander.Instance.GetListUsers(spaceID, payload.Page, payload.Limit)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
