@@ -6,10 +6,11 @@ import (
 	"time"
 )
 
-func GetToken(subject, name string, isAdmin bool) (tokenString string, err error) {
+func GetToken(userID, name, spaceID string, isAdmin bool) (tokenString string, err error) {
 	claims := jwt.MapClaims{
 		"name":  name,
-		"sub":   subject,
+		"sub":   userID,
+		"space": spaceID,
 		"admin": isAdmin,
 		"exp":   time.Now().Add(time.Second * time.Duration(config.Conf.Auth.JWTExpireInSec)).Unix(),
 		"iat":   time.Now().Unix(),
@@ -18,10 +19,10 @@ func GetToken(subject, name string, isAdmin bool) (tokenString string, err error
 	return token.SignedString([]byte(config.Conf.Auth.JWTSecret))
 }
 
-func GetRefreshToken(subject, name string) (tokenString string, err error) {
+func GetRefreshToken(userID, name string) (tokenString string, err error) {
 	claims := jwt.MapClaims{
 		"name": name,
-		"sub":  subject,
+		"sub":  userID,
 		"exp":  time.Now().Add(time.Second * time.Duration(config.Conf.Auth.JWTRefreshExpireInSec)).Unix(),
 		"iat":  time.Now().Unix(),
 	}
