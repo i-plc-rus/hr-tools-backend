@@ -59,12 +59,12 @@ func (i impl) RefreshToken(ctx *fiber.Ctx, refreshToken string) (response authap
 				Error("ошибка поиска пользователя")
 			return authapimodels.JWTResponse{}, err
 		}
-		tokenString, err := authutils.GetToken(userID, fmt.Sprintf("%s %s", user.FirstName, user.LastName), user.SpaceID, user.IsAdmin)
+		tokenString, err := authutils.GetToken(userID, user.GetFullName(), user.SpaceID, user.IsAdmin)
 		if err != nil {
 			log.WithError(err).Error("ошибка генерации JWT")
 			return authapimodels.JWTResponse{}, err
 		}
-		refreshTokenString, err := authutils.GetRefreshToken(userID, fmt.Sprintf("%s %s", user.FirstName, user.LastName))
+		refreshTokenString, err := authutils.GetRefreshToken(userID, user.GetFullName())
 		if err != nil {
 			log.WithError(err).Error("ошибка генерации refresh JWT")
 			return authapimodels.JWTResponse{}, err
@@ -109,12 +109,12 @@ func (i impl) Login(email, password string) (response authapimodels.JWTResponse,
 		logger.Debug("пользователь не прошел проверку пароля")
 		return authapimodels.JWTResponse{}, errors.New("пользователь не прошел проверку пароля")
 	}
-	tokenString, err := authutils.GetToken(user.ID, fmt.Sprintf("%s %s", user.FirstName, user.LastName), user.SpaceID, user.IsAdmin)
+	tokenString, err := authutils.GetToken(user.ID, user.GetFullName(), user.SpaceID, user.IsAdmin)
 	if err != nil {
 		logger.WithError(err).Error("ошибка генерации JWT")
 		return authapimodels.JWTResponse{}, err
 	}
-	refresTokenString, err := authutils.GetRefreshToken(user.ID, fmt.Sprintf("%s %s", user.FirstName, user.LastName))
+	refresTokenString, err := authutils.GetRefreshToken(user.ID, user.GetFullName())
 	if err != nil {
 		logger.WithError(err).Error("ошибка генерации refresh JWT")
 		return authapimodels.JWTResponse{}, err

@@ -1,6 +1,7 @@
 package dbmodels
 
 import (
+	"fmt"
 	spaceapimodels "hr-tools-backend/models/api/space"
 	"time"
 )
@@ -31,4 +32,8 @@ func (r SpaceUser) ToModel() spaceapimodels.SpaceUser {
 			SpaceID:     r.SpaceID,
 		},
 	}
+}
+
+func (r SpaceUser) GetFullName() string {
+	return fmt.Sprintf("%s %s", r.FirstName, r.LastName)
 }
