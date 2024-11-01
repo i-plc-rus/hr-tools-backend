@@ -12,6 +12,7 @@ import (
 	extservicestore "hr-tools-backend/lib/external-services/store"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
+	"hr-tools-backend/lib/utils/helpers"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	"hr-tools-backend/models"
 	hhapimodels "hr-tools-backend/models/api/hh"
@@ -243,18 +244,36 @@ func (i *impl) VacancyAttach(ctx context.Context, spaceID, vacancyID, hhID strin
 	if models.VacancyStatusOpened != rec.Status {
 		return errors.Errorf("неподходящей статус вакансии: %v", rec.Status)
 	}
-	vacancyUrl := fmt.Sprintf(VacancyUriTpl, hhID)
+	accessToken, err := i.getToken(ctx, spaceID)
+	if err != nil {
+		return err
+	}
+
+	self, err := i.client.Me(ctx, accessToken)
+	if err != nil {
+		return err
+	}
+	info, err := i.client.GetVacancy(ctx, accessToken, hhID)
+	if err != nil {
+		return err
+	}
+	if info == nil {
+		return errors.New("вакансия не найдена на сайте НН")
+	}
+	if info.Employer.ID != self.Employer.ID {
+		return errors.New("вакансия принадлежит другой компании")
+	}
 	updMap := map[string]interface{}{
 		"hh_id":     hhID,
-		"hh_uri":    vacancyUrl,
+		"hh_uri":    info.AlternateUrl,
 		"hh_status": models.VacancyPubStatusPublished,
 	}
 	logger := i.getLogger(spaceID, vacancyID)
 	err = i.vacancyStore.Update(spaceID, vacancyID, updMap)
 	if err != nil {
-		err = errors.Errorf("не удалось сохранить идентификатор опубликованной вакансии (%v)", hhID)
-		logger.Error(err)
-		return err
+		errMsg := errors.Errorf("не удалось обновить данные опубликованной вакансии (%v)", hhID)
+		logger.WithError(err).Error(errMsg)
+		return errMsg
 	}
 	return nil
 }
@@ -370,16 +389,17 @@ func (i *impl) fillVacancyData(ctx context.Context, rec *dbmodels.Vacancy) (*hha
 		return nil, err
 	}
 
+	if rec.JobTitle == nil {
+		return nil, errors.New("для публикации на HeadHunter, необходимо указать должность")
+	}
+	if len(rec.Requirements) < 200 {
+		return nil, errors.New("для публикации на HeadHunter, необходимо указать описание не менее 200 символов")
+	}
 	request := hhapimodels.VacancyPubRequest{
-		Description: rec.Requirements,
-		Name:        rec.VacancyName,
-		Area:        area,
-		//Employment:        hhapimodels.DictItem{},
-		//Schedule:          hhapimodels.DictItem{},
-		//Experience:        hhapimodels.DictItem{},
-		//Salary: 			 hhapimodels.Salary{},
-		//Contacts:          hhapimodels.Contacts{},
-		ProfessionalRoles: nil, //!!todo
+		Description:       rec.Requirements,
+		Name:              rec.VacancyName,
+		Area:              area,
+		ProfessionalRoles: []hhapimodels.DictItem{{ID: rec.JobTitle.HhRoleID}},
 		BillingType: hhapimodels.DictItem{
 			ID: "free",
 		},
@@ -401,5 +421,57 @@ func (i *impl) fillVacancyData(ctx context.Context, rec *dbmodels.Vacancy) (*hha
 		}
 		request.Salary = &salary
 	}
+	if rec.Schedule != "" {
+		request.Schedule = &hhapimodels.DictItem{ID: string(rec.Schedule)}
+	}
 	return &request, nil
+}
+
+func (i *impl) GetCheckList(ctx context.Context, spaceID string, status models.VacancyPubStatus) ([]dbmodels.Vacancy, error) {
+	return i.vacancyStore.ListHhByStatus(spaceID, status)
+}
+
+func (i *impl) CheckIsModerationDone(ctx context.Context, spaceID string, list []dbmodels.Vacancy) error {
+	return i.checkPublications(ctx, spaceID, list)
+}
+
+func (i *impl) CheckIsActivePublications(ctx context.Context, spaceID string, list []dbmodels.Vacancy) error {
+	return i.checkPublications(ctx, spaceID, list)
+}
+
+func (i *impl) checkPublications(ctx context.Context, spaceID string, list []dbmodels.Vacancy) error {
+	logger := i.getLogger(spaceID, "")
+	accessToken, err := i.getToken(ctx, spaceID)
+	if err != nil {
+		return err
+	}
+	for _, rec := range list {
+		if helpers.IsContextDone(ctx) {
+			return nil
+		}
+		info, err := i.client.GetVacancy(ctx, accessToken, rec.HhID)
+		if err != nil {
+			logger.
+				WithError(err).
+				Error("не удалось проверить статус публикации")
+			continue
+		}
+		if info == nil {
+			continue
+		}
+		newStatus := info.GetPubStatus()
+		if newStatus == rec.AvitoStatus {
+			continue
+		}
+		updMap := map[string]interface{}{
+			"hh_status": newStatus,
+		}
+		err = i.vacancyStore.Update(spaceID, rec.ID, updMap)
+		if err != nil {
+			logger.
+				WithError(err).
+				Error("ошибка обновления статуса публикации")
+		}
+	}
+	return nil
 }

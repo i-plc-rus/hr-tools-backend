@@ -109,8 +109,11 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyData) 
 			ByResult: data.Salary.ByResult,
 			InHand:   data.Salary.InHand,
 		},
-		AuthorID: userID,
-		Status:   models.VacancyStatusOpened,
+		AuthorID:   userID,
+		Status:     models.VacancyStatusOpened,
+		Employment: data.Employment,
+		Experience: data.Experience,
+		Schedule:   data.Schedule,
 	}
 	if data.VacancyRequestID != "" {
 		rec.VacancyRequestID = &data.VacancyRequestID
@@ -191,6 +194,9 @@ func (i impl) Update(spaceID, id string, data vacancyapimodels.VacancyData) erro
 		"salary_to":       data.Salary.To,
 		"salary_result":   data.Salary.ByResult,
 		"salary_in_hand":  data.Salary.InHand,
+		"Employment":      data.Employment,
+		"Experience":      data.Experience,
+		"Schedule":        data.Schedule,
 	}
 	err = i.store.Update(spaceID, id, updMap)
 	if err != nil {

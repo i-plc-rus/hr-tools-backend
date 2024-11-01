@@ -1842,8 +1842,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "authorization_code",
                         "name": "code",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1890,8 +1889,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "authorization_code",
                         "name": "code",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -4403,6 +4401,75 @@ const docTemplate = `{
                 "AStatusAwaiting"
             ]
         },
+        "models.Employment": {
+            "type": "string",
+            "enum": [
+                "temporary",
+                "full",
+                "internship",
+                "partial"
+            ],
+            "x-enum-comments": {
+                "EmploymentFull": "Полная",
+                "EmploymentInternship": "Стажировка",
+                "EmploymentPartial": "Частичная",
+                "EmploymentTemporary": "Временная"
+            },
+            "x-enum-varnames": [
+                "EmploymentTemporary",
+                "EmploymentFull",
+                "EmploymentInternship",
+                "EmploymentPartial"
+            ]
+        },
+        "models.Experience": {
+            "type": "string",
+            "enum": [
+                "noMatter",
+                "moreThan1",
+                "moreThan3",
+                "moreThan5",
+                "moreThan10"
+            ],
+            "x-enum-comments": {
+                "ExperienceMoreThan1": "Более 1 года",
+                "ExperienceMoreThan10": "Более 10 лет",
+                "ExperienceMoreThan3": "Более 3 лет",
+                "ExperienceMoreThan5": "Более 5 лет",
+                "ExperienceNoMatter": "Без опыта"
+            },
+            "x-enum-varnames": [
+                "ExperienceNoMatter",
+                "ExperienceMoreThan1",
+                "ExperienceMoreThan3",
+                "ExperienceMoreThan5",
+                "ExperienceMoreThan10"
+            ]
+        },
+        "models.Schedule": {
+            "type": "string",
+            "enum": [
+                "flyInFlyOut",
+                "partTime",
+                "fullDay",
+                "flexible",
+                "shift"
+            ],
+            "x-enum-comments": {
+                "ScheduleFlexible": "Гибкий",
+                "ScheduleFlyInFlyOut": "Вахта",
+                "ScheduleFullDay": "Полный день",
+                "SchedulePartTime": "Неполный день",
+                "ScheduleShift": "Сменный"
+            },
+            "x-enum-varnames": [
+                "ScheduleFlyInFlyOut",
+                "SchedulePartTime",
+                "ScheduleFullDay",
+                "ScheduleFlexible",
+                "ScheduleShift"
+            ]
+        },
         "models.UserRole": {
             "type": "string",
             "enum": [
@@ -4737,6 +4804,22 @@ const docTemplate = `{
                     "description": "ид подразделения",
                     "type": "string"
                 },
+                "employment": {
+                    "description": "Занятость",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Employment"
+                        }
+                    ]
+                },
+                "experience": {
+                    "description": "Опыт работы",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Experience"
+                        }
+                    ]
+                },
                 "job_title_id": {
                     "description": "ид штатной должности",
                     "type": "string"
@@ -4766,6 +4849,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/vacancyapimodels.Salary"
+                        }
+                    ]
+                },
+                "schedule": {
+                    "description": "Режим работы",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Schedule"
                         }
                     ]
                 },

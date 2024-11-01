@@ -57,6 +57,7 @@ const (
 	vUpdatePath        string = "%s/job/v2/vacancies/%v"
 	vArchivePath       string = "%s/job/v1/vacancies/archived/%v"
 	vGetPath           string = "%s/job/v2/vacancies/%v"
+	vGetListPath       string = "%s/core/v1/items?category=111&status=active&page=%v&per_page=50"
 )
 
 func (i impl) GetLoginUri(clientID, spaceID string) (string, error) {
@@ -225,26 +226,12 @@ func (i impl) sendRequest(logger *log.Entry, r *http.Request, resp interface{}, 
 		return nil
 	}
 
-	errorResp := avitoapimodels.ErrorData{}
+	responseError := ""
 	if response != nil {
 		responseBody, _ := io.ReadAll(response.Body)
 		logger = logger.WithField("response_body", string(responseBody))
-		err = json.Unmarshal(responseBody, &errorResp)
-		if err != nil {
-			logger.WithError(err).Error("ошибка сериализации ответа")
-		}
-
+		responseError = string(responseBody)
 	}
 	logger.Error("ошибка отправки запроса в Avito")
-	switch response.StatusCode {
-	case 400:
-		return errors.Errorf("Некорректный запрос. Ошибка: %+v", errorResp.Error.Err400)
-	case 401:
-		return errors.Errorf("Некорректный запрос. Ошибка: %+v", errorResp.Error.Err401)
-	case 402 - 404:
-		return errors.Errorf("Некорректный запрос. Ошибка: %+v", errorResp.Error.Err402X)
-	case 500 - 503:
-		return errors.Errorf("Некорректный запрос. Ошибка: %+v", errorResp.Error.Err5XX)
-	}
-	return errors.Errorf("Некорректный запрос. Ошибка: %+v", errorResp)
+	return errors.Errorf("Некорректный запрос. Ошибка: %v", responseError)
 }

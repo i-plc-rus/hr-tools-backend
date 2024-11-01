@@ -75,9 +75,11 @@ type DictItem struct {
 }
 
 type VacancyInfo struct {
-	ID       string `json:"id"`
-	Approved bool   `json:"approved"`
-	Archived bool   `json:"archived"`
+	ID           string     `json:"id"`
+	Approved     bool       `json:"approved"`
+	Archived     bool       `json:"archived"`
+	AlternateUrl string     `json:"alternate_url"`
+	Employer     MeEmployer `json:"employer"`
 }
 
 func (v VacancyInfo) GetPubStatus() models.VacancyPubStatus {

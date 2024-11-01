@@ -220,6 +220,63 @@ definitions:
     - AStatusApproved
     - AStatusRejected
     - AStatusAwaiting
+  models.Employment:
+    enum:
+    - temporary
+    - full
+    - internship
+    - partial
+    type: string
+    x-enum-comments:
+      EmploymentFull: Полная
+      EmploymentInternship: Стажировка
+      EmploymentPartial: Частичная
+      EmploymentTemporary: Временная
+    x-enum-varnames:
+    - EmploymentTemporary
+    - EmploymentFull
+    - EmploymentInternship
+    - EmploymentPartial
+  models.Experience:
+    enum:
+    - noMatter
+    - moreThan1
+    - moreThan3
+    - moreThan5
+    - moreThan10
+    type: string
+    x-enum-comments:
+      ExperienceMoreThan1: Более 1 года
+      ExperienceMoreThan3: Более 3 лет
+      ExperienceMoreThan5: Более 5 лет
+      ExperienceMoreThan10: Более 10 лет
+      ExperienceNoMatter: Без опыта
+    x-enum-varnames:
+    - ExperienceNoMatter
+    - ExperienceMoreThan1
+    - ExperienceMoreThan3
+    - ExperienceMoreThan5
+    - ExperienceMoreThan10
+  models.Schedule:
+    enum:
+    - flyInFlyOut
+    - partTime
+    - fullDay
+    - flexible
+    - shift
+    type: string
+    x-enum-comments:
+      ScheduleFlexible: Гибкий
+      ScheduleFlyInFlyOut: Вахта
+      ScheduleFullDay: Полный день
+      SchedulePartTime: Неполный день
+      ScheduleShift: Сменный
+    x-enum-varnames:
+    - ScheduleFlyInFlyOut
+    - SchedulePartTime
+    - ScheduleFullDay
+    - ScheduleFlexible
+    - ScheduleShift
   models.UserRole:
     enum:
     - SUPER_ADMIN
@@ -452,6 +509,14 @@ definitions:
       department_id:
         description: ид подразделения
         type: string
+      employment:
+        allOf:
+        - $ref: '#/definitions/models.Employment'
+        description: Занятость
+      experience:
+        allOf:
+        - $ref: '#/definitions/models.Experience'
+        description: Опыт работы
       job_title_id:
         description: ид штатной должности
         type: string
@@ -472,6 +537,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/vacancyapimodels.Salary'
         description: ожидания по зп
+      schedule:
+        allOf:
+        - $ref: '#/definitions/models.Schedule'
+        description: Режим работы
       selection_type:
         allOf:
         - $ref: '#/definitions/models.VRSelectionType'
@@ -1865,7 +1934,6 @@ paths:
       - description: authorization_code
         in: query
         name: code
-        required: true
         type: string
       responses:
         "200":
@@ -1897,7 +1965,6 @@ paths:
       - description: authorization_code
         in: query
         name: code
-        required: true
         type: string
       responses:
         "200":
