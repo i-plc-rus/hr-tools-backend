@@ -13,7 +13,6 @@ import (
 	authutils "hr-tools-backend/lib/utils/auth-utils"
 	authapimodels "hr-tools-backend/models/api/auth"
 	spaceapimodels "hr-tools-backend/models/api/space"
-	"time"
 )
 
 type Provider interface {
@@ -60,12 +59,12 @@ func (i impl) RefreshToken(ctx *fiber.Ctx, refreshToken string) (response authap
 				Error("ошибка поиска пользователя")
 			return authapimodels.JWTResponse{}, err
 		}
-		tokenString, err := authutils.GetToken(userID, fmt.Sprintf("%s %s", user.FirstName, user.LastName), user.IsAdmin)
+		tokenString, err := authutils.GetToken(userID, user.GetFullName(), user.SpaceID, user.IsAdmin)
 		if err != nil {
 			log.WithError(err).Error("ошибка генерации JWT")
 			return authapimodels.JWTResponse{}, err
 		}
-		refreshTokenString, err := authutils.GetRefreshToken(userID, fmt.Sprintf("%s %s", user.FirstName, user.LastName))
+		refreshTokenString, err := authutils.GetRefreshToken(userID, user.GetFullName())
 		if err != nil {
 			log.WithError(err).Error("ошибка генерации refresh JWT")
 			return authapimodels.JWTResponse{}, err
@@ -110,21 +109,19 @@ func (i impl) Login(email, password string) (response authapimodels.JWTResponse,
 		logger.Debug("пользователь не прошел проверку пароля")
 		return authapimodels.JWTResponse{}, errors.New("пользователь не прошел проверку пароля")
 	}
-	claims := jwt.MapClaims{
-		"name":  fmt.Sprintf("%s %s", user.FirstName, user.LastName),
-		"sub":   user.ID,
-		"admin": user.IsAdmin,
-		"space": user.SpaceID,
-		"exp":   time.Now().Add(time.Second * time.Duration(config.Conf.Auth.JWTExpireInSec)).Unix(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(config.Conf.Auth.JWTSecret))
+	tokenString, err := authutils.GetToken(user.ID, user.GetFullName(), user.SpaceID, user.IsAdmin)
 	if err != nil {
 		logger.WithError(err).Error("ошибка генерации JWT")
 		return authapimodels.JWTResponse{}, err
 	}
+	refresTokenString, err := authutils.GetRefreshToken(user.ID, user.GetFullName())
+	if err != nil {
+		logger.WithError(err).Error("ошибка генерации refresh JWT")
+		return authapimodels.JWTResponse{}, err
+	}
 	return authapimodels.JWTResponse{
-		Token: tokenString,
+		Token:        tokenString,
+		RefreshToken: refresTokenString,
 	}, nil
 }
 
