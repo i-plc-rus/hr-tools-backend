@@ -2,8 +2,6 @@ services:
   db:
     image: postgres:13.15
     restart: unless-stopped
-    env_file:
-      - env
     #ports:
     #  - 127.0.0.1:5433:5432
     #ports:
@@ -19,9 +17,7 @@ services:
       dockerfile: Dockerfile
     container_name: hr-tools-backend
     depends_on:
-      - db 
-    env_file:
-      - env
+      - db
     #ports:
     #  - 127.0.0.1:8080:8080
     expose:
