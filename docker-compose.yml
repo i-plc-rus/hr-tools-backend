@@ -10,31 +10,39 @@ services:
       - "5432"
     volumes:
       - db-data:/var/lib/postgresql/data
+    networks:
+      - dokploy-network
 
   hr-tools-backend:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: hr-tools-backend
+    #container_name: hr-tools-backend
     depends_on:
       - db
-    #ports:
-    #  - 127.0.0.1:8080:8080
-    expose:
-      - "8080"
-      #- "30128:8080"
-  
-  nginx:
-    image: nginx:latest
-    restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
-    depends_on:
-      - hr-tools-backend 
-    volumes:
-      - ./config/nginx.conf:/etc/nginx/nginx.conf
-      - /etc/letsencrypt/archive/:/etc/letsencrypt/archive/
-      
+      - 8080:8080
+    #expose:
+    #  - "8080"
+      #- "30128:8080"
+    networks:
+      - dokploy-network
+  # nginx:
+  #   image: nginx:latest
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   depends_on:
+  #     - hr-tools-backend
+  #   volumes:
+  #     - ./config/nginx.conf:/etc/nginx/nginx.conf
+  #     - /etc/letsencrypt/archive/:/etc/letsencrypt/archive/
+  #   networks:
+  #     - backend
+networks:
+  dokploy-network:
+    external: true
+
 volumes:
   db-data: {}
