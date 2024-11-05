@@ -146,3 +146,27 @@ const (
 	ScheduleFlexible    Schedule = "flexible"    // Гибкий
 	ScheduleShift       Schedule = "shift"       // Сменный
 )
+
+type ApplicantStatus string
+
+const (
+	ApplicantStatusInProcess   ApplicantStatus = "В процессе"
+	ApplicantStatusRejected    ApplicantStatus = "Отклонен"
+	ApplicantStatusNegotiation ApplicantStatus = "Отклик"
+)
+
+type ApplicantSource string
+
+const (
+	ApplicantSourceManual ApplicantSource = "ручной ввод"
+	ApplicantSourceAvito  ApplicantSource = "Avito"
+	ApplicantSourceHh     ApplicantSource = "HeadHunter"
+)
+
+type RelocationType string
+
+const (
+	RelocationTypeNo   RelocationType = "не могу переехать"
+	RelocationTypeYes                 = "могу переехать"
+	RelocationTypeWant                = "хочу переехать"
+)

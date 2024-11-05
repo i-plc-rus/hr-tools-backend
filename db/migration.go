@@ -68,6 +68,9 @@ func AutoMigrateDB() error {
 	if err := DB.AutoMigrate(&dbmodels.ExtData{}); err != nil {
 		return errors.Wrap(err, "ошибка создания структуры ExtData")
 	}
+	if err := DB.AutoMigrate(&dbmodels.Applicant{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры Applicant")
+	}
 	log.Info("Миграция прошла успешно")
 	return nil
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
+	applicantstore "hr-tools-backend/lib/applicant/store"
 	externalservices "hr-tools-backend/lib/external-services"
 	"hr-tools-backend/lib/external-services/hh/hhclient"
 	extservicestore "hr-tools-backend/lib/external-services/store"
@@ -27,11 +28,13 @@ var Instance externalservices.JobSiteProvider
 
 func NewHandler() {
 	Instance = &impl{
+		//client:             hhclient.Instance,
 		client:             hhclient.Instance,
 		extStore:           extservicestore.NewInstance(db.DB),
 		spaceUserStore:     spaceusersstore.NewInstance(db.DB),
 		vacancyStore:       vacancystore.NewInstance(db.DB),
 		spaceSettingsStore: spacesettingsstore.NewInstance(db.DB),
+		applicantStore:     applicantstore.NewInstance(db.DB),
 		tokenMap:           sync.Map{},
 		cityMap:            map[string]string{},
 	}
@@ -43,6 +46,7 @@ type impl struct {
 	spaceUserStore     spaceusersstore.Provider
 	vacancyStore       vacancystore.Provider
 	spaceSettingsStore spacesettingsstore.Provider
+	applicantStore     applicantstore.Provider
 	tokenMap           sync.Map
 	cityMap            map[string]string
 }
@@ -295,6 +299,112 @@ func (i *impl) GetVacancyInfo(ctx context.Context, spaceID, vacancyID string) (*
 	}
 	result.Status = rec.HhStatus
 	return &result, nil
+}
+
+func (i *impl) HandleNegotiations(ctx context.Context, data dbmodels.Vacancy) error {
+	accessToken, err := i.getToken(ctx, data.SpaceID)
+	if err != nil {
+		return err
+	}
+	resp, err := i.client.Negotiations(ctx, accessToken, data.HhID, 0, 20)
+	if err != nil {
+		return err
+	}
+	for _, item := range resp.Items {
+		logger := i.getLogger(data.SpaceID, data.ID)
+		logger = logger.
+			WithField("negotiation_id", item.ID).
+			WithField("resume_id", item.Resume.ID)
+		found, err := i.applicantStore.IsExistNegotiationID(data.SpaceID, item.ID, models.ApplicantSourceHh)
+		if err != nil {
+			logger.WithError(err).Error("не удалось проверить наличие отклика")
+			continue
+		}
+		if found {
+			continue
+		}
+		resume, err := i.client.GetResume(ctx, accessToken, item.Resume.ResumeUrl)
+		if err != nil {
+			logger.WithError(err).Error("не удалось проверить наличие отклика")
+			continue
+		}
+		applicantData := dbmodels.Applicant{
+			BaseSpaceModel: dbmodels.BaseSpaceModel{
+				SpaceID: data.SpaceID,
+			},
+			VacancyID:       data.ID,
+			NegotiationID:   item.ID,
+			ResumeID:        resume.ID,
+			Source:          models.ApplicantSourceHh,
+			NegotiationDate: time.Now(),
+			Status:          models.ApplicantStatusNegotiation,
+			FirstName:       resume.FirstName,
+			LastName:        resume.LastName,
+			MiddleName:      resume.MiddleName,
+			ResumeTitle:     resume.Title,
+			Salary:          resume.Salary.Amount,
+			Address:         resume.Area.Name,
+			Gender:          resume.Gender.Name,
+			Relocation:      resume.Relocation.GetRelocationType(),
+			TotalExperience: resume.TotalExperience.Months, //опыт работ в месяцах
+		}
+		birthDate, err := resume.GetBirthDate()
+		if err != nil {
+			logger.WithError(err).Error("ошибка получения даты рождения кандидата")
+		}
+		applicantData.BirthDate = birthDate
+		for _, contact := range resume.Contact {
+			switch contact.Type.ID {
+			case hhapimodels.ContactTypeCell:
+				value, ok := contact.Value.(map[string]interface{})
+				if !ok {
+					logger.Error("ошибка получения мобильного телефона кандидата")
+					continue
+				}
+				fValue, ok := value["formatted"].(string)
+				if ok {
+					applicantData.Phone = fValue
+				}
+			case hhapimodels.ContactTypeHome:
+				if applicantData.Phone != "" {
+					continue
+				}
+				value, ok := contact.Value.(map[string]interface{})
+				if !ok {
+					logger.Error("ошибка получения домашнего телефона кандидата")
+					continue
+				}
+				fValue, ok := value["formatted"].(string)
+				if ok {
+					applicantData.Phone = fValue
+				}
+
+			case hhapimodels.ContactTypeEmail:
+				value, ok := contact.Value.(string)
+				if !ok {
+					logger.Error("ошибка получения email кандидата")
+					continue
+				}
+				applicantData.Email = value
+			}
+		}
+		for _, area := range resume.Citizenship {
+			applicantData.Citizenship = area.Name
+			if applicantData.Citizenship != "" {
+				break
+			}
+		}
+		for _, language := range resume.Language {
+			if language.ID == "eng" {
+				applicantData.LanguageLevel = language.Level.Name
+			}
+		}
+		_, err = i.applicantStore.Create(applicantData)
+		if err != nil {
+			logger.WithError(err).Error("ошибка сохранения кандидата по отклику")
+		}
+	}
+	return nil
 }
 
 func (i *impl) getValue(spaceID string, code models.SpaceSettingCode) (string, error) {
