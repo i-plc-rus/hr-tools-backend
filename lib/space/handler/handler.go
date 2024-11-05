@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"hr-tools-backend/db"
+	companystructload "hr-tools-backend/lib/company-struct-load"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
 	spacestore "hr-tools-backend/lib/space/store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
@@ -42,6 +43,15 @@ func (i impl) CreateOrganizationSpace(request spaceapimodels.CreateOrganization)
 		}
 		// создаем настройки по-умолчанию для простраства
 		err = i.createDefaultSpaceSettings(tx, spaceID)
+		if err != nil {
+			return err
+		}
+		// подгружаем справочники доступные по-умолчанию
+		err = i.createDefaultSpaceSettings(tx, spaceID)
+		if err != nil {
+			return err
+		}
+		err = i.preloadDicts(tx, spaceID)
 		if err != nil {
 			return err
 		}
@@ -107,4 +117,8 @@ func (i impl) createDefaultSpaceSettings(tx *gorm.DB, spaceID string) error {
 		return errors.Wrap(err, "ошибка добавления настройки YandexGPT")
 	}
 	return nil
+}
+
+func (i impl) preloadDicts(tx *gorm.DB, spaceID string) error {
+	return companystructload.PreloadCompanyStruct(tx, spaceID)
 }

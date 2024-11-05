@@ -6,9 +6,9 @@ import (
 )
 
 type DepartmentData struct {
-	Name      string `json:"name"`
-	CompanyID string `json:"company_id"`
-	ParentID  string `json:"parent_id"`
+	Name            string `json:"name"`
+	CompanyStructID string `json:"company_struct_id"`
+	ParentID        string `json:"parent_id"`
 }
 
 type DepartmentView struct {
@@ -17,13 +17,13 @@ type DepartmentView struct {
 }
 
 type DepartmentFind struct {
-	Name      string `json:"name"`
-	CompanyID string `json:"company_id"`
+	Name            string `json:"name"`
+	CompanyStructID string `json:"company_struct_id"`
 }
 
 func (c DepartmentData) Validate() error {
-	if c.CompanyID == "" {
-		return errors.New("отсутсвует ссылка на компанию")
+	if c.CompanyStructID == "" {
+		return errors.New("отсутсвует ссылка на структуру компании")
 	}
 	if c.Name == "" {
 		return errors.New("не указано название подразделения")
@@ -34,9 +34,9 @@ func (c DepartmentData) Validate() error {
 func DepartmentConvert(rec dbmodels.Department) DepartmentView {
 	return DepartmentView{
 		DepartmentData: DepartmentData{
-			Name:      rec.Name,
-			CompanyID: rec.CompanyID,
-			ParentID:  rec.ParentID,
+			Name:            rec.Name,
+			CompanyStructID: rec.CompanyStructID,
+			ParentID:        rec.ParentID,
 		},
 		ID: rec.ID,
 	}

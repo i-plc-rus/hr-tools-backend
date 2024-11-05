@@ -9,7 +9,7 @@ import (
 type Provider interface {
 	Create(rec dbmodels.Department) (id string, err error)
 	GetByID(spaceID, id string) (rec *dbmodels.Department, err error)
-	FindByCompany(spaceID, companyID string) (list []dbmodels.Department, err error)
+	FindByCompanyStruct(spaceID, companyStructID string) (list []dbmodels.Department, err error)
 	Update(spaceID, id string, updMap map[string]interface{}) error
 	Delete(spaceID, id string) error
 }
@@ -30,7 +30,7 @@ func (i impl) Create(rec dbmodels.Department) (id string, err error) {
 		return "", err
 	}
 
-	err = i.isUnique(rec.CompanyID, "", rec.Name)
+	err = i.isUnique(rec.CompanyStructID, "", rec.Name)
 	if err != nil {
 		return "", err
 	}
@@ -59,12 +59,12 @@ func (i impl) GetByID(spaceID, id string) (*dbmodels.Department, error) {
 	return &rec, nil
 }
 
-func (i impl) FindByCompany(spaceID, companyID string) (list []dbmodels.Department, err error) {
+func (i impl) FindByCompanyStruct(spaceID, companyStructID string) (list []dbmodels.Department, err error) {
 	list = []dbmodels.Department{}
 	tx := i.db.
 		Where("space_id = ?", spaceID)
-	if companyID != "" {
-		tx = tx.Where("company_id = ?", companyID)
+	if companyStructID != "" {
+		tx = tx.Where("company_struct_id = ?", companyStructID)
 	}
 	err = tx.Find(&list).Error
 	if err != nil {
@@ -89,7 +89,7 @@ func (i impl) Update(spaceID, id string, updMap map[string]interface{}) error {
 		if rec == nil {
 			return errors.New("запись не найдена")
 		}
-		err = i.isUnique(rec.CompanyID, id, name.(string))
+		err = i.isUnique(rec.CompanyStructID, id, name.(string))
 		if err != nil {
 			return err
 		}
@@ -125,10 +125,10 @@ func (i impl) Delete(spaceID, id string) error {
 	return nil
 }
 
-func (i impl) isUnique(companyID string, selfID, name string) error {
+func (i impl) isUnique(companyStructID string, selfID, name string) error {
 	var rowCount int64
 	tx := i.db.Model(dbmodels.Department{})
-	tx.Where("company_id = ?", companyID)
+	tx.Where("company_struct_id = ?", companyStructID)
 	tx.Where("name = ?", name)
 	if selfID != "" {
 		tx.Where("id <> ?", selfID)

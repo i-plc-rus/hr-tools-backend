@@ -47,7 +47,7 @@ func (i impl) Create(spaceID string, request dictapimodels.CompanyStructData) (i
 		return "", err
 	}
 	logger.
-		WithField("company_name", rec.Name).
+		WithField("company_struct_name", rec.Name).
 		WithField("rec_id", rec.ID).
 		Info("создана структура компании")
 	return id, nil
