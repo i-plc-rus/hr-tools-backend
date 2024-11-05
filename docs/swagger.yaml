@@ -134,6 +134,18 @@ definitions:
         description: порядок сортировки false = ASC/ true = DESC
         type: boolean
     type: object
+  dictapimodels.CityData:
+    properties:
+      address:
+        type: string
+    type: object
+  dictapimodels.CityView:
+    properties:
+      address:
+        type: string
+      id:
+        type: string
+    type: object
   dictapimodels.CompanyData:
     properties:
       name:
@@ -1252,6 +1264,83 @@ paths:
       summary: Подтверждение почты кодом
       tags:
       - Регистрация_организации
+  /api/v1/dict/city/{id}:
+    get:
+      description: Получение по ИД
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dictapimodels.CityView'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получение по ИД
+      tags:
+      - Справочник. Города
+  /api/v1/dict/city/find:
+    post:
+      description: Поиск по названию
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dictapimodels.CityData'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dictapimodels.CityView'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Поиск по названию
+      tags:
+      - Справочник. Города
   /api/v1/dict/company:
     post:
       description: Создание

@@ -7,6 +7,7 @@ import (
 	adminpanelhandler "hr-tools-backend/lib/admin-panel"
 	adminpanelauthhandler "hr-tools-backend/lib/admin-panel/auth"
 	aprovalstageshandler "hr-tools-backend/lib/aproval-stages"
+	cityprovider "hr-tools-backend/lib/dicts/city"
 	companyprovider "hr-tools-backend/lib/dicts/company"
 	companystructprovider "hr-tools-backend/lib/dicts/company-struct"
 	departmentprovider "hr-tools-backend/lib/dicts/department"
@@ -32,6 +33,7 @@ func InitAllServices(ctx context.Context) {
 	config.InitConfig()
 	InitDBConnection()
 	InitSmtp()
+	cityprovider.NewHandler()
 	hhclient.NewProvider(config.Conf.HH.RedirectUri)
 	avitoclient.NewProvider()
 	spaceusershander.NewHandler()
