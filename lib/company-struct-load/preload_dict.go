@@ -59,8 +59,6 @@ func PreloadCompanyStruct(tx *gorm.DB, spaceID string) error {
 				Name: companyName,
 			}
 			err := tx.Save(&compStructRec).Error
-			/*err = tx.Exec("INSERT INTO company_structs (id, name, space_id) VALUES ($1, $2, $3)",
-			companyStructID, companyName, spaceID).Error*/
 			if err != nil {
 				return errors.Wrap(err, "Unable to insert into CompanyStruct")
 			}
@@ -85,9 +83,6 @@ func PreloadCompanyStruct(tx *gorm.DB, spaceID string) error {
 				BusinessAreaID:  avitoAreaID,
 			}
 			err = tx.Save(&depRec).Error
-
-			/*err = tx.Exec("INSERT INTO departments (id, name, company_struct_id, business_area_id, space_id) VALUES ($1, $2, $3, $4, $5)",
-			departmentID, departmentName, companyStructID, avitoAreaID, spaceID).Error*/
 			if err != nil {
 				return errors.Wrap(err, "Unable to insert into Department")
 			}
@@ -104,8 +99,6 @@ func PreloadCompanyStruct(tx *gorm.DB, spaceID string) error {
 			HhRoleID:     hhRoleID,
 		}
 		err = tx.Save(&jobTitleRec).Error
-		/*err = tx.Exec("INSERT INTO job_titles (id, department_id, name, hh_role_id, space_id) VALUES ($1, $2, $3, $4, $5)",
-		jobTitleID, departmentID, jobTitleName, hhRoleID, spaceID).Error*/
 		if err != nil {
 			return errors.Wrap(err, "Unable to insert into JobTitle")
 		}
