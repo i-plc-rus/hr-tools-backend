@@ -121,6 +121,9 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyReques
 		OutInteraction:  data.OutInteraction,
 		InInteraction:   data.InInteraction,
 		Status:          models.VRStatusCreated,
+		Employment:      data.Employment,
+		Experience:      data.Experience,
+		Schedule:        data.Schedule,
 	}
 	if data.CompanyID != "" {
 		rec.CompanyID = &data.CompanyID
@@ -383,6 +386,9 @@ func (i impl) updateVr(store vacancyreqstore.Provider, spaceID, id string, data 
 		"Description":     data.Description,
 		"OutInteraction":  data.OutInteraction,
 		"InInteraction":   data.InInteraction,
+		"Employment":      data.Employment,
+		"Experience":      data.Experience,
+		"Schedule":        data.Schedule,
 	}
 	err = store.Update(spaceID, id, updMap)
 	if err != nil {
@@ -420,6 +426,9 @@ func (i impl) publish(spaceID, id, userID string) error {
 		ChiefFio:         rec.ChiefFio,
 		Requirements:     rec.Requirements,
 		Salary:           vacancyapimodels.Salary{},
+		Employment:       rec.Employment,
+		Experience:       rec.Experience,
+		Schedule:         rec.Schedule,
 	}
 	err = data.Validate(true)
 	if err != nil {
