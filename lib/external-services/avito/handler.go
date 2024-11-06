@@ -293,6 +293,11 @@ func (i *impl) GetVacancyInfo(ctx context.Context, spaceID, vacancyID string) (*
 	return &result, nil
 }
 
+func (i *impl) HandleNegotiations(ctx context.Context, data dbmodels.Vacancy) error {
+	//todo impl
+	return nil
+}
+
 func (i *impl) getValue(spaceID string, code models.SpaceSettingCode) (string, error) {
 	return i.spaceSettingsStore.GetValueByCode(spaceID, code)
 }
