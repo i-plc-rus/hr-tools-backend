@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
+	applicantstore "hr-tools-backend/lib/applicant/store"
 	externalservices "hr-tools-backend/lib/external-services"
 	avitoclient "hr-tools-backend/lib/external-services/avito/client"
 	extservicestore "hr-tools-backend/lib/external-services/store"
@@ -32,6 +33,7 @@ func NewHandler() {
 		spaceUserStore:     spaceusersstore.NewInstance(db.DB),
 		vacancyStore:       vacancystore.NewInstance(db.DB),
 		spaceSettingsStore: spacesettingsstore.NewInstance(db.DB),
+		applicantStore:     applicantstore.NewInstance(db.DB),
 		tokenMap:           sync.Map{},
 	}
 }
@@ -42,11 +44,13 @@ type impl struct {
 	spaceUserStore     spaceusersstore.Provider
 	vacancyStore       vacancystore.Provider
 	spaceSettingsStore spacesettingsstore.Provider
+	applicantStore     applicantstore.Provider
 	tokenMap           sync.Map
 }
 
 const (
-	TokenCode = "AVITO_TOKEN"
+	TokenCode              = "AVITO_TOKEN"
+	LastApplicationDateTpl = "AVITO_LAST_APPL_DATE:%v"
 )
 
 func (i *impl) getLogger(spaceID, vacancyID string) *log.Entry {
@@ -294,8 +298,112 @@ func (i *impl) GetVacancyInfo(ctx context.Context, spaceID, vacancyID string) (*
 }
 
 func (i *impl) HandleNegotiations(ctx context.Context, data dbmodels.Vacancy) error {
-	//todo impl
+	accessToken, err := i.getToken(ctx, data.SpaceID)
+	if err != nil {
+		return err
+	}
+	logger := i.getLogger(data.SpaceID, data.ID)
+	lastDateKey := fmt.Sprintf(LastApplicationDateTpl, data.ID)
+
+	updatedAt := data.CreatedAt.Format("2006-01-02")
+	lastDate, ok, err := i.extStore.Get(data.SpaceID, lastDateKey)
+	if err != nil {
+		logger.WithError(err).Warn("не удалось получить дату последнего обновления")
+	} else if ok {
+		updatedAt = string(lastDate)
+	}
+
+	idsResp, err := i.client.GetApplicationIDs(ctx, accessToken, updatedAt, "", data.AvitoID)
+	if err != nil {
+		return errors.Wrap(err, "ошибка получения идентификаторов откликов")
+	}
+	if idsResp == nil || len(idsResp.Applies) == 0 {
+		return nil
+	}
+	ids := []string{}
+	for _, applie := range idsResp.Applies {
+		negotiationID := applie.ID
+		found, err := i.applicantStore.IsExistNegotiationID(data.SpaceID, negotiationID, models.ApplicantSourceAvito)
+		if err != nil {
+			logger.WithError(err).Error("не удалось проверить наличие отклика")
+			continue
+		}
+		if found {
+			continue
+		}
+
+		ids = append(ids, negotiationID)
+		updatedDate, ok := applie.GetUpdatedAt()
+		if ok {
+			updatedAt = updatedDate.Format("2006-01-02")
+		}
+	}
+	if len(ids) == 0 {
+		// из полученных все добавлены
+		return nil
+	}
+	applicationResp, err := i.client.GetApplicationByIDs(ctx, accessToken, ids, data.AvitoID)
+	if err != nil {
+		return errors.Wrap(err, "ошибка получения списка откликов")
+	}
+	for _, apply := range applicationResp.Applies {
+		if apply.Applicant.ResumeID == 0 {
+			logger.
+				WithField("negotiation_id", apply.ID).
+				Info("отклик без резюме")
+			continue
+		}
+		resume, err := i.client.GetResume(ctx, accessToken, data.AvitoID, apply.Applicant.ResumeID)
+		if err != nil {
+			logger.WithError(err).Error("ошибка получения резюме по отклику")
+			continue
+		}
+		i.storeApplicant(resume, apply, data)
+	}
+	i.extStore.Set(data.SpaceID, lastDateKey, []byte(updatedAt))
 	return nil
+}
+
+func (i *impl) storeApplicant(resume *avitoapimodels.Resume, apply avitoapimodels.Applies, data dbmodels.Vacancy) {
+	logger := i.getLogger(data.SpaceID, data.ID).
+		WithField("negotiation_id", apply.ID)
+
+	applicantData := dbmodels.Applicant{
+		BaseSpaceModel: dbmodels.BaseSpaceModel{
+			SpaceID: data.SpaceID,
+		},
+		VacancyID:       data.ID,
+		NegotiationID:   apply.ID,
+		ResumeID:        strconv.Itoa(resume.ID),
+		Source:          models.ApplicantSourceAvito,
+		NegotiationDate: time.Now(),
+		Status:          models.ApplicantStatusNegotiation,
+		FirstName:       apply.Applicant.Data.FullName.FirstName,
+		LastName:        apply.Applicant.Data.FullName.LastName,
+		MiddleName:      apply.Applicant.Data.FullName.Patronymic,
+		ResumeTitle:     resume.Title,
+		Salary:          resume.Salary,
+		Address:         resume.Params.Address,
+		Gender:          resume.Params.Pol,
+		Relocation:      resume.Params.GetRelocationType(),
+		Email:           "", //нет данных
+		TotalExperience: 0,  //опыт работ в месяцах - нет данных
+	}
+	birthDate, err := apply.GetBirthDate()
+	if err != nil {
+		logger.WithError(err).Error("ошибка получения даты рождения кандидата")
+	}
+	applicantData.BirthDate = birthDate
+	if len(apply.Contacts.Phones) > 0 {
+		applicantData.Phone = strconv.Itoa(apply.Contacts.Phones[0].Value)
+	}
+
+	applicantData.Citizenship = apply.Applicant.Data.Citizenship
+	applicantData.LanguageLevel = resume.Params.GetEngLevel()
+	_, err = i.applicantStore.Create(applicantData)
+	if err != nil {
+		logger.WithError(err).Error("ошибка сохранения кандидата по отклику")
+	}
 }
 
 func (i *impl) getValue(spaceID string, code models.SpaceSettingCode) (string, error) {
@@ -482,7 +590,6 @@ func (i *impl) CheckIsModerationDone(ctx context.Context, spaceID string, list [
 }
 
 func (i *impl) CheckIsActivePublications(ctx context.Context, spaceID string, list []dbmodels.Vacancy) error {
-	logger := i.getLogger(spaceID, "")
 	accessToken, err := i.getToken(ctx, spaceID)
 	if err != nil {
 		return err
@@ -491,9 +598,10 @@ func (i *impl) CheckIsActivePublications(ctx context.Context, spaceID string, li
 		if helpers.IsContextDone(ctx) {
 			return nil
 		}
+		logger := i.getLogger(spaceID, rec.ID)
 		vacancyInfo, err := i.client.GetVacancy(ctx, accessToken, rec.AvitoID)
 		if err != nil {
-			i.getLogger(spaceID, rec.ID).
+			logger.
 				WithError(err).
 				WithField("avito_vacancy_id", rec.AvitoID).
 				Error("не удалось проверить статус публикации вакансии")
