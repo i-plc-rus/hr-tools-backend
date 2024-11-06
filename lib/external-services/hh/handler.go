@@ -323,9 +323,13 @@ func (i *impl) HandleNegotiations(ctx context.Context, data dbmodels.Vacancy) er
 		if found {
 			continue
 		}
+		if item.Resume.ResumeUrl == "" {
+			logger.Info("отклик без резюме")
+			continue
+		}
 		resume, err := i.client.GetResume(ctx, accessToken, item.Resume.ResumeUrl)
 		if err != nil {
-			logger.WithError(err).Error("не удалось проверить наличие отклика")
+			logger.WithError(err).Error("не удалось получить резюме по отклику")
 			continue
 		}
 		applicantData := dbmodels.Applicant{

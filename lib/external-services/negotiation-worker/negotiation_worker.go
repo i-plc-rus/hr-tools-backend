@@ -92,7 +92,8 @@ func (i impl) handle(ctx context.Context, integrationName string, jobHandler Neg
 			if err != nil {
 				logger.
 					WithError(err).
-					Error("ошибка проверки списка активных вакансий")
+					WithField("vacancy_id", vacancy.ID).
+					Error("ошибка получения откликов по вакансии")
 				return
 			}
 		}
