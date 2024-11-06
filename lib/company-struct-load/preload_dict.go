@@ -1,7 +1,6 @@
 package companystructload
 
 import (
-	"crypto/md5"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -45,7 +44,7 @@ func PreloadCompanyStruct(tx *gorm.DB, spaceID string) error {
 		}
 
 		// Insert into CompanyStruct if not exists
-		companyStructKey := string(md5.New().Sum([]byte(companyName)))
+		companyStructKey := companyName
 		companyStructID, exists := companyStructMap[companyStructKey]
 		if !exists {
 			companyStructID = uuid.New().String()
@@ -65,7 +64,7 @@ func PreloadCompanyStruct(tx *gorm.DB, spaceID string) error {
 		}
 
 		// Insert into Department if not exists
-		departmentKey := string(md5.New().Sum([]byte(fmt.Sprintf("%s-%s", companyName, departmentName))))
+		departmentKey := fmt.Sprintf("%s-%s", companyName, departmentName)
 		departmentID, exists := departmentMap[departmentKey]
 		if !exists {
 			departmentID = uuid.New().String()
