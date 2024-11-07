@@ -8,10 +8,10 @@ import (
 
 type Department struct {
 	BaseSpaceModel
-	CompanyID      string `gorm:"type:varchar(36);index:idx_company"`
-	ParentID       string `gorm:"type:varchar(36);index:idx_company"`
-	Name           string `gorm:"type:varchar(255)"`
-	BusinessAreaID int
+	CompanyStructID string `gorm:"type:varchar(36);index:idx_company_struct"`
+	ParentID        string `gorm:"type:varchar(36);index:idx_company_struct"`
+	Name            string `gorm:"type:varchar(255)"`
+	BusinessAreaID  int
 }
 
 func (d *Department) AfterDelete(tx *gorm.DB) (err error) {
@@ -27,8 +27,8 @@ func (d *Department) Validate() error {
 	if err := d.BaseSpaceModel.Validate(); err != nil {
 		return err
 	}
-	if d.CompanyID == "" {
-		return errors.New("отсутсвует ссылка на компанию")
+	if d.CompanyStructID == "" {
+		return errors.New("отсутсвует ссылка на структуру компании")
 	}
 	if d.Name == "" {
 		return errors.New("не указано название подразделения")

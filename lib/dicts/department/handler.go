@@ -36,7 +36,7 @@ type impl struct {
 
 func (i impl) Create(spaceID string, request dictapimodels.DepartmentData) (id string, err error) {
 	logger := log.WithField("space_id", spaceID)
-	err = i.isUserCompany(request.CompanyID, spaceID)
+	err = i.isUserCompany(request.CompanyStructID, spaceID)
 	if err != nil {
 		return "", err
 	}
@@ -44,9 +44,9 @@ func (i impl) Create(spaceID string, request dictapimodels.DepartmentData) (id s
 		BaseSpaceModel: dbmodels.BaseSpaceModel{
 			SpaceID: spaceID,
 		},
-		CompanyID: request.CompanyID,
-		ParentID:  request.ParentID,
-		Name:      request.Name,
+		CompanyStructID: request.CompanyStructID,
+		ParentID:        request.ParentID,
+		Name:            request.Name,
 	}
 	id, err = i.store.Create(rec)
 	if err != nil {
@@ -99,7 +99,7 @@ func (i impl) Get(spaceID, id string) (item dictapimodels.DepartmentView, err er
 
 func (i impl) FindByName(spaceID string, request dictapimodels.DepartmentFind) (list []dictapimodels.DepartmentTreeItem, err error) {
 	logger := log.WithField("space_id", spaceID)
-	recList, err := i.store.FindByCompany(spaceID, request.CompanyID)
+	recList, err := i.store.FindByCompanyStruct(spaceID, request.CompanyStructID)
 	if err != nil {
 		logger.
 			WithError(err).

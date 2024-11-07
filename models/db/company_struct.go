@@ -1,10 +1,22 @@
 package dbmodels
 
-import "github.com/pkg/errors"
+import (
+	"github.com/pkg/errors"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+)
 
 type CompanyStruct struct {
 	BaseSpaceModel
 	Name string `gorm:"type:varchar(255)"`
+}
+
+func (c *CompanyStruct) AfterDelete(tx *gorm.DB) (err error) {
+	if c.ID == "" {
+		return nil
+	}
+	tx.Clauses(clause.Returning{}).Where("company_struct_id = ?", c.ID).Delete(&Department{})
+	return
 }
 
 func (c *CompanyStruct) Validate() error {
