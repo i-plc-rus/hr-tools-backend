@@ -38,6 +38,9 @@ type VacancyRequest struct {
 	InInteraction   string
 	Status          models.VRStatus
 	ApprovalStages  []*ApprovalStage
+	Employment      models.Employment `gorm:"type:varchar(255)"` // Занятость
+	Experience      models.Experience `gorm:"type:varchar(255)"` // Опыт работы
+	Schedule        models.Schedule   `gorm:"type:varchar(255)"` // Режим работы
 }
 
 func (v *VacancyRequest) AfterDelete(tx *gorm.DB) (err error) {

@@ -5070,6 +5070,22 @@
                     "description": "Коментарий к заявке",
                     "type": "string"
                 },
+                "employment": {
+                    "description": "Занятость",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Employment"
+                        }
+                    ]
+                },
+                "experience": {
+                    "description": "Опыт работы",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Experience"
+                        }
+                    ]
+                },
                 "in_interaction": {
                     "description": "внутреннее взаимодействие",
                     "type": "string"
@@ -5105,6 +5121,14 @@
                 "requirements": {
                     "description": "требования/обязанности/условия",
                     "type": "string"
+                },
+                "schedule": {
+                    "description": "Режим работы",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Schedule"
+                        }
+                    ]
                 },
                 "selection_type": {
                     "description": "вид подбора",
@@ -5169,6 +5193,22 @@
                     "description": "Коментарий к заявке",
                     "type": "string"
                 },
+                "employment": {
+                    "description": "Занятость",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Employment"
+                        }
+                    ]
+                },
+                "experience": {
+                    "description": "Опыт работы",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Experience"
+                        }
+                    ]
+                },
                 "in_interaction": {
                     "description": "внутреннее взаимодействие",
                     "type": "string"
@@ -5204,6 +5244,14 @@
                 "requirements": {
                     "description": "требования/обязанности/условия",
                     "type": "string"
+                },
+                "schedule": {
+                    "description": "Режим работы",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Schedule"
+                        }
+                    ]
                 },
                 "selection_type": {
                     "description": "вид подбора",
@@ -5289,6 +5337,22 @@
                     "description": "Коментарий к заявке",
                     "type": "string"
                 },
+                "employment": {
+                    "description": "Занятость",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Employment"
+                        }
+                    ]
+                },
+                "experience": {
+                    "description": "Опыт работы",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Experience"
+                        }
+                    ]
+                },
                 "id": {
                     "type": "string"
                 },
@@ -5330,6 +5394,14 @@
                 "requirements": {
                     "description": "требования/обязанности/условия",
                     "type": "string"
+                },
+                "schedule": {
+                    "description": "Режим работы",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Schedule"
+                        }
+                    ]
                 },
                 "selection_type": {
                     "description": "вид подбора",

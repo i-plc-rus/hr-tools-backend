@@ -603,6 +603,14 @@ definitions:
       description:
         description: Коментарий к заявке
         type: string
+      employment:
+        allOf:
+        - $ref: '#/definitions/models.Employment'
+        description: Занятость
+      experience:
+        allOf:
+        - $ref: '#/definitions/models.Experience'
+        description: Опыт работы
       in_interaction:
         description: внутреннее взаимодействие
         type: string
@@ -628,6 +636,10 @@ definitions:
       requirements:
         description: требования/обязанности/условия
         type: string
+      schedule:
+        allOf:
+        - $ref: '#/definitions/models.Schedule'
+        description: Режим работы
       selection_type:
         allOf:
         - $ref: '#/definitions/models.VRSelectionType'
@@ -670,6 +682,14 @@ definitions:
       description:
         description: Коментарий к заявке
         type: string
+      employment:
+        allOf:
+        - $ref: '#/definitions/models.Employment'
+        description: Занятость
+      experience:
+        allOf:
+        - $ref: '#/definitions/models.Experience'
+        description: Опыт работы
       in_interaction:
         description: внутреннее взаимодействие
         type: string
@@ -695,6 +715,10 @@ definitions:
       requirements:
         description: требования/обязанности/условия
         type: string
+      schedule:
+        allOf:
+        - $ref: '#/definitions/models.Schedule'
+        description: Режим работы
       selection_type:
         allOf:
         - $ref: '#/definitions/models.VRSelectionType'
@@ -751,6 +775,14 @@ definitions:
       description:
         description: Коментарий к заявке
         type: string
+      employment:
+        allOf:
+        - $ref: '#/definitions/models.Employment'
+        description: Занятость
+      experience:
+        allOf:
+        - $ref: '#/definitions/models.Experience'
+        description: Опыт работы
       id:
         type: string
       in_interaction:
@@ -780,6 +812,10 @@ definitions:
       requirements:
         description: требования/обязанности/условия
         type: string
+      schedule:
+        allOf:
+        - $ref: '#/definitions/models.Schedule'
+        description: Режим работы
       selection_type:
         allOf:
         - $ref: '#/definitions/models.VRSelectionType'
