@@ -4,6 +4,7 @@ import (
 	"context"
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
+	avitohandler "hr-tools-backend/lib/external-services/avito"
 	hhhandler "hr-tools-backend/lib/external-services/hh"
 	spacestore "hr-tools-backend/lib/space/store"
 	"hr-tools-backend/lib/utils/helpers"
@@ -20,12 +21,12 @@ type NegotiationCheckJob interface {
 
 func StartWorker(ctx context.Context) {
 	i := &impl{
-		//avito:      avitohandler.Instance.(NegotiationCheckJob), //todo
+		avito:      avitohandler.Instance.(NegotiationCheckJob),
 		hh:         hhhandler.Instance.(NegotiationCheckJob),
 		spaceStore: spacestore.NewInstance(db.DB),
 	}
 	go i.run(ctx, "HeadHunter", i.hh)
-	//go i.run(ctx, "Avito", i.avito)
+	go i.run(ctx, "Avito", i.avito)
 }
 
 const (
