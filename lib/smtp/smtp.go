@@ -11,7 +11,7 @@ import (
 var Instance Provider
 
 type Provider interface {
-	SendConfirmEMail(from, to, message, subject string) error
+	SendEMail(from, to, message, subject string) error
 }
 
 func Connect(user, password, host, port string, tlsEnabled bool) error {
@@ -34,7 +34,7 @@ type impl struct {
 	emailSendVerification string
 }
 
-func (i impl) SendConfirmEMail(from, to, message, subject string) (err error) {
+func (i impl) SendEMail(from, to, message, subject string) (err error) {
 	logger := log.WithField("sender", from)
 	if i.user == "" || i.host == "" || i.port == "" {
 		logger.Warn("Письмо для подтверждения почты не отправлено, тк не настроен smtp клиент")
@@ -60,6 +60,6 @@ func (i impl) SendConfirmEMail(from, to, message, subject string) (err error) {
 		log.WithError(err).Error("Ошибка отправки сообщения")
 		return err
 	}
-	logger.Info("Отправлено письмо в тех поддержку")
+	logger.Info("письмо отправлено")
 	return nil
 }
