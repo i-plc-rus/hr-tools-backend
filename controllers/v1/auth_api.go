@@ -17,8 +17,8 @@ func InitAuthApiRouters(app *fiber.App) {
 	controller := authApiController{}
 	app.Route("auth", func(router fiber.Router) {
 		router.Post("login", controller.login)
-		router.Use(middleware.AuthorizationRequired()).Get("me", controller.me)
 		router.Post("refresh-token", controller.refreshToken)
+		router.Use(middleware.AuthorizationRequired()).Get("me", controller.me)
 	})
 }
 
