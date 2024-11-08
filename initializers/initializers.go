@@ -6,6 +6,7 @@ import (
 	"hr-tools-backend/fiberlog"
 	adminpanelhandler "hr-tools-backend/lib/admin-panel"
 	adminpanelauthhandler "hr-tools-backend/lib/admin-panel/auth"
+	"hr-tools-backend/lib/applicant"
 	aprovalstageshandler "hr-tools-backend/lib/aproval-stages"
 	cityprovider "hr-tools-backend/lib/dicts/city"
 	companyprovider "hr-tools-backend/lib/dicts/company"
@@ -53,6 +54,7 @@ func InitAllServices(ctx context.Context) {
 	gpthandler.NewHandler()
 	hhhandler.NewHandler()
 	avitohandler.NewHandler()
+	applicant.NewHandler()
 	externalserviceworker.StartWorker(ctx)
 	negotiationworker.StartWorker(ctx)
 }

@@ -155,10 +155,18 @@ const (
 	ApplicantStatusNegotiation ApplicantStatus = "Отклик"
 )
 
+type NegotiationStatus string
+
+const (
+	NegotiationStatusWait     NegotiationStatus = "Рассмотреть позже"
+	NegotiationStatusRejected NegotiationStatus = "Отклонен"
+	NegotiationStatusAccepted NegotiationStatus = "Подходит"
+)
+
 type ApplicantSource string
 
 const (
-	ApplicantSourceManual ApplicantSource = "ручной ввод"
+	ApplicantSourceManual ApplicantSource = "Ручной ввод"
 	ApplicantSourceAvito  ApplicantSource = "Avito"
 	ApplicantSourceHh     ApplicantSource = "HeadHunter"
 )
