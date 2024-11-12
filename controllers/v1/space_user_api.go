@@ -17,6 +17,7 @@ func InitSpaceUserRouters(app *fiber.App) {
 	controller := spaceUserController{}
 	app.Route("users", func(usersRootRoute fiber.Router) {
 		usersRootRoute.Use(middleware.AuthorizationRequired())
+		usersRootRoute.Use(middleware.SpaceAdminUser())
 		usersRootRoute.Post("", controller.CreateUser)
 		usersRootRoute.Post("list", controller.ListUsers)
 		usersRootRoute.Route(":id", func(usersIDRoute fiber.Router) {
