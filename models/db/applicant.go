@@ -1,6 +1,8 @@
 package dbmodels
 
 import (
+	"database/sql/driver"
+	"encoding/json"
 	"github.com/pkg/errors"
 	"hr-tools-backend/models"
 	"time"
@@ -14,8 +16,8 @@ type Applicant struct {
 	ResumeID              string   `gorm:"index;type:varchar(255)"`                 // ид резюме во внешней системе
 	ResumeTitle           string
 	Source                models.ApplicantSource `gorm:"index:idx_negotiation"`
-	NegotiationDate       time.Time
-	NegotiationAcceptDate time.Time
+	NegotiationDate       time.Time              // дата отзыва
+	NegotiationAcceptDate time.Time              // дата принятия решения по отзыву
 	Status                models.ApplicantStatus
 	NegotiationStatus     models.NegotiationStatus
 	FirstName             string `gorm:"type:varchar(255)"`
@@ -26,13 +28,41 @@ type Applicant struct {
 	Salary                int
 	Address               string
 	BirthDate             time.Time
-	Citizenship           string                `gorm:"type:varchar(255)"`
-	Gender                string                `gorm:"type:varchar(50)"`
-	LanguageLevel         string                `gorm:"type:varchar(100)"`
-	Relocation            models.RelocationType `gorm:"type:varchar(100)"`
+	Citizenship           string                `gorm:"type:varchar(255)"` // Гражданство
+	Gender                models.GenderType     `gorm:"type:varchar(50)"`  // Пол кандидата
+	Relocation            models.RelocationType `gorm:"type:varchar(100)"` // Готовность к переезду
 	TotalExperience       int                   //опыт работ в месяцах
 	Comment               string
-	//todo прочие поля резюме
+	Params                ApplicantParams `gorm:"type:jsonb"`
+	PhotoUrl              string          `gorm:"type:varchar(500)"` //todo s3 photo
+}
+
+func (j ApplicantParams) Value() (driver.Value, error) {
+	valueString, err := json.Marshal(j)
+	return string(valueString), err
+}
+
+func (j *ApplicantParams) Scan(value interface{}) error {
+	if err := json.Unmarshal(value.([]byte), &j); err != nil {
+		return err
+	}
+	return nil
+}
+
+type ApplicantParams struct {
+	Education               models.EducationType       `json:"education"`                 // Образование
+	HaveAdditionalEducation bool                       `json:"have_additional_education"` // Повышение квалификации, курсы
+	Employments             []models.Employment        `json:"employments"`               // Занятость
+	Schedules               []models.Schedule          `json:"schedules"`                 // График работы
+	Languages               []Language                 `json:"languages"`                 // Знание языков
+	TripReadiness           models.TripReadinessType   `json:"trip_readiness"`            // Готовность к командировкам
+	DriverLicenseTypes      []models.DriverLicenseType `json:"driver_license_types"`      // Водительсике права
+	SearchStatus            models.SearchStatusType    `json:"search_status"`             // Статус поиска работы
+}
+
+type Language struct {
+	Name          string                   `json:"name"`
+	LanguageLevel models.LanguageLevelType `json:"language_level"`
 }
 
 type ApplicantExt struct {
@@ -63,8 +93,27 @@ func (a Applicant) IsAllowStatusChange(newStatus models.NegotiationStatus) (bool
 }
 
 type NegotiationFilter struct {
-	VacancyID string `json:"vacancy_id"`
-	Search    string `json:"search"`
+	VacancyID         string                     `json:"vacancy_id"`          // идентификатор вакансии
+	Search            string                     `json:"search"`              // поиск по ФИО/телефон/емайл
+	Education         *models.EducationType      `json:"education"`           // Образование
+	Experience        *models.ExperienceType     `json:"experience"`          // Опыт
+	ResponsePeriod    *models.ResponsePeriodType `json:"response_period"`     // Период отклика на вакансию
+	City              string                     `json:"city"`                // Город проживания
+	Employment        *models.Employment         `json:"employment"`          // Занятость
+	Schedule          *models.Schedule           `json:"schedule"`            // График работы
+	Language          string                     `json:"language"`            // Знание языка
+	LanguageLevel     *models.LanguageLevelType  `json:"language_level"`      // Уровень знания языка
+	Gender            *models.GenderType         `json:"gender"`              // Пол кандидата
+	TripReadiness     *models.TripReadinessType  `json:"trip_readiness"`      // Готовность к командировкам
+	Citizenship       string                     `json:"citizenship"`         // Гражданство
+	SalaryFrom        int                        `json:"salary_from"`         // Уровень дохода от
+	SalaryTo          int                        `json:"salary_to"`           // Уровень дохода до
+	SalaryProvided    *bool                      `json:"salary_provided"`     // Указан доход
+	Source            *models.ApplicantSource    `json:"source"`              // Источник
+	DriverLicence     []models.DriverLicenseType `json:"driver_licence"`      // Водительсике права
+	JobSearchStatuses *models.SearchStatusType   `json:"job_search_statuses"` // Статус поиска работы
+	SearchLabel       *models.SearchLabelType    `json:"search_label"`        // Метка поиска резюме
+	AdvancedTraining  *bool                      `json:"advanced_training"`   // Повышение квалификации, курсы
 }
 
 func (n NegotiationFilter) Validate() error {

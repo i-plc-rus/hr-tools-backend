@@ -13,18 +13,22 @@ type NegotiationView struct {
 	FIO               string                   `json:"fio"`
 	Phone             string                   `json:"phone"`
 	Email             string                   `json:"email"`
-	Comment           string                   `json:"comment"`
-	NegotiationDate   time.Time                `json:"negotiation_date"`
-	Salary            int                      `json:"salary"`
-	Stage             string                   `json:"step"`
-	StageTime         string                   `json:"step_time"`
-	Source            models.ApplicantSource   `json:"source"`
-	NegotiationStatus models.NegotiationStatus `json:"negotiation_status"`
+	Comment           string                   `json:"comment"`            //коментарий к кандидату
+	NegotiationDate   time.Time                `json:"negotiation_date"`   //дата отклика
+	Salary            int                      `json:"salary"`             //ожидаемая зп
+	Stage             string                   `json:"step"`               //этап
+	StageTime         string                   `json:"step_time"`          // время на этапе
+	Source            models.ApplicantSource   `json:"source"`             //источник
+	NegotiationStatus models.NegotiationStatus `json:"negotiation_status"` // статус отклика
 	PhotoUrl          string                   `json:"photo_url"`
-	Age               int                      `json:"age"`
-	ResumeTitle       string                   `json:"resume_title"`
-	Address           string                   `json:"address"`
-	VacancyAuthor     string                   `json:"vacancy_author"`
+	Age               int                      `json:"age"`                      // возраст
+	ResumeTitle       string                   `json:"resume_title"`             //заголовок резюме
+	Address           string                   `json:"address"`                  //Адрес кандидата
+	VacancyAuthor     string                   `json:"vacancy_author,omitempty"` //Автор вакансии
+	Citizenship       string                   `json:"citizenship"`              // Гражданство
+	Gender            models.GenderType        `json:"gender"`                   // Пол кандидата
+	Relocation        models.RelocationType    `json:"relocation"`               // Готовность к переезду
+	Params            dbmodels.ApplicantParams `json:"params"`
 }
 
 func NegotiationConvertExt(rec dbmodels.ApplicantExt) NegotiationView {
@@ -46,6 +50,11 @@ func NegotiationConvert(rec dbmodels.Applicant) NegotiationView {
 		NegotiationStatus: rec.NegotiationStatus,
 		ResumeTitle:       rec.ResumeTitle,
 		Address:           rec.Address,
+		Citizenship:       rec.Citizenship,
+		Gender:            rec.Gender,
+		Relocation:        rec.Relocation,
+		PhotoUrl:          rec.PhotoUrl,
+		Params:            rec.Params,
 	}
 	if !rec.BirthDate.IsZero() {
 		difference := time.Now().Sub(rec.BirthDate)

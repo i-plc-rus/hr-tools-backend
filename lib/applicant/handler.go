@@ -61,11 +61,15 @@ func (i impl) UpdateStatus(spaceID, id string, status models.NegotiationStatus) 
 		return err
 	}
 	updMap := map[string]interface{}{
-		"negotiation_status": status,
+		"negotiation_status":      status,
+		"negotiation_accept_date": nil,
 	}
 	if status == models.NegotiationStatusAccepted {
 		updMap["negotiation_accept_date"] = time.Now()
 		updMap["status"] = models.ApplicantStatusInProcess
+	}
+	if status == models.NegotiationStatusRejected {
+		updMap["negotiation_accept_date"] = time.Now()
 	}
 	return i.store.Update(id, updMap)
 }
