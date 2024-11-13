@@ -147,19 +147,28 @@ func (c *vacancyReqApiController) delete(ctx *fiber.Ctx) error {
 // @Summary Список
 // @Tags Заявка
 // @Description Список
+// @Param	body body	 vacancyapimodels.VrFilter	true	"request filter body"
 // @Param   Authorization		header		string	true	"Authorization token"
-// @Success 200 {object} apimodels.Response{data=[]vacancyapimodels.VacancyRequestView}
+// @Success 200 {object} apimodels.ScrollerResponse{data=[]vacancyapimodels.VacancyRequestView}
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
 // @router /api/v1/space/vacancy_request/list [post]
 func (c *vacancyReqApiController) list(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
-	list, err := vacancyreqhandler.Instance.List(spaceID)
+	var payload vacancyapimodels.VrFilter
+	if err := c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	if err := payload.Validate(); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	userID := middleware.GetUserID(ctx)
+	list, rowCount, err := vacancyreqhandler.Instance.List(spaceID, userID, payload)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
-	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(list))
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewScrollerResponse(list, rowCount))
 }
 
 // @Summary Обновление цепочки согласования

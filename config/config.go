@@ -18,7 +18,7 @@ type Configuration struct {
 		User           string `default:"postgres" env:"DB_USER"`
 		Password       string `default:"postgres" env:"DB_PASSWORD"`
 		MigrateOnStart *bool  `default:"true" env:"DB_MIGRATE_ON_START"`
-		DebugMode      *bool  `default:"false" env:"DB_DEBUG_MODE"`
+		DebugMode      *bool  `default:"true" env:"DB_DEBUG_MODE"`
 	}
 	Smtp struct {
 		User                  string `default:"" env:"SMTP_USER"`
