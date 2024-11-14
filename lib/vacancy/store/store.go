@@ -2,9 +2,11 @@ package vacancystore
 
 import (
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"hr-tools-backend/models"
+	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
 	"strings"
 )
@@ -14,7 +16,8 @@ type Provider interface {
 	GetByID(spaceID, id string) (rec *dbmodels.Vacancy, err error)
 	Update(spaceID, id string, updMap map[string]interface{}) error
 	Delete(spaceID, id string) error
-	List(spaceID, userID string, filter dbmodels.VacancyFilter) (list []dbmodels.VacancyExt, err error)
+	ListCount(spaceID, userID string, filter vacancyapimodels.VacancyFilter) (count int64, err error)
+	List(spaceID, userID string, filter vacancyapimodels.VacancyFilter) (list []dbmodels.VacancyExt, err error)
 	SetPin(vacancyID, userID string) error
 	RemovePin(vacancyID, userID string) error
 	SetFavorite(vacancyID, userID string) error
@@ -97,7 +100,21 @@ func (i impl) Delete(spaceID, id string) error {
 	return nil
 }
 
-func (i impl) List(spaceID, userID string, filter dbmodels.VacancyFilter) (list []dbmodels.VacancyExt, err error) {
+func (i impl) ListCount(spaceID, userID string, filter vacancyapimodels.VacancyFilter) (count int64, err error) {
+	var rowCount int64
+	tx := i.db.
+		Model(dbmodels.Vacancy{}).
+		Where("space_id = ?", spaceID)
+	i.addFilter(tx, filter)
+	err = tx.Count(&rowCount).Error
+	if err != nil {
+		log.WithError(err).Error("ошибка получения общего количества вакансий")
+		return 0, errors.New("ошибка получения общего количества вакансий")
+	}
+	return rowCount, nil
+}
+
+func (i impl) List(spaceID, userID string, filter vacancyapimodels.VacancyFilter) (list []dbmodels.VacancyExt, err error) {
 	list = []dbmodels.VacancyExt{}
 	tx := i.db.
 		Model(dbmodels.Vacancy{}).
@@ -106,6 +123,8 @@ func (i impl) List(spaceID, userID string, filter dbmodels.VacancyFilter) (list 
 		Joins("left join pinneds as p on vacancies.id = p.vacancy_id and p.space_user_id = ?", userID).
 		Where("space_id = ?", spaceID)
 	i.addFilter(tx, filter)
+	page, limit := filter.GetPage()
+	i.setPage(tx, page, limit)
 	err = tx.Preload(clause.Associations).Find(&list).Error
 
 	if err != nil {
@@ -209,7 +228,7 @@ func (i impl) ListHhByStatus(spaceID string, status models.VacancyPubStatus) (li
 	return list, nil
 }
 
-func (i impl) addSort(tx *gorm.DB, sort dbmodels.VacancySort) {
+func (i impl) addSort(tx *gorm.DB, sort vacancyapimodels.VacancySort) {
 	tx.Order("p.selected")
 	if sort.CreatedAtDesc {
 		tx = tx.Order("vacancies.created_at desc")
@@ -218,7 +237,7 @@ func (i impl) addSort(tx *gorm.DB, sort dbmodels.VacancySort) {
 	}
 }
 
-func (i impl) addFilter(tx *gorm.DB, filter dbmodels.VacancyFilter) {
+func (i impl) addFilter(tx *gorm.DB, filter vacancyapimodels.VacancyFilter) {
 	if filter.VacancyRequestID != "" {
 		tx = tx.Where("vacancy_request_id = ?", filter.VacancyRequestID)
 	}
@@ -254,4 +273,9 @@ func (i impl) addFilter(tx *gorm.DB, filter dbmodels.VacancyFilter) {
 		tx.Where("vacancy_request_id in (?)", subQuery)
 	}
 	i.addSort(tx, filter.Sort)
+}
+
+func (i impl) setPage(tx *gorm.DB, page, limit int) {
+	offset := (page - 1) * limit
+	tx.Limit(limit).Offset(offset)
 }

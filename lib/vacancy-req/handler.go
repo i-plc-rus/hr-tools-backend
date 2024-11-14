@@ -25,7 +25,7 @@ type Provider interface {
 	GetByID(spaceID, id string) (item vacancyapimodels.VacancyRequestView, err error)
 	Update(spaceID, id string, data vacancyapimodels.VacancyRequestEditData) error
 	Delete(spaceID, id string) error
-	List(spaceID string) (list []vacancyapimodels.VacancyRequestView, err error)
+	List(spaceID, userID string, filter vacancyapimodels.VrFilter) (list []vacancyapimodels.VacancyRequestView, rowCount int64, err error)
 	ChangeStatus(spaceID, id, userID string, status models.VRStatus) error
 	Approve(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) error
 	Reject(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) error
@@ -205,20 +205,31 @@ func (i impl) Delete(spaceID, id string) error {
 	return nil
 }
 
-func (i impl) List(spaceID string) (list []vacancyapimodels.VacancyRequestView, err error) {
+func (i impl) List(spaceID, userID string, filter vacancyapimodels.VrFilter) (list []vacancyapimodels.VacancyRequestView, rowCount int64, err error) {
 	logger := log.WithField("space_id", spaceID)
-	recList, err := i.store.List(spaceID)
+	rowCount, err = i.store.ListCount(spaceID, userID, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	page, limit := filter.GetPage()
+	offset := (page - 1) * limit
+	if int64(offset) > rowCount {
+		return []vacancyapimodels.VacancyRequestView{}, rowCount, nil
+	}
+
+	recList, err := i.store.List(spaceID, userID, filter)
 	if err != nil {
 		logger.
 			WithError(err).
 			Error("ошибка получения списка заявок")
-		return nil, err
+		return nil, 0, err
 	}
 	result := make([]vacancyapimodels.VacancyRequestView, 0, len(list))
 	for _, rec := range recList {
 		result = append(result, vacancyapimodels.VacancyRequestConvert(rec))
 	}
-	return result, nil
+	return result, rowCount, nil
 }
 
 func (i impl) ChangeStatus(spaceID, id, userID string, status models.VRStatus) error {
@@ -248,14 +259,14 @@ func (i impl) ChangeStatus(spaceID, id, userID string, status models.VRStatus) e
 }
 
 func (i impl) checkVacancyExist(spaceID, id, userID string) (bool, error) {
-	filter := dbmodels.VacancyFilter{
+	filter := vacancyapimodels.VacancyFilter{
 		VacancyRequestID: id,
 	}
-	list, err := i.vacancyHandler.List(spaceID, userID, filter)
+	_, rowCount, err := i.vacancyHandler.List(spaceID, userID, filter)
 	if err != nil {
 		return false, err
 	}
-	return len(list) > 0, nil
+	return rowCount > 0, nil
 }
 
 func (i impl) Approve(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) error {
