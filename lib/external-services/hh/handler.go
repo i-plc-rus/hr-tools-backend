@@ -348,10 +348,32 @@ func (i *impl) HandleNegotiations(ctx context.Context, data dbmodels.Vacancy) er
 			ResumeTitle:     resume.Title,
 			Salary:          resume.Salary.Amount,
 			Address:         resume.Area.Name,
-			Gender:          resume.Gender.Name,
+			Gender:          models.GenderType(resume.Gender.ID),
 			Relocation:      resume.Relocation.GetRelocationType(),
 			TotalExperience: resume.TotalExperience.Months, //опыт работ в месяцах
+			Params: dbmodels.ApplicantParams{
+				Education:               models.EducationType(resume.Education.Level.ID),
+				HaveAdditionalEducation: len(resume.Education.Additional) > 0,
+				Employments:             []models.Employment{},
+				Schedules:               []models.Schedule{},
+				Languages:               []dbmodels.Language{},
+				TripReadiness:           models.TripReadinessType(resume.BusinessTripReadiness.ID),
+				DriverLicenseTypes:      []models.DriverLicenseType{},
+				SearchStatus:            models.SearchStatusType(resume.JobSearchStatusesEmployer.ID),
+			},
 		}
+
+		for _, employment := range resume.Employments {
+			applicantData.Params.Employments = append(applicantData.Params.Employments, models.Employment(employment.ID))
+		}
+
+		for _, schedule := range resume.Schedules {
+			applicantData.Params.Schedules = append(applicantData.Params.Schedules, models.Schedule(schedule.ID))
+		}
+		for _, driverLicense := range resume.DriverLicenseTypes {
+			applicantData.Params.DriverLicenseTypes = append(applicantData.Params.DriverLicenseTypes, models.DriverLicenseType(driverLicense.ID))
+		}
+
 		birthDate, err := resume.GetBirthDate()
 		if err != nil {
 			logger.WithError(err).Error("ошибка получения даты рождения кандидата")
@@ -399,9 +421,11 @@ func (i *impl) HandleNegotiations(ctx context.Context, data dbmodels.Vacancy) er
 			}
 		}
 		for _, language := range resume.Language {
-			if language.ID == "eng" {
-				applicantData.LanguageLevel = language.Level.Name
+			lng := dbmodels.Language{
+				Name:          language.Name,
+				LanguageLevel: models.LanguageLevelType(language.Level.ID),
 			}
+			applicantData.Params.Languages = append(applicantData.Params.Languages, lng)
 		}
 		_, err = i.applicantStore.Create(applicantData)
 		if err != nil {

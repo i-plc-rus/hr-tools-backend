@@ -70,6 +70,7 @@ func main() {
 	apiv1.InitVacancyApiRouters(space)
 	apiv1.InitSpaceSettingRouters(space)
 	apiv1.InitMsgTemplateApiRouters(space)
+	apiv1.InitNegotiationApiRouters(space)
 
 	ext := fiber.New()
 	space.Mount("/ext", ext)

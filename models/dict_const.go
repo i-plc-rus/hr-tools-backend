@@ -125,6 +125,8 @@ const (
 	EmploymentFull       Employment = "full"       //Полная
 	EmploymentInternship Employment = "internship" //Стажировка
 	EmploymentPartial    Employment = "partial"    //Частичная
+	EmploymentVolunteer  Employment = "volunteer"  //Волонтерство
+	EmploymentProbation  Employment = "probation"  //Стажировка
 )
 
 type Experience string
@@ -155,10 +157,18 @@ const (
 	ApplicantStatusNegotiation ApplicantStatus = "Отклик"
 )
 
+type NegotiationStatus string
+
+const (
+	NegotiationStatusWait     NegotiationStatus = "Рассмотреть позже"
+	NegotiationStatusRejected NegotiationStatus = "Отклонен"
+	NegotiationStatusAccepted NegotiationStatus = "Подходит"
+)
+
 type ApplicantSource string
 
 const (
-	ApplicantSourceManual ApplicantSource = "ручной ввод"
+	ApplicantSourceManual ApplicantSource = "Ручной ввод"
 	ApplicantSourceAvito  ApplicantSource = "Avito"
 	ApplicantSourceHh     ApplicantSource = "HeadHunter"
 )
@@ -166,7 +176,99 @@ const (
 type RelocationType string
 
 const (
-	RelocationTypeNo   RelocationType = "не могу переехать"
-	RelocationTypeYes                 = "могу переехать"
-	RelocationTypeWant                = "хочу переехать"
+	RelocationTypeNo   RelocationType = "no"       // "не могу переехать"
+	RelocationTypeYes  RelocationType = "possible" // "могу переехать"
+	RelocationTypeWant RelocationType = "want"     // "хочу переехать"
+)
+
+type EducationType string
+
+const (
+	EducationTypeSecondary        EducationType = "secondary"         //"Среднее"
+	EducationTypeSpecialSecondary EducationType = "special_secondary" //"Среднее специальное"
+	EducationTypeUnfinishedHigher EducationType = "unfinished_higher" //"Неоконченное высшее"
+	EducationTypeHigher           EducationType = "higher"            //"Высшее"
+	EducationTypeBachelor         EducationType = "bachelor"          //"Бакалавр"
+	EducationTypeMaster           EducationType = "master"            //"Магистр"
+	EducationTypeCandidate        EducationType = "candidate"         //"Кандидат наук"
+	EducationTypeDoctor           EducationType = "doctor"            //"Доктор наук"
+)
+
+type ExperienceType string
+
+const (
+	ExperienceTypeNo           ExperienceType = "No"           //"Нет опыта"
+	ExperienceTypeBetween1And3 ExperienceType = "Between1And3" //"От 1 года до 3 лет"
+	ExperienceTypeBetween3And6 ExperienceType = "Between3And6" //"От 3 года до 6 лет"
+	ExperienceTypeMoreThan6    ExperienceType = "MoreThan6"    //"Более 6 лет"
+)
+
+type ResponsePeriodType string
+
+const (
+	ResponsePeriodType3days     ResponsePeriodType = "до 3 дней"
+	ResponsePeriodType7days     ResponsePeriodType = "до 7 дней"
+	ResponsePeriodType7toMonth  ResponsePeriodType = "от 7 дней до 30 дней"
+	ResponsePeriodTypeMoreMonth ResponsePeriodType = "более месяца"
+)
+
+type LanguageLevelType string
+
+const (
+	LanguageLevelA1 LanguageLevelType = "a1"
+	LanguageLevelA2 LanguageLevelType = "a2"
+	LanguageLevelB1 LanguageLevelType = "b1"
+	LanguageLevelB2 LanguageLevelType = "b2"
+	LanguageLevelC1 LanguageLevelType = "c1"
+	LanguageLevelC2 LanguageLevelType = "c2"
+	LanguageLevelL1 LanguageLevelType = "l1"
+)
+
+type GenderType string
+
+const (
+	GenderTypeM GenderType = "male"   // мужской
+	GenderTypeF GenderType = "female" // женский
+)
+
+type TripReadinessType string
+
+const (
+	TripReadinessReady     TripReadinessType = "ready"     //готов к командировкам
+	TripReadinessSometimes TripReadinessType = "sometimes" //"готов к редким командировкам
+	TripReadinessNever     TripReadinessType = "never"     //"готов к редким командировкам
+)
+
+type DriverLicenseType string
+
+const (
+	DriverLicenseA  DriverLicenseType = "A"
+	DriverLicenseB  DriverLicenseType = "B"
+	DriverLicenseC  DriverLicenseType = "C"
+	DriverLicenseD  DriverLicenseType = "D"
+	DriverLicenseE  DriverLicenseType = "E"
+	DriverLicenseBE DriverLicenseType = "BE"
+	DriverLicenseCE DriverLicenseType = "CE"
+	DriverLicenseDE DriverLicenseType = "DE"
+	DriverLicenseTM DriverLicenseType = "TM"
+	DriverLicenseTB DriverLicenseType = "TB"
+)
+
+type SearchStatusType string
+
+const (
+	SearchStatusActive           SearchStatusType = "active_search"       //Активно ищет работу
+	SearchStatusLookingForOffers SearchStatusType = "looking_for_offers"  //Рассматривает предложения
+	SearchStatusNotLookingForJob SearchStatusType = "not_looking_for_job" //Не ищет работу
+	SearchStatusHasJobOffer      SearchStatusType = "has_job_offer"       //Предложили работу, решает
+	SearchStatusAcceptedJobOffer SearchStatusType = "accepted_job_offer"  //Вышел на новое место
+)
+
+type SearchLabelType string
+
+const (
+	SearchLabelPhoto  SearchLabelType = "only_with_photo"  //Только с фотографией
+	SearchLabelSalary SearchLabelType = "only_with_salary" //Не показывать резюме без зарплаты
+	SearchLabelAge    SearchLabelType = "only_with_age"    //Не показывать резюме без указания возраста
+	SearchLabelGender SearchLabelType = "only_with_gender" //Не показывать резюме без указания пола
 )
