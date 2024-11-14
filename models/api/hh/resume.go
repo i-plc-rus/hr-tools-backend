@@ -6,34 +6,35 @@ import (
 )
 
 type ResumeResponse struct {
-	Age                   int        `json:"age"`
-	AlternateUrl          string     `json:"alternate_url"`
-	Area                  DictData   `json:"area"`
-	BirthDate             string     `json:"birth_date"` //ГГГГ-ММ-ДД
-	BusinessTripReadiness DictData   `json:"business_trip_readiness"`
-	Citizenship           []DictData `json:"citizenship"`
-	Contact               []Contact  `json:"contact"`
-	CreatedAt             string     `json:"created_at"`
-	DriverLicenseTypes    []DictData `json:"driver_license_types"`
-	Education             interface{}
-	Employments           []DictData      `json:"employments"`
-	Experience            []interface{}   `json:"experience"`
-	Gender                DictData        `json:"gender"`
-	ID                    string          `json:"id"`
-	Language              []Language      `json:"language"`
-	FirstName             string          `json:"first_name"`
-	LastName              string          `json:"last_name"`
-	MiddleName            string          `json:"middle_name"`
-	Photo                 Photo           `json:"photo"`
-	Portfolio             []interface{}   `json:"portfolio"`
-	ProfessionalRoles     []interface{}   `json:"professional_roles"`
-	Recommendation        []interface{}   `json:"recommendation"`
-	Relocation            Relocation      `json:"relocation"`
-	Salary                ResumeSalary    `json:"salary"`
-	Schedules             []DictData      `json:"schedules"`
-	SkillSet              []string        `json:"skill_set"`
-	Title                 string          `json:"title"`
-	TotalExperience       TotalExperience `json:"total_experience"`
+	Age                       int             `json:"age"`
+	AlternateUrl              string          `json:"alternate_url"`
+	Area                      DictData        `json:"area"`
+	BirthDate                 string          `json:"birth_date"` //ГГГГ-ММ-ДД
+	BusinessTripReadiness     DictData        `json:"business_trip_readiness"`
+	JobSearchStatusesEmployer DictData        `json:"job_search_statuses_employer"`
+	Citizenship               []DictData      `json:"citizenship"`
+	Contact                   []Contact       `json:"contact"`
+	CreatedAt                 string          `json:"created_at"`
+	DriverLicenseTypes        []DictData      `json:"driver_license_types"`
+	Education                 Education       `json:"education"`
+	Employments               []DictData      `json:"employments"`
+	Experience                []interface{}   `json:"experience"`
+	Gender                    DictData        `json:"gender"`
+	ID                        string          `json:"id"`
+	Language                  []Language      `json:"language"`
+	FirstName                 string          `json:"first_name"`
+	LastName                  string          `json:"last_name"`
+	MiddleName                string          `json:"middle_name"`
+	Photo                     Photo           `json:"photo"`
+	Portfolio                 []interface{}   `json:"portfolio"`
+	ProfessionalRoles         []interface{}   `json:"professional_roles"`
+	Recommendation            []interface{}   `json:"recommendation"`
+	Relocation                Relocation      `json:"relocation"`
+	Salary                    ResumeSalary    `json:"salary"`
+	Schedules                 []DictData      `json:"schedules"`
+	SkillSet                  []string        `json:"skill_set"`
+	Title                     string          `json:"title"`
+	TotalExperience           TotalExperience `json:"total_experience"`
 }
 
 func (r ResumeResponse) GetBirthDate() (time.Time, error) {
@@ -107,4 +108,14 @@ type LanguageLevel struct {
 type Photo struct {
 	Medium string `json:"medium"`
 	Small  string `json:"small"`
+}
+
+type Education struct {
+	Level      DictData              `json:"level"`
+	Additional []AdditionalEducation `json:"additional"`
+}
+
+type AdditionalEducation struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }

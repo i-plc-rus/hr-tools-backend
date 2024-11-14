@@ -5,7 +5,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
-	companyprovider "hr-tools-backend/lib/dicts/company"
+	companystructprovider "hr-tools-backend/lib/dicts/company-struct"
 	"hr-tools-backend/lib/dicts/department/store"
 	dictapimodels "hr-tools-backend/models/api/dict"
 	dbmodels "hr-tools-backend/models/db"
@@ -24,19 +24,19 @@ var Instance Provider
 
 func NewHandler() {
 	Instance = impl{
-		store:   store.NewInstance(db.DB),
-		company: companyprovider.Instance,
+		store:         store.NewInstance(db.DB),
+		companyStruct: companystructprovider.Instance,
 	}
 }
 
 type impl struct {
-	store   store.Provider
-	company companyprovider.Provider
+	store         store.Provider
+	companyStruct companystructprovider.Provider
 }
 
 func (i impl) Create(spaceID string, request dictapimodels.DepartmentData) (id string, err error) {
 	logger := log.WithField("space_id", spaceID)
-	err = i.isUserCompany(request.CompanyStructID, spaceID)
+	err = i.isUserCompanyStruct(request.CompanyStructID, spaceID)
 	if err != nil {
 		return "", err
 	}
@@ -148,8 +148,8 @@ func (i impl) Delete(spaceID, id string) error {
 	return nil
 }
 
-func (i impl) isUserCompany(companyID, spaceID string) error {
-	_, err := i.company.Get(spaceID, companyID)
+func (i impl) isUserCompanyStruct(companyStructID, spaceID string) error {
+	_, err := i.companyStruct.Get(spaceID, companyStructID)
 	if err != nil {
 		return err
 	}

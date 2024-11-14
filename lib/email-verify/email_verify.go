@@ -54,7 +54,7 @@ func (i impl) SendVerifyCode(email string) error {
 		return err
 	}
 	message := fmt.Sprintf("Ссылка для подтверждения почты: %s/api/v1/auth/verify-email?code=%s", config.Conf.Smtp.DomainForVerifyLink, verifyData.Code)
-	err = smtp.Instance.SendConfirmEMail(i.emailFrom, email, message, "EMail Confirm")
+	err = smtp.Instance.SendEMail(i.emailFrom, email, message, "EMail Confirm")
 	if err != nil {
 		return err
 	}

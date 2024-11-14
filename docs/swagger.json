@@ -2831,6 +2831,109 @@
                 }
             }
         },
+        "/api/v1/space/msg-templates/list": {
+            "get": {
+                "description": "Список шаблонов сообщений",
+                "tags": [
+                    "Шаблоны сообщений"
+                ],
+                "summary": "Список шаблонов сообщений",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/msgtemplateapimodels.MsgTemplateView"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/msg-templates/send-email-msg": {
+            "post": {
+                "description": "Отправить сообщение кандидату на почту",
+                "tags": [
+                    "Шаблоны сообщений"
+                ],
+                "summary": "Отправить сообщение кандидату на почту",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/msgtemplateapimodels.SendMessage"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/space/settings/list": {
             "get": {
                 "description": "Список настроек",
@@ -4445,7 +4548,7 @@
         "dictapimodels.DepartmentData": {
             "type": "object",
             "properties": {
-                "company_id": {
+                "company_struct_id": {
                     "type": "string"
                 },
                 "name": {
@@ -4459,7 +4562,7 @@
         "dictapimodels.DepartmentFind": {
             "type": "object",
             "properties": {
-                "company_id": {
+                "company_struct_id": {
                     "type": "string"
                 },
                 "name": {
@@ -4470,7 +4573,7 @@
         "dictapimodels.DepartmentView": {
             "type": "object",
             "properties": {
-                "company_id": {
+                "company_struct_id": {
                     "type": "string"
                 },
                 "id": {
@@ -4696,6 +4799,36 @@
                 "VacancyStatusSuspended",
                 "VacancyStatusClosed"
             ]
+        },
+        "msgtemplateapimodels.MsgTemplateView": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "msgtemplateapimodels.SendMessage": {
+            "type": "object",
+            "properties": {
+                "applicant_id": {
+                    "description": "ID кандидата/отклика кому отправить сообщение",
+                    "type": "string"
+                },
+                "msg_template_id": {
+                    "description": "ID шаблона сообщения, которое нужно отправить",
+                    "type": "string"
+                }
+            }
         },
         "spaceapimodels.CreateOrganization": {
             "type": "object",

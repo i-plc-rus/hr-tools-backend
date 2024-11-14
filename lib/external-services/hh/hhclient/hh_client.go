@@ -235,6 +235,7 @@ func (i impl) NegotiationMarkRead(ctx context.Context, accessToken, vacancyID, n
 }
 
 func (i impl) GetResume(ctx context.Context, accessToken, resumeUrl string) (hhapimodels.ResumeResponse, error) {
+	resumeUrl = resumeUrl + "&with_job_search_status=true"
 	logger := log.
 		WithField("external_request", resumeUrl)
 

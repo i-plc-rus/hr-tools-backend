@@ -6,3 +6,10 @@ type Favorite struct {
 	SpaceUserID string `gorm:"type:varchar(36);uniqueIndex:idx_user"`
 	Selected    bool
 }
+
+type VrFavorite struct {
+	BaseModel
+	VacancyRequestID string `gorm:"type:varchar(36);uniqueIndex:idx_user"`
+	SpaceUserID      string `gorm:"type:varchar(36);uniqueIndex:idx_user"`
+	Selected         bool
+}
