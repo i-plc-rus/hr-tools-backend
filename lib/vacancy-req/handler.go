@@ -29,6 +29,7 @@ type Provider interface {
 	ChangeStatus(spaceID, id, userID string, status models.VRStatus) error
 	Approve(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) error
 	Reject(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) error
+	CreateVacancy(spaceID, id, userID string) error
 }
 
 var Instance Provider
@@ -281,13 +282,7 @@ func (i impl) Approve(spaceID, id, userID string, data vacancyapimodels.VacancyR
 		return errors.Errorf("невозможно согласовать заявку в текущем статусе: %v", rec.Status)
 	}
 	if rec.Status == models.VRStatusAccepted {
-		exist, err := i.checkVacancyExist(spaceID, id, userID)
-		if err != nil {
-			return err
-		}
-		if exist {
-			return errors.New("невозможно согласовать заявку, вакансия по заявке уже создана")
-		}
+		return errors.New("заявка уже согласована")
 	}
 
 	isLastStage, stage := rec.GetCurrentApprovalStage()
@@ -314,7 +309,6 @@ func (i impl) Approve(spaceID, id, userID string, data vacancyapimodels.VacancyR
 		if err != nil {
 			return err
 		}
-		return i.publish(spaceID, id, userID)
 	}
 	return nil
 }
@@ -450,4 +444,22 @@ func (i impl) publish(spaceID, id, userID string) error {
 		return err
 	}
 	return nil
+}
+
+func (i impl) CreateVacancy(spaceID, id, userID string) error {
+	rec, err := i.getRec(spaceID, id)
+	if err != nil {
+		return err
+	}
+	if rec.Status != models.VRStatusAccepted {
+		return errors.New("для создания вакансии, необходимо согласовать заявку")
+	}
+	exist, err := i.checkVacancyExist(spaceID, id, userID)
+	if err != nil {
+		return err
+	}
+	if exist {
+		return errors.New("вакансии уже создана")
+	}
+	return i.publish(spaceID, id, userID)
 }

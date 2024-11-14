@@ -71,6 +71,9 @@ func AutoMigrateDB() error {
 	if err := DB.AutoMigrate(&dbmodels.Applicant{}); err != nil {
 		return errors.Wrap(err, "ошибка создания структуры Applicant")
 	}
+	if err := DB.AutoMigrate(&dbmodels.MessageTemplate{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры MessageTemplate")
+	}
 
 	if err := DB.AutoMigrate(&dbmodels.VrFavorite{}); err != nil {
 		return errors.Wrap(err, "ошибка создания структуры VrFavorite")
