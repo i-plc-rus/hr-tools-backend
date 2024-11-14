@@ -2,17 +2,14 @@ package middleware
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt/v5"
+	authutils "hr-tools-backend/lib/utils/auth-utils"
 	"hr-tools-backend/models"
 	apimodels "hr-tools-backend/models/api"
 )
 
-func SuperAdminRole() fiber.Handler {
+func SuperAdminRoleRequired() fiber.Handler {
 	return func(ctx *fiber.Ctx) (err error) {
-		token := ctx.Locals("user").(*jwt.Token)
-		claims := token.Claims.(jwt.MapClaims)
-		role := claims["role"].(string)
-		if role != string(models.UserRoleSuperAdmin) {
+		if GetSpaceRole(ctx) != models.UserRoleSuperAdmin {
 			return ctx.Status(fiber.StatusForbidden).JSON(apimodels.NewError("операция недоступна"))
 		}
 		return ctx.Next()
@@ -20,21 +17,22 @@ func SuperAdminRole() fiber.Handler {
 }
 
 func GetUserSpace(ctx *fiber.Ctx) string {
-	token := ctx.Locals("user").(*jwt.Token)
-	claims := token.Claims.(jwt.MapClaims)
+	claims := authutils.GetClaims(ctx)
 	return claims["space"].(string)
 }
 func GetUserID(ctx *fiber.Ctx) string {
-	token := ctx.Locals("user").(*jwt.Token)
-	claims := token.Claims.(jwt.MapClaims)
+	claims := authutils.GetClaims(ctx)
 	return claims["sub"].(string)
 }
 
-func SpaceAdminUser() fiber.Handler {
+func GetSpaceRole(ctx *fiber.Ctx) models.UserRole {
+	claims := authutils.GetClaims(ctx)
+	return claims["role"].(models.UserRole)
+}
+
+func SpaceAdminRequired() fiber.Handler {
 	return func(ctx *fiber.Ctx) (err error) {
-		token := ctx.Locals("user").(*jwt.Token)
-		claims := token.Claims.(jwt.MapClaims)
-		if !claims["admin"].(bool) {
+		if GetSpaceRole(ctx) != models.SpaceAdminRole {
 			return ctx.Status(fiber.StatusForbidden).JSON(apimodels.NewError("операция недоступна"))
 		}
 		return ctx.Next()

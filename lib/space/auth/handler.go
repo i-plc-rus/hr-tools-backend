@@ -59,7 +59,7 @@ func (i impl) RefreshToken(ctx *fiber.Ctx, refreshToken string) (response authap
 				Error("ошибка поиска пользователя")
 			return authapimodels.JWTResponse{}, err
 		}
-		tokenString, err := authutils.GetToken(userID, user.GetFullName(), user.SpaceID, user.IsAdmin)
+		tokenString, err := authutils.GetToken(userID, user.GetFullName(), user.SpaceID, user.Role.IsSpaceAdmin(), string(user.Role))
 		if err != nil {
 			log.WithError(err).Error("ошибка генерации JWT")
 			return authapimodels.JWTResponse{}, err
@@ -109,7 +109,7 @@ func (i impl) Login(email, password string) (response authapimodels.JWTResponse,
 		logger.Debug("пользователь не прошел проверку пароля")
 		return authapimodels.JWTResponse{}, errors.New("пользователь не прошел проверку пароля")
 	}
-	tokenString, err := authutils.GetToken(user.ID, user.GetFullName(), user.SpaceID, user.IsAdmin)
+	tokenString, err := authutils.GetToken(user.ID, user.GetFullName(), user.SpaceID, user.Role.IsSpaceAdmin(), string(user.Role))
 	if err != nil {
 		logger.WithError(err).Error("ошибка генерации JWT")
 		return authapimodels.JWTResponse{}, err

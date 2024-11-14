@@ -17,7 +17,7 @@ func InitJobTitleDictApiRouters(app *fiber.App) {
 	controller := jobTitleDictApiController{}
 	app.Route("job_title", func(router fiber.Router) {
 		router.Post("find", controller.jobTitleFindByName)
-		router.Use(middleware.SpaceAdminUser())
+		router.Use(middleware.SpaceAdminRequired())
 		router.Post("", controller.jobTitleCreate)
 		router.Put(":id", controller.jobTitleUpdate)
 		router.Get(":id", controller.jobTitleGet)

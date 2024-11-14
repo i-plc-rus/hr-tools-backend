@@ -29,7 +29,7 @@ func InitAdminApiRouters(app *fiber.App) {
 	user := fiber.New()
 	app.Mount("/user", user)
 	user.Use(middleware.AdminPanelAuthorizationRequired())
-	user.Use(middleware.SuperAdminRole())
+	user.Use(middleware.SuperAdminRoleRequired())
 	user.Get("get/:userID", controller.userGet)
 	user.Post("create", controller.userCreate)
 	user.Put("update/:userID", controller.userUpdate)
