@@ -7,7 +7,6 @@ import (
 	"hr-tools-backend/middleware"
 	apimodels "hr-tools-backend/models/api"
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
-	dbmodels "hr-tools-backend/models/db"
 )
 
 type vacancyApiController struct {
@@ -142,25 +141,25 @@ func (c *vacancyApiController) delete(ctx *fiber.Ctx) error {
 // @Summary Список
 // @Tags Вакансия
 // @Description Список
-// @Param	body body	 dbmodels.VacancyFilter	true	"request filter body"
+// @Param	body body	 vacancyapimodels.VacancyFilter	true	"request filter body"
 // @Param   Authorization		header		string	true	"Authorization token"
-// @Success 200 {object} apimodels.Response{data=[]vacancyapimodels.VacancyView}
+// @Success 200 {object} apimodels.ScrollerResponse{data=[]vacancyapimodels.VacancyView}
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
 // @router /api/v1/space/vacancy/list [post]
 func (c *vacancyApiController) list(ctx *fiber.Ctx) error {
-	var payload dbmodels.VacancyFilter
+	var payload vacancyapimodels.VacancyFilter
 	if err := c.BodyParser(ctx, &payload); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
 	userID := middleware.GetUserID(ctx)
-	list, err := vacancyhandler.Instance.List(spaceID, userID, payload)
+	list, rowCount, err := vacancyhandler.Instance.List(spaceID, userID, payload)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
-	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(list))
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewScrollerResponse(list, rowCount))
 }
 
 // @Summary Закрепить

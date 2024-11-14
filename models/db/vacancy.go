@@ -75,22 +75,3 @@ type VacancyExt struct {
 	Favorite bool
 	Pinned   bool
 }
-
-type VacancySort struct {
-	CreatedAtDesc bool `json:"created_at_desc"` // порядок сортировки false = ASC/ true = DESC
-}
-
-type VacancyFilter struct {
-	VacancyRequestID string                 `json:"request_id"`
-	Favorite         bool                   `json:"favorite"`
-	Search           string                 `json:"search"`
-	Statuses         []models.VacancyStatus `json:"statuses"`
-	CityID           string                 `json:"city_id"`
-	DepartmentID     string                 `json:"department_id"`
-	SelectionType    models.VRSelectionType `json:"selection_type"`
-	RequestType      models.VRType          `json:"request_type"`
-	Urgency          models.VRUrgency       `json:"urgency"`
-	AuthorID         string                 `json:"author_id"`
-	RequestAuthorID  string                 `json:"request_author_id"`
-	Sort             VacancySort            `json:"sort"`
-}

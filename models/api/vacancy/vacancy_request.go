@@ -3,6 +3,7 @@ package vacancyapimodels
 import (
 	"github.com/pkg/errors"
 	"hr-tools-backend/models"
+	apimodels "hr-tools-backend/models/api"
 	dbmodels "hr-tools-backend/models/db"
 	"time"
 )
@@ -154,4 +155,72 @@ type ExtVacancyInfo struct {
 	Url    string                  `json:"url"`    //урл вакансии
 	Status models.VacancyPubStatus `json:"status"` //статус публикации
 	Reason string                  `json:"reason"` //описание статуса/ошибки
+}
+
+type VrSort struct {
+	CreatedAtDesc bool `json:"created_at_desc"` // порядок сортировки false = ASC/ true = DESC
+}
+
+type VrFilter struct {
+	apimodels.Pagination
+	Favorite      bool                   `json:"favorite"`       // Избранные
+	Search        string                 `json:"search"`         // Поиск по названию
+	Statuses      []models.VRStatus      `json:"statuses"`       // Фильтр по статусам
+	CityID        string                 `json:"city_id"`        // Фильтр по городу
+	AuthorID      string                 `json:"author_id"`      // Фильтр по автору
+	SelectionType models.VRSelectionType `json:"selection_type"` // Фильтр по виду подбора
+	SearchPeriod  SearchPeriod           `json:"search_period"`  // Поиск по дате (1 - За день|2 - за 3 дня|3 - за неделю|4 - за 30 дней|5 - за пероид)
+	SearchFrom    string                 `json:"search_from"`    // Период "с", при выборе search_period = 5 (в формате "21.09.2023")
+	SearchTo      string                 `json:"search_to"`      // Период "по", при выборе search_period = 5 (в формате "21.09.2023")
+	Sort          VrSort                 `json:"sort"`           // Сортировка
+}
+
+type SearchPeriod int
+
+const (
+	SearchByToday SearchPeriod = iota + 1
+	SearchBy3Days
+	SearchByWeek
+	SearchByMonth
+	SearchByPeriod
+)
+
+const ruLayout = "02.01.2006"
+
+func (vr VrFilter) Validate() error {
+	if vr.SearchPeriod != SearchByPeriod {
+		return nil
+	}
+	if vr.SearchFrom == "" && vr.SearchTo == "" {
+		return errors.New("не указан период поиска")
+	}
+	if vr.SearchFrom != "" {
+		_, err := time.ParseInLocation(ruLayout, vr.SearchFrom, time.Now().Location())
+		if err != nil {
+			return errors.New("некорректный формат Периода \"с\", ожидается формат: \"21.09.2023\"")
+		}
+	}
+	if vr.SearchTo != "" {
+		_, err := time.ParseInLocation(ruLayout, vr.SearchTo, time.Now().Location())
+		if err != nil {
+			return errors.New("некорректный формат Периода \"по\", ожидается формат: \"21.09.2023\"")
+		}
+	}
+	return nil
+}
+
+func (vr VrFilter) GetSearchFrom() time.Time {
+	if vr.SearchFrom == "" {
+		return time.Time{}
+	}
+	res, _ := time.ParseInLocation(ruLayout, vr.SearchFrom, time.Now().Location())
+	return res
+}
+
+func (vr VrFilter) GetSearchTo() time.Time {
+	if vr.SearchTo == "" {
+		return time.Time{}
+	}
+	res, _ := time.ParseInLocation(ruLayout, vr.SearchTo, time.Now().Location())
+	return res
 }
