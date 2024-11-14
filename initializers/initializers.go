@@ -33,6 +33,7 @@ func InitAllServices(ctx context.Context) {
 	LoggerConfig = InitLogger()
 	config.InitConfig()
 	InitDBConnection()
+	InitS3(ctx)
 	InitSmtp()
 	cityprovider.NewHandler()
 	hhclient.NewProvider(config.Conf.HH.RedirectUri)

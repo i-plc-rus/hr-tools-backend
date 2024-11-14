@@ -1,12 +1,14 @@
 package spacehandler
 
 import (
+	"context"
 	"fmt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"hr-tools-backend/db"
 	companystructload "hr-tools-backend/lib/company-struct-load"
+	filestorage "hr-tools-backend/lib/file-storage"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
 	spacestore "hr-tools-backend/lib/space/store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
@@ -47,11 +49,12 @@ func (i impl) CreateOrganizationSpace(request spaceapimodels.CreateOrganization)
 			return err
 		}
 		// подгружаем справочники доступные по-умолчанию
-		err = i.createDefaultSpaceSettings(tx, spaceID)
+		err = i.preloadDicts(tx, spaceID)
 		if err != nil {
 			return err
 		}
-		err = i.preloadDicts(tx, spaceID)
+		// создаем отдельный бакет в S3
+		err = i.makeS3Bucket(context.Background(), spaceID)
 		if err != nil {
 			return err
 		}
@@ -92,7 +95,7 @@ func (i impl) createAdmin(tx *gorm.DB, spaceID string, adminData spaceapimodels.
 		Password:    authutils.GetMD5Hash(adminData.Password),
 		FirstName:   adminData.FirstName,
 		LastName:    adminData.LastName,
-		IsAdmin:     true,
+		Role:        models.SpaceAdminRole,
 		Email:       adminData.Email,
 		IsActive:    true,
 		PhoneNumber: adminData.PhoneNumber,
@@ -121,4 +124,12 @@ func (i impl) createDefaultSpaceSettings(tx *gorm.DB, spaceID string) error {
 
 func (i impl) preloadDicts(tx *gorm.DB, spaceID string) error {
 	return companystructload.PreloadCompanyStruct(tx, spaceID)
+}
+
+func (i impl) makeS3Bucket(ctx context.Context, spaceID string) error {
+	err := filestorage.Instance.MakeSpaceBucket(ctx, spaceID)
+	if err != nil {
+		return errors.Wrap(err, "ошибка создания бакета для space")
+	}
+	return nil
 }
