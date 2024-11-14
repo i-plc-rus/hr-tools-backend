@@ -172,7 +172,7 @@ definitions:
     type: object
   dictapimodels.DepartmentData:
     properties:
-      company_id:
+      company_struct_id:
         type: string
       name:
         type: string
@@ -181,14 +181,14 @@ definitions:
     type: object
   dictapimodels.DepartmentFind:
     properties:
-      company_id:
+      company_struct_id:
         type: string
       name:
         type: string
     type: object
   dictapimodels.DepartmentView:
     properties:
-      company_id:
+      company_struct_id:
         type: string
       id:
         type: string
@@ -361,6 +361,26 @@ definitions:
     - VacancyStatusCanceled
     - VacancyStatusSuspended
     - VacancyStatusClosed
+  msgtemplateapimodels.MsgTemplateView:
+    properties:
+      id:
+        type: string
+      message:
+        type: string
+      name:
+        type: string
+      title:
+        type: string
+    type: object
+  msgtemplateapimodels.SendMessage:
+    properties:
+      applicant_id:
+        description: ID кандидата/отклика кому отправить сообщение
+        type: string
+      msg_template_id:
+        description: ID шаблона сообщения, которое нужно отправить
+        type: string
+    type: object
   spaceapimodels.CreateOrganization:
     properties:
       admin_data:
@@ -2733,6 +2753,71 @@ paths:
       summary: Получение ссылки для авторизации
       tags:
       - Интеграция HeadHunter
+  /api/v1/space/msg-templates/list:
+    get:
+      description: Список шаблонов сообщений
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/msgtemplateapimodels.MsgTemplateView'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Список шаблонов сообщений
+      tags:
+      - Шаблоны сообщений
+  /api/v1/space/msg-templates/send-email-msg:
+    post:
+      description: Отправить сообщение кандидату на почту
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/msgtemplateapimodels.SendMessage'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Отправить сообщение кандидату на почту
+      tags:
+      - Шаблоны сообщений
   /api/v1/space/settings/{code}:
     put:
       description: Обновить значение настройки пространства
