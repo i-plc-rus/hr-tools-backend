@@ -35,6 +35,8 @@ type Applicant struct {
 	Comment               string
 	Params                ApplicantParams `gorm:"type:jsonb"`
 	PhotoUrl              string          `gorm:"type:varchar(500)"` //todo s3 photo
+	SelectionStageID      string          `gorm:"type:varchar(36)"`
+	SelectionStage        *SelectionStage `gorm:"foreignKey:SelectionStageID"`
 }
 
 func (j ApplicantParams) Value() (driver.Value, error) {

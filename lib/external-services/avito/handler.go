@@ -399,6 +399,12 @@ func (i *impl) storeApplicant(resume *avitoapimodels.Resume, apply avitoapimodel
 			SearchStatus:            "", //нет данных
 		},
 	}
+	for _, stage := range data.SelectionStages {
+		if stage.Name == dbmodels.NegotiationStage {
+			applicantData.SelectionStageID = stage.ID
+			break
+		}
+	}
 	birthDate, err := apply.GetBirthDate()
 	if err != nil {
 		logger.WithError(err).Error("ошибка получения даты рождения кандидата")
