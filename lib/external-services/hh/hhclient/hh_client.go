@@ -43,6 +43,8 @@ type Provider interface {
 	GetAreas(ctx context.Context) ([]hhapimodels.Area, error)
 
 	GetVacancy(ctx context.Context, accessToken, vacancyID string) (*hhapimodels.VacancyInfo, error)
+
+	DownloadResume(ctx context.Context, accessToken, resumeUrl string) ([]byte, error)
 }
 
 var Instance Provider
@@ -312,6 +314,19 @@ func (i impl) GetAreas(ctx context.Context) ([]hhapimodels.Area, error) {
 		return nil, err
 	}
 	return resp, nil
+}
+
+func (i impl) DownloadResume(ctx context.Context, accessToken, resumeUrl string) ([]byte, error) {
+	r, _ := http.NewRequestWithContext(ctx, "GET", resumeUrl, nil)
+	r.Header.Add("Content-Type", "application/pdf")
+	logger := log.
+		WithField("external_request", resumeUrl)
+	var fileBody []byte
+	err := i.sendRequest(logger, r, &fileBody, accessToken)
+	if err != nil {
+		return nil, err
+	}
+	return fileBody, nil
 }
 
 func (i impl) sendRequest(logger *log.Entry, r *http.Request, resp interface{}, accessToken string) error {
