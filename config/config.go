@@ -58,11 +58,11 @@ type Configuration struct {
 		RedirectUri string `default:"https://api.hr-tools.pro/api/v1/oauth/callback/hh" env:"HH_REDIRECT"`
 	}
 	S3 struct {
-		Endpoint        string `default:"" env:"S3_ENDPOINT"`
-		AccessKeyID     string `default:"" env:"S3_ACCESS_KEY_ID"`
-		SecretAccessKey string `default:"" env:"S3_SECRET_KEY"`
-		UseSSL          *bool  `default:"false" env:"S3_USE_SSL"`
-		BucketName      string `default:"hr-tools" env:"S3_BUCKET_NAME"`
+		Endpoint         string `default:"" env:"S3_ENDPOINT"`
+		AccessKeyID      string `default:"" env:"S3_ACCESS_KEY_ID"`
+		SecretAccessKey  string `default:"" env:"S3_SECRET_KEY"`
+		UseSSL           *bool  `default:"false" env:"S3_USE_SSL"`
+		BucketNamePrefix string `default:"hr-tools" env:"S3_BUCKET_NAME_PREFIX"`
 	}
 }
 
