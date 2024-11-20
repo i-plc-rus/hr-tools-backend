@@ -107,7 +107,7 @@ func (i impl) RequestToken(ctx context.Context, req hhapimodels.RequestToken) (*
 		WithField("external_request", uri).
 		WithField("request_body", fmt.Sprintf("%+v", data.Encode()))
 
-	err = i.sendRequest(logger, r, &resp, "")
+	err = i.sendRequest(logger, r, &resp, "", true)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +128,7 @@ func (i impl) RefreshToken(ctx context.Context, req hhapimodels.RefreshToken) (*
 		WithField("external_request", uri).
 		WithField("request_body", fmt.Sprintf("%+v", data.Encode()))
 
-	err := i.sendRequest(logger, r, &resp, "")
+	err := i.sendRequest(logger, r, &resp, "", true)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +142,7 @@ func (i impl) Me(ctx context.Context, accessToken string) (*hhapimodels.MeRespon
 	r, _ := http.NewRequestWithContext(ctx, "GET", uri, nil)
 	r.Header.Add("Content-Type", "application/json")
 	resp := hhapimodels.MeResponse{}
-	err := i.sendRequest(logger, r, &resp, accessToken)
+	err := i.sendRequest(logger, r, &resp, accessToken, true)
 	return &resp, err
 }
 
@@ -162,7 +162,7 @@ func (i impl) VacancyPublish(ctx context.Context, accessToken string, request hh
 	logger = logger.
 		WithField("request_body", string(body))
 
-	err = i.sendRequest(logger, r, &resp, accessToken)
+	err = i.sendRequest(logger, r, &resp, accessToken, true)
 	if err != nil {
 		return "", err
 	}
@@ -185,7 +185,7 @@ func (i impl) VacancyUpdate(ctx context.Context, accessToken, vacancyID string, 
 	logger = logger.
 		WithField("request_body", string(body))
 
-	return i.sendRequest(logger, r, nil, accessToken)
+	return i.sendRequest(logger, r, nil, accessToken, true)
 }
 
 func (i impl) VacancyClose(ctx context.Context, accessToken, employerID, vacancyID string) error {
@@ -196,7 +196,7 @@ func (i impl) VacancyClose(ctx context.Context, accessToken, employerID, vacancy
 		WithField("external_request", uri)
 	r, _ := http.NewRequestWithContext(ctx, "PUT", uri, nil)
 	r.Header.Add("Content-Type", "application/json")
-	return i.sendRequest(logger, r, nil, accessToken)
+	return i.sendRequest(logger, r, nil, accessToken, true)
 }
 
 func (i impl) Negotiations(ctx context.Context, accessToken, vacancyID string, page, perPage int) (hhapimodels.NegotiationResponse, error) {
@@ -229,7 +229,7 @@ func (i impl) NegotiationMarkRead(ctx context.Context, accessToken, vacancyID, n
 	r.Header.Add("Content-Type", "application/json")
 	resp := hhapimodels.ResumeResponse{}
 
-	err = i.sendRequest(logger, r, &resp, accessToken)
+	err = i.sendRequest(logger, r, &resp, accessToken, true)
 	if err != nil {
 		return err
 	}
@@ -245,7 +245,7 @@ func (i impl) GetResume(ctx context.Context, accessToken, resumeUrl string) (hha
 	r.Header.Add("Content-Type", "application/json")
 	resp := hhapimodels.ResumeResponse{}
 
-	err := i.sendRequest(logger, r, &resp, accessToken)
+	err := i.sendRequest(logger, r, &resp, accessToken, true)
 	if err != nil {
 		return hhapimodels.ResumeResponse{}, err
 	}
@@ -261,7 +261,7 @@ func (i impl) GetVacancy(ctx context.Context, accessToken, vacancyID string) (*h
 	r.Header.Add("Content-Type", "application/json")
 	resp := hhapimodels.VacancyInfo{}
 
-	err := i.sendRequest(logger, r, &resp, accessToken)
+	err := i.sendRequest(logger, r, &resp, accessToken, true)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +277,7 @@ func (i impl) getNegotiations(ctx context.Context, accessToken, vacancyID string
 	r.Header.Add("Content-Type", "application/json")
 	resp := hhapimodels.NegotiationCollections{}
 
-	err := i.sendRequest(logger, r, &resp, accessToken)
+	err := i.sendRequest(logger, r, &resp, accessToken, true)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +293,7 @@ func (i impl) getNegotiationCollection(ctx context.Context, accessToken, originU
 	r.Header.Add("Content-Type", "application/json")
 	resp := hhapimodels.NegotiationResponse{}
 
-	err := i.sendRequest(logger, r, &resp, accessToken)
+	err := i.sendRequest(logger, r, &resp, accessToken, true)
 	if err != nil {
 		return hhapimodels.NegotiationResponse{}, err
 	}
@@ -309,7 +309,7 @@ func (i impl) GetAreas(ctx context.Context) ([]hhapimodels.Area, error) {
 	r.Header.Add("Content-Type", "application/json")
 	resp := []hhapimodels.Area{}
 
-	err := i.sendRequest(logger, r, &resp, "")
+	err := i.sendRequest(logger, r, &resp, "", true)
 	if err != nil {
 		return nil, err
 	}
@@ -322,14 +322,14 @@ func (i impl) DownloadResume(ctx context.Context, accessToken, resumeUrl string)
 	logger := log.
 		WithField("external_request", resumeUrl)
 	var fileBody []byte
-	err := i.sendRequest(logger, r, &fileBody, accessToken)
+	err := i.sendRequest(logger, r, &fileBody, accessToken, false)
 	if err != nil {
 		return nil, err
 	}
 	return fileBody, nil
 }
 
-func (i impl) sendRequest(logger *log.Entry, r *http.Request, resp interface{}, accessToken string) error {
+func (i impl) sendRequest(logger *log.Entry, r *http.Request, resp interface{}, accessToken string, needUnmarshalResponse bool) error {
 	r.Header.Add("User-Agent", "HRTools/1.0")
 	if accessToken != "" {
 		r.Header.Add("Authorization", fmt.Sprintf("Bearer %v", accessToken))
@@ -339,9 +339,11 @@ func (i impl) sendRequest(logger *log.Entry, r *http.Request, resp interface{}, 
 	if response != nil && (response.StatusCode >= 200 && response.StatusCode <= 300) {
 		if resp != nil {
 			responseBody, _ := io.ReadAll(response.Body)
-			err = json.Unmarshal(responseBody, resp)
-			if err != nil {
-				return errors.Wrap(err, "ошибка сериализации ответа")
+			if needUnmarshalResponse {
+				err = json.Unmarshal(responseBody, resp)
+				if err != nil {
+					return errors.Wrap(err, "ошибка сериализации ответа")
+				}
 			}
 		}
 		return nil
