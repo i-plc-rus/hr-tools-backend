@@ -1,12 +1,15 @@
 package applicant
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
 	applicantstore "hr-tools-backend/lib/applicant/store"
+	vacancyhandler "hr-tools-backend/lib/vacancy"
 	selectionstagestore "hr-tools-backend/lib/vacancy/selection-stage-store"
 	"hr-tools-backend/models"
+	applicantapimodels "hr-tools-backend/models/api/applicant"
 	negotiationapimodels "hr-tools-backend/models/api/negotiation"
 	dbmodels "hr-tools-backend/models/db"
 	"time"
@@ -17,6 +20,12 @@ type Provider interface {
 	UpdateComment(id string, comment string) error
 	UpdateStatus(spaceID, id string, status models.NegotiationStatus) error
 	GetByID(spaceID, id string) (negotiationapimodels.NegotiationView, error)
+	CreateApplicant(spaceID string, applicant applicantapimodels.ApplicantData) (string, error)
+	GetApplicant(spaceID string, id string) (applicantapimodels.ApplicantViewExt, error)
+	ListOfApplicant(spaceID string, filter applicantapimodels.ApplicantFilter) (list []applicantapimodels.ApplicantView, rowCount int64, err error)
+	UpdateApplicant(spaceID string, id string, applicant applicantapimodels.ApplicantData) error
+	ApplicantAddTag(spaceID string, id string, tag string) error
+	ApplicantRemoveTag(spaceID string, id string, tag string) error
 }
 
 var Instance Provider
@@ -25,12 +34,14 @@ func NewHandler() {
 	Instance = impl{
 		store:               applicantstore.NewInstance(db.DB),
 		selectionStageStore: selectionstagestore.NewInstance(db.DB),
+		vacancyProvider:     vacancyhandler.Instance,
 	}
 }
 
 type impl struct {
 	store               applicantstore.Provider
 	selectionStageStore selectionstagestore.Provider
+	vacancyProvider     vacancyhandler.Provider
 }
 
 func (i impl) ListOfNegotiation(spaceID string, filter dbmodels.NegotiationFilter) ([]negotiationapimodels.NegotiationView, error) {
@@ -103,7 +114,226 @@ func (i impl) GetByID(spaceID, id string) (negotiationapimodels.NegotiationView,
 		return negotiationapimodels.NegotiationView{}, err
 	}
 	if rec == nil {
-		return negotiationapimodels.NegotiationView{}, errors.New("отклил не найден")
+		return negotiationapimodels.NegotiationView{}, errors.New("отклик не найден")
 	}
 	return negotiationapimodels.NegotiationConvertExt(*rec), nil
+}
+
+func (i impl) CreateApplicant(spaceID string, data applicantapimodels.ApplicantData) (id string, err error) {
+	logger := log.WithField("space_id", spaceID)
+	err = i.checkDependency(spaceID, data)
+	if err != nil {
+		return "", err
+	}
+	rec := dbmodels.Applicant{
+		BaseSpaceModel: dbmodels.BaseSpaceModel{
+			SpaceID: spaceID,
+		},
+		VacancyID:             data.VacancyID,
+		NegotiationID:         "",
+		ResumeID:              "",
+		ResumeTitle:           "",
+		Source:                models.ApplicantSourceManual,
+		NegotiationDate:       time.Time{},
+		NegotiationAcceptDate: time.Now(),
+		Status:                models.ApplicantStatusInProcess,
+		FirstName:             data.FirstName,
+		LastName:              data.LastName,
+		MiddleName:            data.MiddleName,
+		Salary:                data.Salary,
+		Address:               data.Address,
+		Citizenship:           data.Citizenship,
+		Gender:                data.Gender,
+		Relocation:            data.Relocation,
+		Phone:                 data.Phone,
+		Email:                 data.Email,
+		TotalExperience:       data.TotalExperience,
+		Params:                data.Params,
+		Comment:               data.Comment,
+	}
+	birthDate, err := data.GetBirthDate()
+	if err != nil {
+		logger.WithError(err).Error("ошибка получения даты рождения кандидата")
+		return "", errors.New("ошибка получения даты рождения кандидата")
+	}
+	rec.BirthDate = birthDate
+	recID, err := i.store.Create(rec)
+	if err != nil {
+		logger.
+			WithField("request", fmt.Sprintf("%+v", data)).
+			WithError(err).
+			Error("ошибка создания кандидата")
+		return "", errors.New("Ошибка создания кандидата")
+	}
+	logger.
+		WithField("rec_id", recID).
+		Info("Создан кандидат")
+	return recID, nil
+
+}
+
+func (i impl) GetApplicant(spaceID string, id string) (applicantapimodels.ApplicantViewExt, error) {
+	rec, err := i.store.GetByID(spaceID, id)
+	if err != nil {
+		return applicantapimodels.ApplicantViewExt{}, err
+	}
+	if rec == nil {
+		return applicantapimodels.ApplicantViewExt{}, errors.New("кандидат не найден")
+	}
+	//todo дубликаты
+	result := applicantapimodels.ApplicantViewExt{
+		ApplicantView: applicantapimodels.ApplicantConvert(rec.Applicant),
+		Tags:          rec.Tags,
+	}
+	return result, nil
+}
+
+func (i impl) ListOfApplicant(spaceID string, filter applicantapimodels.ApplicantFilter) (list []applicantapimodels.ApplicantView, rowCount int64, err error) {
+	logger := log.WithField("space_id", spaceID)
+	rowCount, err = i.store.ListCountOfApplicant(spaceID, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	page, limit := filter.GetPage()
+	offset := (page - 1) * limit
+	if int64(offset) > rowCount {
+		return []applicantapimodels.ApplicantView{}, rowCount, nil
+	}
+
+	recList, err := i.store.ListOfApplicant(spaceID, filter)
+	if err != nil {
+		logger.
+			WithError(err).
+			Error("ошибка получения списка кандидатов")
+		return nil, 0, errors.New("ошибка получения списка кандидатов")
+	}
+	result := make([]applicantapimodels.ApplicantView, 0, len(recList))
+	for _, rec := range recList {
+		result = append(result, applicantapimodels.ApplicantConvert(rec))
+	}
+	return result, rowCount, nil
+}
+
+func (i impl) UpdateApplicant(spaceID string, id string, data applicantapimodels.ApplicantData) error {
+	logger := log.WithField("space_id", spaceID).
+		WithField("rec_id", id)
+	err := i.checkDependency(spaceID, data)
+	if err != nil {
+		return err
+	}
+
+	birthDate, err := data.GetBirthDate()
+	if err != nil {
+		logger.WithError(err).Error("некорректный формат даты рождения кандидата")
+		return errors.New("Некорректный формат даты рождения кандидата")
+	}
+	updMap := map[string]interface{}{
+		"SpaceID":         spaceID,
+		"VacancyID":       data.VacancyID,
+		"Source":          models.ApplicantSourceManual,
+		"Status":          models.ApplicantStatusInProcess,
+		"FirstName":       data.FirstName,
+		"LastName":        data.LastName,
+		"MiddleName":      data.MiddleName,
+		"Salary":          data.Salary,
+		"Address":         data.Address,
+		"BirthDate":       birthDate,
+		"Citizenship":     data.Citizenship,
+		"Gender":          data.Gender,
+		"Relocation":      data.Relocation,
+		"Phone":           data.Phone,
+		"Email":           data.Email,
+		"TotalExperience": data.TotalExperience,
+		"Params":          data.Params,
+		"Comment":         data.Comment,
+	}
+	err = i.store.Update(id, updMap)
+	if err != nil {
+		logger.
+			WithField("request", fmt.Sprintf("%+v", data)).
+			WithError(err).
+			Error("ошибка обновления кандидата")
+		return err
+	}
+	logger.Info("Обновлен кандидат")
+	return nil
+}
+
+func (i impl) ApplicantAddTag(spaceID string, id string, tag string) error {
+	logger := log.WithField("space_id", spaceID).
+		WithField("rec_id", id)
+	rec, err := i.store.GetByID(spaceID, id)
+	if err != nil {
+		return err
+	}
+	if rec == nil {
+		return errors.New("кандидат не найден")
+	}
+	for _, recTag := range rec.Tags {
+		if recTag == tag {
+			//уже существует
+			return nil
+		}
+	}
+	tags := append(rec.Tags, tag)
+	updMap := map[string]interface{}{
+		"tags": tags,
+	}
+	err = i.store.Update(id, updMap)
+	if err != nil {
+		logger.
+			WithField("tag", tag).
+			WithError(err).
+			Error("ошибка добавления тега кандидата")
+		return err
+	}
+	logger.Info("Обновлен список тегов кандидата")
+	return nil
+}
+
+func (i impl) ApplicantRemoveTag(spaceID string, id string, tag string) error {
+	logger := log.WithField("space_id", spaceID).
+		WithField("rec_id", id)
+	rec, err := i.store.GetByID(spaceID, id)
+	if err != nil {
+		return err
+	}
+	if rec == nil {
+		return errors.New("кандидат не найден")
+	}
+	tags := make([]string, 0, len(rec.Tags)-1)
+	for _, recTag := range rec.Tags {
+		if recTag == tag {
+			continue
+		}
+		tags = append(tags, recTag)
+	}
+	if len(tags) == len(rec.Tags) {
+		// тэг не найден
+		return nil
+	}
+	updMap := map[string]interface{}{
+		"tags": tags,
+	}
+	err = i.store.Update(id, updMap)
+	if err != nil {
+		logger.
+			WithField("tag", tag).
+			WithError(err).
+			Error("ошибка удаления тега кандидата")
+		return err
+	}
+	logger.Info("Обновлен список тегов кандидата")
+	return nil
+}
+
+func (i impl) checkDependency(spaceID string, data applicantapimodels.ApplicantData) (err error) {
+	if data.VacancyID != "" {
+		_, err = i.vacancyProvider.GetByID(spaceID, data.VacancyID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

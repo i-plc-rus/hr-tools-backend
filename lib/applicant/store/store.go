@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"hr-tools-backend/models"
+	applicantapimodels "hr-tools-backend/models/api/applicant"
 	dbmodels "hr-tools-backend/models/db"
 	"strings"
+	"time"
 )
 
 type Provider interface {
@@ -17,6 +20,8 @@ type Provider interface {
 	GetByID(spaceID, id string) (rec *dbmodels.ApplicantExt, err error)
 	IsExistNegotiationID(spaceID, negotiationID string, source models.ApplicantSource) (found bool, err error)
 	ListOfNegotiation(spaceID string, filter dbmodels.NegotiationFilter) ([]dbmodels.Applicant, error)
+	ListCountOfApplicant(spaceID string, filter applicantapimodels.ApplicantFilter) (count int64, err error)
+	ListOfApplicant(spaceID string, filter applicantapimodels.ApplicantFilter) ([]dbmodels.Applicant, error)
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -108,6 +113,126 @@ func (i impl) ListOfNegotiation(spaceID string, filter dbmodels.NegotiationFilte
 	return list, nil
 }
 
+func (i impl) ListOfApplicant(spaceID string, filter applicantapimodels.ApplicantFilter) (list []dbmodels.Applicant, err error) {
+	list = []dbmodels.Applicant{}
+	tx := i.db.
+		Select("applicants.*, (last_name || ' ' || first_name|| ' ' || middle_name) as fio").
+		Model(dbmodels.Applicant{}).
+		Where("space_id = ?", spaceID).
+		Joins("left join vacancies as v on vacancy_id = v.id").
+		Joins("left join selection_stages as st on selection_stage_id = st.id")
+	i.addApplicantFilter(tx, filter)
+	i.addSort(tx, filter.Sort)
+	page, limit := filter.GetPage()
+	i.setPage(tx, page, limit)
+	err = tx.Preload(clause.Associations).Find(&list).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return list, nil
+}
+
+func (i impl) ListCountOfApplicant(spaceID string, filter applicantapimodels.ApplicantFilter) (count int64, err error) {
+	var rowCount int64
+	tx := i.db.
+		Model(dbmodels.Vacancy{}).
+		Joins("left join vacancies as v on vacancy_id = v.id").
+		Joins("left join selection_stages as st on selection_stage_id = st.id").
+		Where("space_id = ?", spaceID)
+	i.addApplicantFilter(tx, filter)
+	err = tx.Count(&rowCount).Error
+	if err != nil {
+		log.WithError(err).Error("ошибка получения общего количества кандидатов")
+		return 0, errors.New("ошибка получения общего количества кандидатов")
+	}
+	return rowCount, nil
+}
+
+func (i impl) addApplicantFilter(tx *gorm.DB, filter applicantapimodels.ApplicantFilter) {
+	if filter.VacancyName != "" {
+		searchValue := "%" + strings.ToLower(filter.VacancyName) + "%"
+		tx.Where("LOWER(v.vacancy_name) like ?", searchValue)
+	}
+	if filter.Search != "" {
+		searchValue := "%" + strings.ToLower(filter.Search) + "%"
+		tx.Where("LOWER(CONCAT(last_name,' ', first_name, ' ' , middle_name)) like ? or phone like ? or email like ? or LOWER(array_to_string(tags,',', '*')) like ?", searchValue, searchValue, searchValue, searchValue)
+	}
+	if filter.Relocation != nil {
+		tx.Where("relocation = ?", *filter.Relocation)
+	}
+	if filter.AgeFrom > 0 {
+		date := time.Now().AddDate(filter.AgeFrom, 0, 0)
+		tx.Where("birth_date <= ?", date)
+	}
+	if filter.AgeTo > 0 {
+		date := time.Now().AddDate(filter.AgeTo, 0, 0)
+		tx.Where("birth_date >= ?", date)
+	}
+	if filter.TotalExperienceFrom > 0 {
+		tx.Where("total_experience >= ?", filter.TotalExperienceFrom)
+	}
+	if filter.TotalExperienceTo > 0 {
+		tx.Where("total_experience <= ?", filter.TotalExperienceTo)
+	}
+	if filter.City != "" {
+		searchValue := "%" + strings.ToLower(filter.City) + "%"
+		tx.Where("LOWER(address) like ?", searchValue)
+	}
+	if filter.StageName != "" {
+		tx.Where("st.name = ?", filter.StageName)
+	}
+	if filter.Status != nil {
+		tx.Where("status = ?", *filter.Status)
+	}
+	if filter.Source != nil {
+		tx.Where("source = ?", *filter.Source)
+	}
+	if filter.Tag != "" {
+		tx.Where("? = ANY (tags)", filter.Tag)
+	}
+	if filter.AddedDay != "" {
+		date, _ := filter.GetAddedDay()
+		fromDate := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+		toDate := fromDate.AddDate(0, 0, 1)
+		tx.Where("negotiation_accept_date between ? and ?", fromDate, toDate)
+	}
+	if filter.AddedPeriod != nil {
+		period := *filter.AddedPeriod
+		switch period {
+		case models.ApAddedPeriodTypeTDay:
+			now := time.Now()
+			fromDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+			toDate := fromDate.AddDate(0, 0, 1)
+			tx.Where("negotiation_accept_date between ? and ?", fromDate, toDate)
+		case models.ApAddedPeriodTypeYDay:
+			now := time.Now()
+			fromDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+			fromDate = fromDate.AddDate(0, 0, -1)
+			toDate := fromDate.AddDate(0, 0, 1)
+			tx.Where("negotiation_accept_date between ? and ?", fromDate, toDate)
+		case models.ApAddedPeriodType7days:
+			tx.Where("((CURRENT_DATE + INTERVAL '1 day')::date - negotiation_accept_date::date) <= 7")
+		case models.ApAddedPeriodTypeMonth:
+			tx.Where("((CURRENT_DATE + INTERVAL '1 day')::date - negotiation_accept_date::date) <= 30")
+		case models.ApAddedPeriodTypeYear:
+			tx.Where("((CURRENT_DATE + INTERVAL '1 day')::date - negotiation_accept_date::date) < 365")
+		}
+	}
+	if filter.AddedType != nil {
+		exp := *filter.AddedType
+		switch exp {
+		case models.AddedTypeAdded:
+			tx.Where("negotiation_id is null")
+		case models.AddedTypeNegotiation:
+			tx.Where("negotiation_id is not null")
+		}
+	}
+}
+
 func (i impl) addNegotiationFilter(tx *gorm.DB, filter dbmodels.NegotiationFilter) {
 	if filter.Search != "" {
 		searchValue := "%" + strings.ToLower(filter.Search) + "%"
@@ -119,9 +244,6 @@ func (i impl) addNegotiationFilter(tx *gorm.DB, filter dbmodels.NegotiationFilte
 	}
 	if filter.Experience != nil {
 		exp := *filter.Experience
-		if exp == models.ExperienceTypeNo {
-			fmt.Println("no")
-		}
 		switch exp {
 		case models.ExperienceTypeNo:
 			tx.Where("total_experience is null or total_experience = 0")
@@ -229,6 +351,35 @@ func (i impl) addNegotiationFilter(tx *gorm.DB, filter dbmodels.NegotiationFilte
 		} else {
 			jWhere := fmt.Sprintf("params @> '{\"have_additional_education\":false}'")
 			tx.Where(jWhere)
+		}
+	}
+}
+
+func (i impl) setPage(tx *gorm.DB, page, limit int) {
+	offset := (page - 1) * limit
+	tx.Limit(limit).Offset(offset)
+}
+
+func (i impl) addSort(tx *gorm.DB, sort applicantapimodels.ApplicantSort) {
+	if sort.FioDesc != nil {
+		if *sort.FioDesc {
+			tx = tx.Order("fio desc")
+		} else {
+			tx = tx.Order("fio asc")
+		}
+	}
+	if sort.SalaryDesc != nil {
+		if *sort.SalaryDesc {
+			tx = tx.Order("salary desc")
+		} else {
+			tx = tx.Order("salary asc")
+		}
+	}
+	if sort.AcceptDateDesc != nil {
+		if *sort.AcceptDateDesc {
+			tx = tx.Order("negotiation_accept_date desc")
+		} else {
+			tx = tx.Order("negotiation_accept_date asc")
 		}
 	}
 }
