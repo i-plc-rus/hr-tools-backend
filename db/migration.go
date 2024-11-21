@@ -71,6 +71,22 @@ func AutoMigrateDB() error {
 	if err := DB.AutoMigrate(&dbmodels.Applicant{}); err != nil {
 		return errors.Wrap(err, "ошибка создания структуры Applicant")
 	}
+	if err := DB.AutoMigrate(&dbmodels.MessageTemplate{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры MessageTemplate")
+	}
+
+	if err := DB.AutoMigrate(&dbmodels.VrFavorite{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры VrFavorite")
+	}
+
+	if err := DB.AutoMigrate(&dbmodels.VrPinned{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры VrPinned")
+	}
+
+	if err := DB.AutoMigrate(&dbmodels.SelectionStage{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры SelectionStage")
+	}
+
 	log.Info("Миграция прошла успешно")
 	return nil
 }

@@ -3,6 +3,7 @@ package vacancyapimodels
 import (
 	"github.com/pkg/errors"
 	"hr-tools-backend/models"
+	apimodels "hr-tools-backend/models/api"
 	dbmodels "hr-tools-backend/models/db"
 	"time"
 )
@@ -84,9 +85,10 @@ type VacancyInfo struct {
 type VacancyView struct {
 	VacancyData
 	VacancyInfo
-	External     ExternalData `json:"external"`
-	ID           string       `json:"id"`
-	CreationDate time.Time    `json:"creation_date"`
+	External        ExternalData         `json:"external"`
+	ID              string               `json:"id"`
+	CreationDate    time.Time            `json:"creation_date"`
+	SelectionStages []SelectionStageView `json:"selection_stages"` // этапы подбора
 }
 
 type Salary struct {
@@ -182,5 +184,29 @@ func VacancyConvert(rec dbmodels.VacancyExt) VacancyView {
 		result.External.HeadHunter.ID = rec.HhID
 		result.External.HeadHunter.Url = rec.HhUri
 	}
+	result.SelectionStages = make([]SelectionStageView, 0, len(rec.SelectionStages))
+	for _, stage := range rec.SelectionStages {
+		result.SelectionStages = append(result.SelectionStages, SelectionStageConvert(stage))
+	}
 	return result
+}
+
+type VacancySort struct {
+	CreatedAtDesc bool `json:"created_at_desc"` // порядок сортировки false = ASC/ true = DESC
+}
+
+type VacancyFilter struct {
+	apimodels.Pagination
+	VacancyRequestID string                 `json:"request_id"`
+	Favorite         bool                   `json:"favorite"`
+	Search           string                 `json:"search"`
+	Statuses         []models.VacancyStatus `json:"statuses"`
+	CityID           string                 `json:"city_id"`
+	DepartmentID     string                 `json:"department_id"`
+	SelectionType    models.VRSelectionType `json:"selection_type"`
+	RequestType      models.VRType          `json:"request_type"`
+	Urgency          models.VRUrgency       `json:"urgency"`
+	AuthorID         string                 `json:"author_id"`
+	RequestAuthorID  string                 `json:"request_author_id"`
+	Sort             VacancySort            `json:"sort"`
 }

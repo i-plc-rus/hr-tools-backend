@@ -384,10 +384,26 @@ func (i *impl) storeApplicant(resume *avitoapimodels.Resume, apply avitoapimodel
 		ResumeTitle:     resume.Title,
 		Salary:          resume.Salary,
 		Address:         resume.Params.Address,
-		Gender:          resume.Params.Pol,
+		Gender:          resume.Params.GetGender(),
 		Relocation:      resume.Params.GetRelocationType(),
 		Email:           "", //нет данных
 		TotalExperience: 0,  //опыт работ в месяцах - нет данных
+		Params: dbmodels.ApplicantParams{
+			Education:               resume.Params.GetEducationType(),
+			HaveAdditionalEducation: false,
+			Employments:             []models.Employment{}, //нет данных
+			Schedules:               []models.Schedule{},   //нет данных
+			Languages:               []dbmodels.Language{},
+			TripReadiness:           resume.Params.GetTripReadinessType(),
+			DriverLicenseTypes:      resume.Params.GetDriverLicence(),
+			SearchStatus:            "", //нет данных
+		},
+	}
+	for _, stage := range data.SelectionStages {
+		if stage.Name == dbmodels.NegotiationStage {
+			applicantData.SelectionStageID = stage.ID
+			break
+		}
 	}
 	birthDate, err := apply.GetBirthDate()
 	if err != nil {
@@ -399,7 +415,13 @@ func (i *impl) storeApplicant(resume *avitoapimodels.Resume, apply avitoapimodel
 	}
 
 	applicantData.Citizenship = apply.Applicant.Data.Citizenship
-	applicantData.LanguageLevel = resume.Params.GetEngLevel()
+	for _, language := range resume.Params.LanguageList {
+		lng := dbmodels.Language{
+			Name:          language.Language,
+			LanguageLevel: language.GetLanguageLevelType(),
+		}
+		applicantData.Params.Languages = append(applicantData.Params.Languages, lng)
+	}
 	_, err = i.applicantStore.Create(applicantData)
 	if err != nil {
 		logger.WithError(err).Error("ошибка сохранения кандидата по отклику")

@@ -7,7 +7,6 @@ import (
 	"hr-tools-backend/middleware"
 	apimodels "hr-tools-backend/models/api"
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
-	dbmodels "hr-tools-backend/models/db"
 )
 
 type vacancyApiController struct {
@@ -25,6 +24,12 @@ func InitVacancyApiRouters(app *fiber.App) {
 			idRoute.Delete("", controller.delete)
 			idRoute.Put("pin", controller.pin)
 			idRoute.Put("favorite", controller.favorite)
+			idRoute.Route("stage", func(stageRoute fiber.Router) {
+				stageRoute.Post("list", controller.stageList)
+				stageRoute.Post("", controller.stageCreate)
+				stageRoute.Delete("", controller.stageDelete)
+				stageRoute.Put("change_order", controller.stageChangeOrder)
+			})
 		})
 	})
 }
@@ -142,25 +147,25 @@ func (c *vacancyApiController) delete(ctx *fiber.Ctx) error {
 // @Summary Список
 // @Tags Вакансия
 // @Description Список
-// @Param	body body	 dbmodels.VacancyFilter	true	"request filter body"
+// @Param	body body	 vacancyapimodels.VacancyFilter	true	"request filter body"
 // @Param   Authorization		header		string	true	"Authorization token"
-// @Success 200 {object} apimodels.Response{data=[]vacancyapimodels.VacancyView}
+// @Success 200 {object} apimodels.ScrollerResponse{data=[]vacancyapimodels.VacancyView}
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
 // @router /api/v1/space/vacancy/list [post]
 func (c *vacancyApiController) list(ctx *fiber.Ctx) error {
-	var payload dbmodels.VacancyFilter
+	var payload vacancyapimodels.VacancyFilter
 	if err := c.BodyParser(ctx, &payload); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
 	userID := middleware.GetUserID(ctx)
-	list, err := vacancyhandler.Instance.List(spaceID, userID, payload)
+	list, rowCount, err := vacancyhandler.Instance.List(spaceID, userID, payload)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
-	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(list))
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewScrollerResponse(list, rowCount))
 }
 
 // @Summary Закрепить
@@ -210,6 +215,126 @@ func (c *vacancyApiController) favorite(ctx *fiber.Ctx) error {
 	isSet := ctx.QueryBool("set", false)
 	userID := middleware.GetUserID(ctx)
 	err = vacancyhandler.Instance.ToFavorite(id, userID, isSet)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Список этапов подбора
+// @Tags Вакансия
+// @Description Список этапов подбора
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Success 200 {object} apimodels.ScrollerResponse{data=[]vacancyapimodels.SelectionStageView}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/vacancy/{id}/stage/list [post]
+func (c *vacancyApiController) stageList(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	spaceID := middleware.GetUserSpace(ctx)
+	list, err := vacancyhandler.Instance.StageList(spaceID, id)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(list))
+}
+
+// @Summary Изменение порядка этапов подбора
+// @Tags Вакансия
+// @Description Изменение порядка этапов подбора
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    string  				    true         "rec ID"
+// @Param	stage_id			query 	string						false		 "идентификатор этапа"
+// @Param	stage_order			query 	int							false		 "новый порядковый номер"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/vacancy/{id}/stage/change_order [put]
+func (c *vacancyApiController) stageChangeOrder(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	stageID := ctx.Query("stage_id", "")
+	if stageID == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("не указан этап подбора вакансии"))
+	}
+	newOrder := ctx.QueryInt("stage_order", -1)
+	if newOrder <= 0 {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("не указан новый порядковый номер этапа подбора вакансии"))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	err = vacancyhandler.Instance.StageChangeOrder(spaceID, id, stageID, newOrder)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Добавить этап подбора
+// @Tags Вакансия
+// @Description Добавить этап подбора
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    string  				    true         "rec ID"
+// @Param	body body	 vacancyapimodels.SelectionStageAdd	true	"request body"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/vacancy/{id}/stage [post]
+func (c *vacancyApiController) stageCreate(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	var payload vacancyapimodels.SelectionStageAdd
+	if err = c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	if err = payload.Validate(); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	err = vacancyhandler.Instance.StageCreate(spaceID, id, payload)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Удаление этап подбора
+// @Tags Вакансия
+// @Description Удаление этап подбора
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    string  				    	true         "rec ID"
+// @Param	stage_id			query 	string						false		 "идентификатор этапа"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/vacancy/{id}/stage [delete]
+func (c *vacancyApiController) stageDelete(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	stageID := ctx.Query("stage_id", "")
+	if stageID == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("не указан этап подбора вакансии"))
+	}
+	err = vacancyhandler.Instance.StageDelete(spaceID, id, stageID)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
