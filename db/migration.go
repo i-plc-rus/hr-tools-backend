@@ -83,6 +83,10 @@ func AutoMigrateDB() error {
 		return errors.Wrap(err, "ошибка создания структуры VrPinned")
 	}
 
+	if err := DB.AutoMigrate(&dbmodels.SelectionStage{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры SelectionStage")
+	}
+
 	log.Info("Миграция прошла успешно")
 	return nil
 }

@@ -201,7 +201,8 @@ func (i impl) ListAvitoByStatus(spaceID string, status models.VacancyPubStatus) 
 	tx := i.db.
 		Model(dbmodels.Vacancy{}).
 		Where("space_id = ?", spaceID).
-		Where("avito_status = ?", status)
+		Where("avito_status = ?", status).
+		Preload(clause.Associations)
 	err = tx.Find(&list).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -217,7 +218,8 @@ func (i impl) ListHhByStatus(spaceID string, status models.VacancyPubStatus) (li
 	tx := i.db.
 		Model(dbmodels.Vacancy{}).
 		Where("space_id = ?", spaceID).
-		Where("hh_status = ?", status)
+		Where("hh_status = ?", status).
+		Preload(clause.Associations)
 	err = tx.Find(&list).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

@@ -18,16 +18,25 @@ func SuperAdminRoleRequired() fiber.Handler {
 
 func GetUserSpace(ctx *fiber.Ctx) string {
 	claims := authutils.GetClaims(ctx)
-	return claims["space"].(string)
+	if space, exist := claims["space"]; exist {
+		return space.(string)
+	}
+	return ""
 }
 func GetUserID(ctx *fiber.Ctx) string {
 	claims := authutils.GetClaims(ctx)
-	return claims["sub"].(string)
+	if sub, exist := claims["sub"]; exist {
+		return sub.(string)
+	}
+	return ""
 }
 
 func GetSpaceRole(ctx *fiber.Ctx) models.UserRole {
 	claims := authutils.GetClaims(ctx)
-	return claims["role"].(models.UserRole)
+	if role, exist := claims["role"]; exist {
+		return role.(models.UserRole)
+	}
+	return ""
 }
 
 func SpaceAdminRequired() fiber.Handler {

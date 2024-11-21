@@ -365,6 +365,12 @@ func (i *impl) HandleNegotiations(ctx context.Context, data dbmodels.Vacancy) er
 				SearchStatus:            models.SearchStatusType(resume.JobSearchStatusesEmployer.ID),
 			},
 		}
+		for _, stage := range data.SelectionStages {
+			if stage.Name == dbmodels.NegotiationStage {
+				applicantData.SelectionStageID = stage.ID
+				break
+			}
+		}
 
 		for _, employment := range resume.Employments {
 			applicantData.Params.Employments = append(applicantData.Params.Employments, models.Employment(employment.ID))

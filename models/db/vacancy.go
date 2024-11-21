@@ -44,9 +44,10 @@ type Vacancy struct {
 	Status           models.VacancyStatus
 	HhData
 	AvitoData
-	Employment models.Employment `gorm:"type:varchar(255)"` // Занятость
-	Experience models.Experience `gorm:"type:varchar(255)"` // Опыт работы
-	Schedule   models.Schedule   `gorm:"type:varchar(255)"` // Режим работы
+	Employment      models.Employment `gorm:"type:varchar(255)"` // Занятость
+	Experience      models.Experience `gorm:"type:varchar(255)"` // Опыт работы
+	Schedule        models.Schedule   `gorm:"type:varchar(255)"` // Режим работы
+	SelectionStages []SelectionStage
 }
 
 type HhData struct {
