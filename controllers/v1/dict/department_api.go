@@ -17,7 +17,7 @@ func InitDepartmentDictApiRouters(app *fiber.App) {
 	controller := departmentDictApiController{}
 	app.Route("department", func(router fiber.Router) {
 		router.Post("find", controller.departmentFindByName)
-		router.Use(middleware.SpaceAdminUser())
+		router.Use(middleware.SpaceAdminRequired())
 		router.Post("", controller.departmentCreate)
 		router.Put(":id", controller.departmentUpdate)
 		router.Get(":id", controller.departmentGet)
