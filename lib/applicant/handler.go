@@ -2,6 +2,7 @@ package applicant
 
 import (
 	"fmt"
+	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
@@ -11,6 +12,7 @@ import (
 	"hr-tools-backend/models"
 	applicantapimodels "hr-tools-backend/models/api/applicant"
 	negotiationapimodels "hr-tools-backend/models/api/negotiation"
+	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
 	"time"
 )
@@ -47,7 +49,9 @@ type impl struct {
 func (i impl) ListOfNegotiation(spaceID string, filter dbmodels.NegotiationFilter) ([]negotiationapimodels.NegotiationView, error) {
 	list, err := i.store.ListOfNegotiation(spaceID, filter)
 	if err != nil {
-		return nil, err
+		log.WithField("filter", fmt.Sprintf("%+v", filter)).
+			WithError(err).Error("ошибка получения списка откликов")
+		return nil, errors.New("ошибка получения списка откликов")
 	}
 	result := make([]negotiationapimodels.NegotiationView, 0, len(list))
 	for _, rec := range list {
@@ -109,9 +113,13 @@ func (i impl) UpdateStatus(spaceID, id string, status models.NegotiationStatus) 
 }
 
 func (i impl) GetByID(spaceID, id string) (negotiationapimodels.NegotiationView, error) {
+	logger := log.
+		WithField("space_id", spaceID).
+		WithField("rec_id", id)
 	rec, err := i.store.GetByID(spaceID, id)
 	if err != nil {
-		return negotiationapimodels.NegotiationView{}, err
+		logger.WithError(err).Error("ошибка получения отклика")
+		return negotiationapimodels.NegotiationView{}, errors.New("ошибка получения отклика")
 	}
 	if rec == nil {
 		return negotiationapimodels.NegotiationView{}, errors.New("отклик не найден")
@@ -121,7 +129,7 @@ func (i impl) GetByID(spaceID, id string) (negotiationapimodels.NegotiationView,
 
 func (i impl) CreateApplicant(spaceID string, data applicantapimodels.ApplicantData) (id string, err error) {
 	logger := log.WithField("space_id", spaceID)
-	err = i.checkDependency(spaceID, data)
+	vacancy, err := i.checkDependency(spaceID, data)
 	if err != nil {
 		return "", err
 	}
@@ -157,6 +165,12 @@ func (i impl) CreateApplicant(spaceID string, data applicantapimodels.ApplicantD
 		return "", errors.New("ошибка получения даты рождения кандидата")
 	}
 	rec.BirthDate = birthDate
+	for _, stage := range vacancy.SelectionStages {
+		if stage.Name == dbmodels.AddedStage {
+			rec.SelectionStageID = stage.ID
+			break
+		}
+	}
 	recID, err := i.store.Create(rec)
 	if err != nil {
 		logger.
@@ -218,7 +232,7 @@ func (i impl) ListOfApplicant(spaceID string, filter applicantapimodels.Applican
 func (i impl) UpdateApplicant(spaceID string, id string, data applicantapimodels.ApplicantData) error {
 	logger := log.WithField("space_id", spaceID).
 		WithField("rec_id", id)
-	err := i.checkDependency(spaceID, data)
+	vacancy, err := i.checkDependency(spaceID, data)
 	if err != nil {
 		return err
 	}
@@ -248,13 +262,40 @@ func (i impl) UpdateApplicant(spaceID string, id string, data applicantapimodels
 		"Params":          data.Params,
 		"Comment":         data.Comment,
 	}
+	rec, err := i.store.GetByID(spaceID, id)
+	if err != nil {
+		logger.WithError(err).Error("ошибка получения кандидата")
+		return errors.New("ошибка получения кандидата")
+	}
+	if rec == nil {
+		return errors.New("кандидат не найден")
+	}
+	//сменили вакансию, ищем такой же шаг
+	if rec.VacancyID != data.VacancyID {
+		currentStageName := ""
+		if rec.SelectionStage != nil {
+			currentStageName = rec.SelectionStage.Name
+		}
+		newSelectionStageID := ""
+		for _, stage := range vacancy.SelectionStages {
+			if stage.Name == currentStageName {
+				newSelectionStageID = stage.ID
+				break
+			}
+		}
+		if newSelectionStageID == "" {
+			return errors.New("смена вакансии невозможна, не найден этап подбора")
+		}
+		updMap["SelectionStageID"] = newSelectionStageID
+	}
+
 	err = i.store.Update(id, updMap)
 	if err != nil {
 		logger.
 			WithField("request", fmt.Sprintf("%+v", data)).
 			WithError(err).
 			Error("ошибка обновления кандидата")
-		return err
+		return errors.New("ошибка обновления кандидата")
 	}
 	logger.Info("Обновлен кандидат")
 	return nil
@@ -262,7 +303,8 @@ func (i impl) UpdateApplicant(spaceID string, id string, data applicantapimodels
 
 func (i impl) ApplicantAddTag(spaceID string, id string, tag string) error {
 	logger := log.WithField("space_id", spaceID).
-		WithField("rec_id", id)
+		WithField("rec_id", id).
+		WithField("tag", tag)
 	rec, err := i.store.GetByID(spaceID, id)
 	if err != nil {
 		return err
@@ -278,17 +320,16 @@ func (i impl) ApplicantAddTag(spaceID string, id string, tag string) error {
 	}
 	tags := append(rec.Tags, tag)
 	updMap := map[string]interface{}{
-		"tags": tags,
+		"tags": pq.Array(tags),
 	}
 	err = i.store.Update(id, updMap)
 	if err != nil {
 		logger.
-			WithField("tag", tag).
 			WithError(err).
 			Error("ошибка добавления тега кандидата")
-		return err
+		return errors.New("ошибка добавления тега кандидата")
 	}
-	logger.Info("Обновлен список тегов кандидата")
+	logger.Info("кандидату добавлен тег")
 	return nil
 }
 
@@ -314,7 +355,7 @@ func (i impl) ApplicantRemoveTag(spaceID string, id string, tag string) error {
 		return nil
 	}
 	updMap := map[string]interface{}{
-		"tags": tags,
+		"tags": pq.Array(tags),
 	}
 	err = i.store.Update(id, updMap)
 	if err != nil {
@@ -322,18 +363,20 @@ func (i impl) ApplicantRemoveTag(spaceID string, id string, tag string) error {
 			WithField("tag", tag).
 			WithError(err).
 			Error("ошибка удаления тега кандидата")
-		return err
+		return errors.New("ошибка удаления тега кандидата")
 	}
-	logger.Info("Обновлен список тегов кандидата")
+	logger.Info("удаленин тег у кандидата")
 	return nil
 }
 
-func (i impl) checkDependency(spaceID string, data applicantapimodels.ApplicantData) (err error) {
-	if data.VacancyID != "" {
-		_, err = i.vacancyProvider.GetByID(spaceID, data.VacancyID)
-		if err != nil {
-			return err
-		}
+func (i impl) checkDependency(spaceID string, data applicantapimodels.ApplicantData) (vacancy vacancyapimodels.VacancyView, err error) {
+	if data.VacancyID == "" {
+		return vacancyapimodels.VacancyView{}, errors.New("необходима указать вакансию")
 	}
-	return nil
+	vacancy, err = i.vacancyProvider.GetByID(spaceID, data.VacancyID)
+	if err != nil {
+		return vacancyapimodels.VacancyView{}, err
+	}
+
+	return vacancy, nil
 }

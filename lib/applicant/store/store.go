@@ -118,7 +118,7 @@ func (i impl) ListOfApplicant(spaceID string, filter applicantapimodels.Applican
 	tx := i.db.
 		Select("applicants.*, (last_name || ' ' || first_name|| ' ' || middle_name) as fio").
 		Model(dbmodels.Applicant{}).
-		Where("space_id = ?", spaceID).
+		Where("applicants.space_id = ?", spaceID).
 		Joins("left join vacancies as v on vacancy_id = v.id").
 		Joins("left join selection_stages as st on selection_stage_id = st.id")
 	i.addApplicantFilter(tx, filter)
@@ -139,10 +139,10 @@ func (i impl) ListOfApplicant(spaceID string, filter applicantapimodels.Applican
 func (i impl) ListCountOfApplicant(spaceID string, filter applicantapimodels.ApplicantFilter) (count int64, err error) {
 	var rowCount int64
 	tx := i.db.
-		Model(dbmodels.Vacancy{}).
+		Model(dbmodels.Applicant{}).
 		Joins("left join vacancies as v on vacancy_id = v.id").
 		Joins("left join selection_stages as st on selection_stage_id = st.id").
-		Where("space_id = ?", spaceID)
+		Where("applicants.space_id = ?", spaceID)
 	i.addApplicantFilter(tx, filter)
 	err = tx.Count(&rowCount).Error
 	if err != nil {
@@ -165,11 +165,11 @@ func (i impl) addApplicantFilter(tx *gorm.DB, filter applicantapimodels.Applican
 		tx.Where("relocation = ?", *filter.Relocation)
 	}
 	if filter.AgeFrom > 0 {
-		date := time.Now().AddDate(filter.AgeFrom, 0, 0)
+		date := time.Now().AddDate(filter.AgeFrom*(-1), 0, 0)
 		tx.Where("birth_date <= ?", date)
 	}
 	if filter.AgeTo > 0 {
-		date := time.Now().AddDate(filter.AgeTo, 0, 0)
+		date := time.Now().AddDate(filter.AgeTo*(-1), 0, 0)
 		tx.Where("birth_date >= ?", date)
 	}
 	if filter.TotalExperienceFrom > 0 {
@@ -186,7 +186,7 @@ func (i impl) addApplicantFilter(tx *gorm.DB, filter applicantapimodels.Applican
 		tx.Where("st.name = ?", filter.StageName)
 	}
 	if filter.Status != nil {
-		tx.Where("status = ?", *filter.Status)
+		tx.Where("applicants.status = ?", *filter.Status)
 	}
 	if filter.Source != nil {
 		tx.Where("source = ?", *filter.Source)
