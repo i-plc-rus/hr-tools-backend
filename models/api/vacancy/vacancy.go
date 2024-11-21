@@ -85,9 +85,10 @@ type VacancyInfo struct {
 type VacancyView struct {
 	VacancyData
 	VacancyInfo
-	External     ExternalData `json:"external"`
-	ID           string       `json:"id"`
-	CreationDate time.Time    `json:"creation_date"`
+	External        ExternalData         `json:"external"`
+	ID              string               `json:"id"`
+	CreationDate    time.Time            `json:"creation_date"`
+	SelectionStages []SelectionStageView `json:"selection_stages"` // этапы подбора
 }
 
 type Salary struct {
@@ -182,6 +183,10 @@ func VacancyConvert(rec dbmodels.VacancyExt) VacancyView {
 	if rec.HhID != "" {
 		result.External.HeadHunter.ID = rec.HhID
 		result.External.HeadHunter.Url = rec.HhUri
+	}
+	result.SelectionStages = make([]SelectionStageView, 0, len(rec.SelectionStages))
+	for _, stage := range rec.SelectionStages {
+		result.SelectionStages = append(result.SelectionStages, SelectionStageConvert(stage))
 	}
 	return result
 }

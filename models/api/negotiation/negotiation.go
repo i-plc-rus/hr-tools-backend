@@ -45,7 +45,6 @@ func NegotiationConvert(rec dbmodels.Applicant) NegotiationView {
 		Comment:           rec.Comment,
 		NegotiationDate:   rec.NegotiationDate,
 		Salary:            rec.Salary,
-		Stage:             "Откликнулся",
 		Source:            rec.Source,
 		NegotiationStatus: rec.NegotiationStatus,
 		ResumeTitle:       rec.ResumeTitle,
@@ -55,6 +54,9 @@ func NegotiationConvert(rec dbmodels.Applicant) NegotiationView {
 		Relocation:        rec.Relocation,
 		PhotoUrl:          rec.PhotoUrl,
 		Params:            rec.Params,
+	}
+	if rec.SelectionStage != nil {
+		result.Stage = rec.SelectionStage.Name
 	}
 	if !rec.BirthDate.IsZero() {
 		difference := time.Now().Sub(rec.BirthDate)
@@ -71,6 +73,7 @@ func NegotiationConvert(rec dbmodels.Applicant) NegotiationView {
 	if !rec.NegotiationAcceptDate.IsZero() {
 		toTime = rec.NegotiationAcceptDate
 	}
+	//todo получение времени на шаге из истории действий
 	sec := toTime.Unix() - rec.NegotiationDate.Unix()
 	minutes := sec / 60
 	hours := minutes / 60

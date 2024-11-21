@@ -272,3 +272,12 @@ const (
 	SearchLabelAge    SearchLabelType = "only_with_age"    //Не показывать резюме без указания возраста
 	SearchLabelGender SearchLabelType = "only_with_gender" //Не показывать резюме без указания пола
 )
+
+type LimitType string
+
+const (
+	LimitTypeMin  LimitType = "Минут"
+	LimitTypeHour LimitType = "Часов"
+	LimitTypDay   LimitType = "Дней"
+	LimitTypeWeek LimitType = "Недель"
+)
