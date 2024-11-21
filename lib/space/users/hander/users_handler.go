@@ -7,6 +7,7 @@ import (
 	"hr-tools-backend/db"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	authutils "hr-tools-backend/lib/utils/auth-utils"
+	"hr-tools-backend/models"
 	spaceapimodels "hr-tools-backend/models/api/space"
 	dbmodels "hr-tools-backend/models/db"
 )
@@ -62,11 +63,15 @@ func (i impl) CreateUser(request spaceapimodels.CreateUser) error {
 		Password:    authutils.GetMD5Hash(request.Password),
 		FirstName:   request.FirstName,
 		LastName:    request.LastName,
-		IsAdmin:     request.IsAdmin,
 		Email:       request.Email,
 		IsActive:    true,
 		PhoneNumber: request.PhoneNumber,
 		SpaceID:     request.SpaceID,
+	}
+	if request.IsAdmin {
+		rec.Role = models.SpaceAdminRole
+	} else {
+		rec.Role = models.SpaceUserRole
 	}
 	err = i.spaceUserStore.Create(rec)
 	if err != nil {

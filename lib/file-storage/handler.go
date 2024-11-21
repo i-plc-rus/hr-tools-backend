@@ -13,7 +13,7 @@ import (
 	filesdbstorage "hr-tools-backend/lib/file-storage/storage"
 	filesapimodels "hr-tools-backend/models/api/files"
 	dbmodels "hr-tools-backend/models/db"
-
+	s3client "hr-tools-backend/s3"
 	"io"
 )
 
@@ -186,9 +186,9 @@ func (i impl) getSpaceBucketName(spaceID string) string {
 	return fmt.Sprintf("%s-%s", config.Conf.S3.BucketNamePrefix, spaceID)
 }
 
-func NewInstance(s3client *minio.Client) {
+func NewHandler() {
 	Instance = &impl{
-		s3client:       s3client,
+		s3client:       s3client.Client,
 		filesDBStorage: filesdbstorage.NewInstance(db.DB),
 	}
 }
