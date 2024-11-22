@@ -38,6 +38,7 @@ func InitAllServices(ctx context.Context) {
 	InitDBConnection()
 	InitS3()
 	InitSmtp()
+	filestorage.NewHandler()
 	cityprovider.NewHandler()
 	hhclient.NewProvider(config.Conf.HH.RedirectUri)
 	avitoclient.NewProvider()
@@ -61,5 +62,4 @@ func InitAllServices(ctx context.Context) {
 	externalserviceworker.StartWorker(ctx)
 	negotiationworker.StartWorker(ctx)
 	messagetemplate.NewHandler()
-	filestorage.NewHandler()
 }

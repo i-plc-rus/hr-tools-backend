@@ -12,6 +12,10 @@ type Provider interface {
 	GetFileListByType(applicantID string, fileType dbmodels.FileType) (list []dbmodels.FileStorage, err error)
 }
 
+func NewInstance(db *gorm.DB) Provider {
+	return &impl{db: db}
+}
+
 type impl struct {
 	db *gorm.DB
 }
@@ -50,8 +54,4 @@ func (i impl) SaveFile(rec dbmodels.FileStorage) (id string, err error) {
 		return "", err
 	}
 	return rec.ID, nil
-}
-
-func NewInstance(db *gorm.DB) Provider {
-	return &impl{db: db}
 }
