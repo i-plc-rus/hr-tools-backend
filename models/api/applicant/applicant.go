@@ -29,7 +29,15 @@ type ApplicantView struct {
 
 type ApplicantViewExt struct {
 	ApplicantView
-	Tags []string `json:"tags"`
+	Tags               []string           `json:"tags"`
+	PotentialDuplicate ApplicantDuplicate `json:"potential_duplicate"` // Возможный дубликат
+	Duplicates         []string           `json:"duplicates"`          // Идентификатор кандидатов дубликатов
+}
+
+type ApplicantDuplicate struct {
+	Found         bool                 `json:"found"`          // Найден
+	DuplicateID   string               `json:"duplicate_id"`   // Идентификатор кандидата
+	DuplicateType models.DuplicateType `json:"duplicate_type"` // Тип дубля (По автору резюме/По контактным данным)
 }
 
 type ApplicantData struct {

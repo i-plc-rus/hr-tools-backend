@@ -5,6 +5,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 	"hr-tools-backend/db"
 	applicantstore "hr-tools-backend/lib/applicant/store"
 	vacancyhandler "hr-tools-backend/lib/vacancy"
@@ -28,6 +29,7 @@ type Provider interface {
 	UpdateApplicant(spaceID string, id string, applicant applicantapimodels.ApplicantData) error
 	ApplicantAddTag(spaceID string, id string, tag string) error
 	ApplicantRemoveTag(spaceID string, id string, tag string) error
+	ResolveDuplicate(spaceID string, mainID, minorID string, isDuplicate bool) error
 }
 
 var Instance Provider
@@ -194,10 +196,16 @@ func (i impl) GetApplicant(spaceID string, id string) (applicantapimodels.Applic
 	if rec == nil {
 		return applicantapimodels.ApplicantViewExt{}, errors.New("кандидат не найден")
 	}
-	//todo дубликаты
 	result := applicantapimodels.ApplicantViewExt{
 		ApplicantView: applicantapimodels.ApplicantConvert(rec.Applicant),
 		Tags:          rec.Tags,
+	}
+	result.Duplicates = make([]string, 0, len(rec.Duplicates))
+	for _, item := range rec.Duplicates {
+		result.Duplicates = append(result.Duplicates, item.ID)
+	}
+	if rec.Status != models.ApplicantStatusArchive {
+		result.PotentialDuplicate = i.checkDuplicate(rec)
 	}
 	return result, nil
 }
@@ -269,6 +277,9 @@ func (i impl) UpdateApplicant(spaceID string, id string, data applicantapimodels
 	}
 	if rec == nil {
 		return errors.New("кандидат не найден")
+	}
+	if rec.Status == models.ApplicantStatusArchive {
+		return errors.Errorf("обновление данных кандидата в статусе '%v' - недоступно", models.ApplicantStatusArchive)
 	}
 	//сменили вакансию, ищем такой же шаг
 	if rec.VacancyID != data.VacancyID {
@@ -369,6 +380,98 @@ func (i impl) ApplicantRemoveTag(spaceID string, id string, tag string) error {
 	return nil
 }
 
+func (i impl) ResolveDuplicate(spaceID string, mainID, minorID string, isDuplicate bool) error {
+	logger := log.WithField("space_id", spaceID).
+		WithField("main_id", mainID).
+		WithField("minor_ID", mainID)
+	if isDuplicate {
+		return i.joinApplicants(spaceID, mainID, minorID, logger)
+	}
+	return i.markAsDifferentApplicants(spaceID, mainID, minorID, logger)
+}
+
+func (i impl) markAsDifferentApplicants(spaceID string, mainID, minorID string, logger *log.Entry) error {
+	mainRec, err := i.store.GetByID(spaceID, mainID)
+	if err != nil {
+		logger.
+			WithError(err).
+			Error("ошибка получения данных кандидата")
+		return errors.New("ошибка получения данных кандидата")
+	}
+	if mainRec == nil {
+		return errors.New("запись с кандидатом не найдена")
+	}
+	for _, notDuplicateID := range mainRec.NotDuplicates {
+		if notDuplicateID == minorID {
+			logger.Info("признак разных кандидатов уже установлен")
+			return nil
+		}
+	}
+	notDuplicates := append(mainRec.NotDuplicates, minorID)
+	updMap := map[string]interface{}{
+		"not_duplicates": pq.Array(notDuplicates),
+	}
+	err = i.store.Update(mainID, updMap)
+	if err != nil {
+		logger.
+			WithError(err).
+			Error("ошибка установки признака разных кандидатов")
+		return errors.New("ошибка установки признака разных кандидатов")
+	}
+	logger.Info("установлен признак разных кандидатов")
+	return nil
+}
+
+func (i impl) joinApplicants(spaceID string, mainID, minorID string, logger *log.Entry) error {
+	mainRec, err := i.store.GetByID(spaceID, mainID)
+	if err != nil {
+		logger.
+			WithError(err).
+			Error("ошибка получения данных основного кандидата")
+		return errors.New("ошибка получения данных основного кандидата")
+	}
+	if mainRec == nil {
+		return errors.New("запись с основным кандидатом не найдена")
+	}
+	if mainRec.Status == models.ApplicantStatusArchive {
+		return errors.Errorf("объединение данных кандидата в статусе '%v' - недоступно", models.ApplicantStatusArchive)
+	}
+	minorRec, err := i.store.GetByID(spaceID, minorID)
+	if err != nil {
+		logger.
+			WithError(err).
+			Error("ошибка получения данных кандидата дубликата")
+		return errors.New("ошибка получения данных кандидата дубликата")
+	}
+	if minorRec == nil {
+		return errors.New("запись с дубликатом кандидата не найдена")
+	}
+	if minorRec.Status == models.ApplicantStatusArchive {
+		return errors.Errorf("объединение данных кандидата в статусе '%v' - недоступно", models.ApplicantStatusArchive)
+	}
+	err = db.DB.Transaction(func(tx *gorm.DB) error {
+		store := applicantstore.NewInstance(tx)
+		updMap := map[string]interface{}{
+			"status":       models.ApplicantStatusArchive,
+			"duplicate_id": mainID,
+		}
+		err = store.Update(minorID, updMap)
+		if err != nil {
+			logger.
+				WithError(err).
+				Error("ошибка перевода дубликата в архив")
+			return errors.New("ошибка перевода дубликата в архив")
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	//todo лог о переводе в историю действий
+	logger.Info("дубликат кандидата перемещем в архив")
+	return nil
+}
+
 func (i impl) checkDependency(spaceID string, data applicantapimodels.ApplicantData) (vacancy vacancyapimodels.VacancyView, err error) {
 	if data.VacancyID == "" {
 		return vacancyapimodels.VacancyView{}, errors.New("необходима указать вакансию")
@@ -377,6 +480,79 @@ func (i impl) checkDependency(spaceID string, data applicantapimodels.ApplicantD
 	if err != nil {
 		return vacancyapimodels.VacancyView{}, err
 	}
-
 	return vacancy, nil
+}
+
+func (i impl) checkDuplicate(originRec *dbmodels.ApplicantExt) applicantapimodels.ApplicantDuplicate {
+	logger := log.WithField("space_id", originRec.SpaceID).
+		WithField("rec_id", originRec.ID)
+	applicantFIO := getLowerFio(originRec.Applicant)
+	filter := dbmodels.DuplicateApplicantFilter{
+		VacancyID:      originRec.VacancyID,
+		FIO:            applicantFIO,
+		Phone:          originRec.Phone,
+		Email:          originRec.Email,
+		ExtApplicantID: originRec.ExtApplicantID,
+	}
+	list, err := i.store.ListOfDuplicateApplicant(originRec.SpaceID, filter)
+	if err != nil {
+		logger.WithError(err).Error("Ошибка получения списка кандидатов для поиска дублей")
+		return applicantapimodels.ApplicantDuplicate{}
+	}
+	if len(list) <= 1 {
+		return applicantapimodels.ApplicantDuplicate{}
+	}
+
+	for _, rec := range list {
+		if rec.ID == originRec.ID {
+			continue
+		}
+		if rec.DuplicateID != nil && *rec.DuplicateID == originRec.ID {
+			//уже помечен как дубль
+			continue
+		}
+
+		if originRec.IsMarkAsNotDuplicate(rec) {
+			//уже помечен как не дубль
+			continue
+		}
+		if originRec.ExtApplicantID != "" && originRec.ExtApplicantID == rec.ExtApplicantID {
+			//совпадение по автору во внешней системе
+			return applicantapimodels.ApplicantDuplicate{
+				Found:         true,
+				DuplicateID:   rec.ID,
+				DuplicateType: models.DuplicateTypeByAuthor,
+			}
+		}
+		if applicantFIO == "" || applicantFIO != getLowerFio(rec) {
+			continue
+		}
+		phoneEquals := false
+		if originRec.Phone != "" && originRec.Phone == rec.Phone {
+			if originRec.Email == "" || rec.Email == "" {
+				//ФИО+телефон если почта не указанна
+				return applicantapimodels.ApplicantDuplicate{
+					Found:         true,
+					DuplicateID:   rec.ID,
+					DuplicateType: models.DuplicateTypeByContacts,
+				}
+			}
+			phoneEquals = true
+		}
+		if originRec.Email != "" && originRec.Email == rec.Email {
+			if phoneEquals || (originRec.Phone == "" || rec.Phone == "") {
+				//ФИО, почта, телефон или ФИО+почта если телефон не указанна
+				return applicantapimodels.ApplicantDuplicate{
+					Found:         true,
+					DuplicateID:   rec.ID,
+					DuplicateType: models.DuplicateTypeByContacts,
+				}
+			}
+		}
+	}
+	return applicantapimodels.ApplicantDuplicate{}
+}
+
+func getLowerFio(rec dbmodels.Applicant) string {
+	return fmt.Sprintf("%v %v %v", rec.LastName, rec.FirstName, rec.MiddleName)
 }

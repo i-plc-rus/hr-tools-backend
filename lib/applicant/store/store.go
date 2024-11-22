@@ -22,6 +22,7 @@ type Provider interface {
 	ListOfNegotiation(spaceID string, filter dbmodels.NegotiationFilter) ([]dbmodels.Applicant, error)
 	ListCountOfApplicant(spaceID string, filter applicantapimodels.ApplicantFilter) (count int64, err error)
 	ListOfApplicant(spaceID string, filter applicantapimodels.ApplicantFilter) ([]dbmodels.Applicant, error)
+	ListOfDuplicateApplicant(spaceID string, filter dbmodels.DuplicateApplicantFilter) (list []dbmodels.Applicant, err error)
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -100,7 +101,8 @@ func (i impl) ListOfNegotiation(spaceID string, filter dbmodels.NegotiationFilte
 		Model(dbmodels.Applicant{}).
 		Where("space_id = ?", spaceID).
 		Where("vacancy_id = ?", filter.VacancyID).
-		Where("negotiation_id is not null")
+		Where("negotiation_id is not null").
+		Where("status != ?", models.ApplicantStatusArchive)
 	i.addNegotiationFilter(tx, filter)
 	err = tx.Preload(clause.Associations).Find(&list).Error
 
@@ -152,7 +154,37 @@ func (i impl) ListCountOfApplicant(spaceID string, filter applicantapimodels.App
 	return rowCount, nil
 }
 
+func (i impl) ListOfDuplicateApplicant(spaceID string, filter dbmodels.DuplicateApplicantFilter) (list []dbmodels.Applicant, err error) {
+	list = []dbmodels.Applicant{}
+	tx := i.db.
+		Model(dbmodels.Applicant{}).
+		Where("space_id = ?", spaceID).
+		Where("status != ?", models.ApplicantStatusArchive).
+		Where("vacancy_id = ?", filter.VacancyID).
+		Where("LOWER(last_name || ' ' || first_name|| ' ' || middle_name) = ?", strings.ToLower(filter.FIO))
+	if filter.ExtApplicantID != "" {
+		tx.Or("ext_applicant_id = ?", filter.ExtApplicantID)
+	}
+	if filter.Phone != "" {
+		tx.Or("phone = ?", filter.Phone)
+	}
+	if filter.Email != "" {
+		tx.Or("email = ?", filter.Email)
+	}
+	err = tx.Find(&list).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return list, nil
+}
+
 func (i impl) addApplicantFilter(tx *gorm.DB, filter applicantapimodels.ApplicantFilter) {
+	if filter.Status != nil {
+		tx.Where("applicants.status = ?", *filter.Status)
+	}
 	if filter.VacancyName != "" {
 		searchValue := "%" + strings.ToLower(filter.VacancyName) + "%"
 		tx.Where("LOWER(v.vacancy_name) like ?", searchValue)
@@ -184,9 +216,6 @@ func (i impl) addApplicantFilter(tx *gorm.DB, filter applicantapimodels.Applican
 	}
 	if filter.StageName != "" {
 		tx.Where("st.name = ?", filter.StageName)
-	}
-	if filter.Status != nil {
-		tx.Where("applicants.status = ?", *filter.Status)
 	}
 	if filter.Source != nil {
 		tx.Where("source = ?", *filter.Source)
