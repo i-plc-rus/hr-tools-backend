@@ -9,6 +9,7 @@ type ResumeResponse struct {
 	Age                       int             `json:"age"`
 	AlternateUrl              string          `json:"alternate_url"`
 	Area                      DictData        `json:"area"`
+	Actions                   DownloadData    `json:"actions"`
 	BirthDate                 string          `json:"birth_date"` //ГГГГ-ММ-ДД
 	BusinessTripReadiness     DictData        `json:"business_trip_readiness"`
 	JobSearchStatusesEmployer DictData        `json:"job_search_statuses_employer"`
@@ -46,6 +47,15 @@ func (r ResumeResponse) GetBirthDate() (time.Time, error) {
 		return time.Time{}, err
 	}
 	return date, nil
+}
+
+type DownloadData struct {
+	Pdf UrlData `json:"pdf"`
+	Rtf UrlData `json:"rtf"`
+}
+
+type UrlData struct {
+	Url string `json:"url"`
 }
 
 type Contact struct {

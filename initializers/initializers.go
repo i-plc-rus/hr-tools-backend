@@ -19,6 +19,7 @@ import (
 	"hr-tools-backend/lib/external-services/hh/hhclient"
 	negotiationworker "hr-tools-backend/lib/external-services/negotiation-worker"
 	externalserviceworker "hr-tools-backend/lib/external-services/worker"
+	filestorage "hr-tools-backend/lib/file-storage"
 	gpthandler "hr-tools-backend/lib/gpt"
 	messagetemplate "hr-tools-backend/lib/message-template"
 	spaceauthhandler "hr-tools-backend/lib/space/auth"
@@ -35,7 +36,9 @@ func InitAllServices(ctx context.Context) {
 	LoggerConfig = InitLogger()
 	config.InitConfig()
 	InitDBConnection()
+	InitS3()
 	InitSmtp()
+	filestorage.NewHandler()
 	cityprovider.NewHandler()
 	hhclient.NewProvider(config.Conf.HH.RedirectUri)
 	avitoclient.NewProvider()

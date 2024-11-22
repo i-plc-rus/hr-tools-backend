@@ -87,6 +87,10 @@ func AutoMigrateDB() error {
 		return errors.Wrap(err, "ошибка создания структуры SelectionStage")
 	}
 
+	if err := DB.AutoMigrate(&dbmodels.FileStorage{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры FileStorage")
+	}
+
 	log.Info("Миграция прошла успешно")
 	return nil
 }
