@@ -24,6 +24,7 @@ services:
     #container_name: hr-tools-backend
     depends_on:
       - db
+      - minio
     ports:
       - 8080:8080
     #expose:
@@ -31,6 +32,18 @@ services:
       #- "30128:8080"
     networks:
       - dokploy-network
+  minio:
+    image: docker.io/bitnami/minio:2024.11.7
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - 'minio_data:/data'
+    env_file:
+      - .env
+    networks:
+      - dokploy-network
+
   # nginx:
   #   image: nginx:latest
   #   restart: unless-stopped
@@ -50,3 +63,4 @@ networks:
 
 volumes:
   db-data: {}
+  minio_data: {}

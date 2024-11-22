@@ -11,6 +11,7 @@ import (
 	externalservices "hr-tools-backend/lib/external-services"
 	"hr-tools-backend/lib/external-services/hh/hhclient"
 	extservicestore "hr-tools-backend/lib/external-services/store"
+	filestorage "hr-tools-backend/lib/file-storage"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	"hr-tools-backend/lib/utils/helpers"
@@ -37,6 +38,7 @@ func NewHandler() {
 		applicantStore:     applicantstore.NewInstance(db.DB),
 		tokenMap:           sync.Map{},
 		cityMap:            map[string]string{},
+		filesStorage:       filestorage.Instance,
 	}
 }
 
@@ -49,6 +51,7 @@ type impl struct {
 	applicantStore     applicantstore.Provider
 	tokenMap           sync.Map
 	cityMap            map[string]string
+	filesStorage       filestorage.Provider
 }
 
 const (
@@ -434,9 +437,19 @@ func (i *impl) HandleNegotiations(ctx context.Context, data dbmodels.Vacancy) er
 			}
 			applicantData.Params.Languages = append(applicantData.Params.Languages, lng)
 		}
-		_, err = i.applicantStore.Create(applicantData)
+		applicantID, err := i.applicantStore.Create(applicantData)
 		if err != nil {
 			logger.WithError(err).Error("ошибка сохранения кандидата по отклику")
+		}
+
+		if resume.Actions.Pdf.Url != "" {
+			err = i.downloadResumePdf(ctx, data.SpaceID, applicantID, resume.Actions.Pdf.Url)
+			if err != nil {
+				logger.
+					WithField("resume_url", resume.Actions.Pdf.Url).
+					WithError(err).
+					Error("ошибка загрузки резюме из HH")
+			}
 		}
 	}
 	return nil
@@ -619,4 +632,16 @@ func (i *impl) checkPublications(ctx context.Context, spaceID string, list []dbm
 		}
 	}
 	return nil
+}
+
+func (i *impl) downloadResumePdf(ctx context.Context, spaceID, applicantID, resumeUrl string) error {
+	accessToken, err := i.getToken(ctx, spaceID)
+	if err != nil {
+		return err
+	}
+	body, err := i.client.DownloadResume(ctx, accessToken, resumeUrl)
+	if err != nil {
+		return err
+	}
+	return i.filesStorage.UploadResume(ctx, spaceID, applicantID, body, "resume.pdf")
 }
