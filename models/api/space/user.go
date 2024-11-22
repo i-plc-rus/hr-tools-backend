@@ -22,6 +22,7 @@ type SpaceUserCommonData struct {
 	LastName    string `json:"last_name"`
 	PhoneNumber string `json:"phone_number"`
 	IsAdmin     bool   `json:"is_admin"`
+	Role        string `json:"role"`
 }
 
 func (r SpaceUserCommonData) Validate() error {
