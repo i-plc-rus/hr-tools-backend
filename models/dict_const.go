@@ -281,3 +281,20 @@ const (
 	LimitTypDay   LimitType = "Дней"
 	LimitTypeWeek LimitType = "Недель"
 )
+
+type ApAddedPeriodType string
+
+const (
+	ApAddedPeriodTypeTDay  ApAddedPeriodType = "За сегодня"
+	ApAddedPeriodTypeYDay  ApAddedPeriodType = "За вчера"
+	ApAddedPeriodType7days ApAddedPeriodType = "За последние 7 дней"
+	ApAddedPeriodTypeMonth ApAddedPeriodType = "За последний месяц"
+	ApAddedPeriodTypeYear  ApAddedPeriodType = "За последний год"
+)
+
+type AddedType string
+
+const (
+	AddedTypeAdded       AddedType = "Добавлен"
+	AddedTypeNegotiation AddedType = "Откликнулся"
+)

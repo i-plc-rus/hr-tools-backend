@@ -3,6 +3,7 @@ package dbmodels
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"hr-tools-backend/models"
 	"time"
@@ -17,7 +18,7 @@ type Applicant struct {
 	ResumeTitle           string
 	Source                models.ApplicantSource `gorm:"index:idx_negotiation"`
 	NegotiationDate       time.Time              // дата отзыва
-	NegotiationAcceptDate time.Time              // дата принятия решения по отзыву
+	NegotiationAcceptDate time.Time              // дата принятия по отклику/дата ручного добавления
 	Status                models.ApplicantStatus
 	NegotiationStatus     models.NegotiationStatus
 	FirstName             string `gorm:"type:varchar(255)"`
@@ -37,6 +38,8 @@ type Applicant struct {
 	PhotoUrl              string          `gorm:"type:varchar(500)"` //todo s3 photo
 	SelectionStageID      string          `gorm:"type:varchar(36)"`
 	SelectionStage        *SelectionStage `gorm:"foreignKey:SelectionStageID"`
+	Tags                  pq.StringArray  `gorm:"type:text[]"`
+	//todo Дата выхода - когда перешел на этап принят
 }
 
 func (j ApplicantParams) Value() (driver.Value, error) {

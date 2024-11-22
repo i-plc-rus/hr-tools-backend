@@ -4,9 +4,11 @@ import (
 	"github.com/gofiber/fiber/v2"
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/controllers"
+	"hr-tools-backend/lib/applicant"
 	filestorage "hr-tools-backend/lib/file-storage"
 	"hr-tools-backend/middleware"
 	apimodels "hr-tools-backend/models/api"
+	applicantapimodels "hr-tools-backend/models/api/applicant"
 	"io"
 )
 
@@ -18,13 +20,18 @@ func InitApplicantApiRouters(app *fiber.App) {
 	controller := applicantApiController{}
 	app.Route("applicant", func(router fiber.Router) {
 		router.Get("doc/:id", controller.GetDoc) // скачать документ по id
+		router.Post("list", controller.list)
+		router.Post("", controller.create)
 		router.Route(":id", func(idRouter fiber.Router) {
 			idRouter.Post("upload-resume", controller.UploadResume) // загрузить резюме кандидата
 			idRouter.Post("upload-doc", controller.UploadDoc)       // загрузить документ кандидата
 			idRouter.Get("doc/list", controller.GetDocList)         // получить список документов кандидата
 			idRouter.Get("resume", controller.GetResume)            // скачать резюме кандидата
+			idRouter.Get("", controller.get)
+			idRouter.Put("", controller.update)
+			idRouter.Put("tag", controller.addTag)
+			idRouter.Delete("tag", controller.delTag)
 		})
-
 	})
 }
 
@@ -182,4 +189,173 @@ func (c *applicantApiController) GetDocList(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(body))
+}
+
+// @Summary Список
+// @Tags Кандидат
+// @Description Список
+// @Param	body body	 applicantapimodels.ApplicantFilter	true	"request filter body"
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Success 200 {object} apimodels.ScrollerResponse{data=[]applicantapimodels.ApplicantView}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/list [post]
+func (c *applicantApiController) list(ctx *fiber.Ctx) error {
+	var payload applicantapimodels.ApplicantFilter
+	if err := c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	if err := payload.Validate(); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	spaceID := middleware.GetUserSpace(ctx)
+	list, rowCount, err := applicant.Instance.ListOfApplicant(spaceID, payload)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewScrollerResponse(list, rowCount))
+}
+
+// @Summary Создание
+// @Tags Кандидат
+// @Description Создание
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param	body body	 applicantapimodels.ApplicantData	true	"request body"
+// @Success 200 {object} apimodels.Response{data=string}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant [post]
+func (c *applicantApiController) create(ctx *fiber.Ctx) error {
+	var payload applicantapimodels.ApplicantData
+	if err := c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	if err := payload.Validate(); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	spaceID := middleware.GetUserSpace(ctx)
+	id, err := applicant.Instance.CreateApplicant(spaceID, payload)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(id))
+}
+
+// @Summary Получение по ИД
+// @Tags Кандидат
+// @Description Получение по ИД
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    string  				    	true         "rec ID"
+// @Success 200 {object} apimodels.Response{data=applicantapimodels.ApplicantViewExt}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/{id} [get]
+func (c *applicantApiController) get(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	resp, err := applicant.Instance.GetApplicant(spaceID, id)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(resp))
+}
+
+// @Summary Обновление
+// @Tags Кандидат
+// @Description Обновление
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param	body body	 applicantapimodels.ApplicantData	true	"request body"
+// @Param   id          		path    string  				    	true         "rec ID"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/{id} [put]
+func (c *applicantApiController) update(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	var payload applicantapimodels.ApplicantData
+	if err = c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	if err = payload.Validate(); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	err = applicant.Instance.UpdateApplicant(spaceID, id, payload)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Добавить тэг
+// @Tags Кандидат
+// @Description Добавить тэг
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param	tag					query 	string							false		 "добавляемый Тег"
+// @Param   id          		path    string  				    	true         "rec ID"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/{id}/tag [put]
+func (c *applicantApiController) addTag(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	tag := ctx.Query("tag", "")
+	if tag == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("не указан тэг"))
+	}
+	spaceID := middleware.GetUserSpace(ctx)
+	err = applicant.Instance.ApplicantAddTag(spaceID, id, tag)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Удалить тэг
+// @Tags Кандидат
+// @Description Удалить тэг
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param	tag					query 	string							false		 "удаляемый Тег"
+// @Param   id          		path    string  				    	true         "rec ID"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/{id}/tag [delete]
+func (c *applicantApiController) delTag(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	tag := ctx.Query("tag", "")
+	if tag == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("не указан тэг"))
+	}
+	spaceID := middleware.GetUserSpace(ctx)
+	err = applicant.Instance.ApplicantRemoveTag(spaceID, id, tag)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }

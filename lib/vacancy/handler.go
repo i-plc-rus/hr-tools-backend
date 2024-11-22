@@ -177,7 +177,7 @@ func (i impl) GetByID(spaceID, id string) (item vacancyapimodels.VacancyView, er
 		logger.
 			WithError(err).
 			Error("ошибка получения вакансии")
-		return vacancyapimodels.VacancyView{}, err
+		return vacancyapimodels.VacancyView{}, errors.New("ошибка получения вакансии")
 	}
 	if rec == nil {
 		return vacancyapimodels.VacancyView{}, errors.New("вакансия не найдена")
