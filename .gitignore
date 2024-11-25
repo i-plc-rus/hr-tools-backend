@@ -19,3 +19,10 @@ go.work.sum
 
 # env file
 .env
+.idea/.gitignore
+.idea/hr-tools-backend.iml
+.idea/modules.xml
+.idea/sqldialects.xml
+.idea/vcs.xml
+docs/*
+.vscode/launch.json
