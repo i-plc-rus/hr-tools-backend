@@ -30,6 +30,8 @@ type Provider interface {
 	Approve(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) error
 	Reject(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) error
 	CreateVacancy(spaceID, id, userID string) error
+	ToPin(id, userID string, isSet bool) error
+	ToFavorite(id, userID string, isSet bool) error
 }
 
 var Instance Provider
@@ -462,4 +464,18 @@ func (i impl) CreateVacancy(spaceID, id, userID string) error {
 		return errors.New("вакансии уже создана")
 	}
 	return i.publish(spaceID, id, userID)
+}
+
+func (i impl) ToPin(id, userID string, isSet bool) error {
+	if isSet {
+		return i.store.SetPin(id, userID)
+	}
+	return i.store.RemovePin(id, userID)
+}
+
+func (i impl) ToFavorite(id, userID string, isSet bool) error {
+	if isSet {
+		return i.store.SetFavorite(id, userID)
+	}
+	return i.store.RemoveFavorite(id, userID)
 }
