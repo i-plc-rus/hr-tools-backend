@@ -36,6 +36,7 @@ type ResumeResponse struct {
 	SkillSet                  []string        `json:"skill_set"`
 	Title                     string          `json:"title"`
 	TotalExperience           TotalExperience `json:"total_experience"`
+	Owner                     Owner           `json:"owner"`
 }
 
 func (r ResumeResponse) GetBirthDate() (time.Time, error) {
@@ -90,6 +91,10 @@ type Relocation struct {
 type RelocationType struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+type Owner struct {
+	ID string `json:"id"`
 }
 
 func (r Relocation) GetRelocationType() models.RelocationType {

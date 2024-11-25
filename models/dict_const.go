@@ -155,6 +155,7 @@ const (
 	ApplicantStatusInProcess   ApplicantStatus = "В процессе"
 	ApplicantStatusRejected    ApplicantStatus = "Отклонен"
 	ApplicantStatusNegotiation ApplicantStatus = "Отклик"
+	ApplicantStatusArchive     ApplicantStatus = "Архивный"
 )
 
 type NegotiationStatus string
@@ -297,4 +298,11 @@ type AddedType string
 const (
 	AddedTypeAdded       AddedType = "Добавлен"
 	AddedTypeNegotiation AddedType = "Откликнулся"
+)
+
+type DuplicateType string
+
+const (
+	DuplicateTypeByAuthor   DuplicateType = "ByAuthor"
+	DuplicateTypeByContacts DuplicateType = "ByContacts"
 )

@@ -32,6 +32,8 @@ func InitApplicantApiRouters(app *fiber.App) {
 			idRouter.Put("tag", controller.addTag)
 			idRouter.Delete("tag", controller.delTag)
 			idRouter.Put("change_stage", controller.changeStage)
+			idRouter.Put("join", controller.join)
+			idRouter.Put("isolate", controller.isolate)
 		})
 	})
 }
@@ -355,6 +357,64 @@ func (c *applicantApiController) delTag(ctx *fiber.Ctx) error {
 	}
 	spaceID := middleware.GetUserSpace(ctx)
 	err = applicant.Instance.ApplicantRemoveTag(spaceID, id, tag)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary (Дубли) Объединение кандидатов
+// @Tags Кандидат
+// @Description (Дубли) Объединение кандидатов
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param	duplicate_id		query 	string							true		 "Идентификатор кандидата - дубликата, который будет перенесен в архив"
+// @Param   id          		path    string  				    	true         "Идентификатор основного кандидата"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/{id}/join [put]
+func (c *applicantApiController) join(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	duplicateID := ctx.Query("duplicate_id", "")
+	if duplicateID == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("не указан идентификатор кандидата - дубликата"))
+	}
+	spaceID := middleware.GetUserSpace(ctx)
+	err = applicant.Instance.ResolveDuplicate(spaceID, id, duplicateID, true)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary (Дубли) Пометить кандидатов как разных
+// @Tags Кандидат
+// @Description (Дубли) Пометить кандидатов как разных
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param	duplicate_id		query 	string							true		 "Идентификатор кандидата - дубликата, который помечается как не дубликат"
+// @Param   id          		path    string  				    	true         "Идентификатор основного кандидата"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/{id}/isolate [put]
+func (c *applicantApiController) isolate(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	duplicateID := ctx.Query("duplicate_id", "")
+	if duplicateID == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("не указан идентификатор кандидата - дубликата"))
+	}
+	spaceID := middleware.GetUserSpace(ctx)
+	err = applicant.Instance.ResolveDuplicate(spaceID, id, duplicateID, false)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}

@@ -58,6 +58,7 @@ type ContactsPhoneValue struct {
 type Applicant struct {
 	Data     ApplicantData `json:"data"`
 	ResumeID int           `json:"resume_id"`
+	ID       string        `json:"id"`
 }
 
 type ApplicantData struct {

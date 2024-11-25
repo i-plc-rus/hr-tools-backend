@@ -342,6 +342,7 @@ func (i *impl) HandleNegotiations(ctx context.Context, data dbmodels.Vacancy) er
 			VacancyID:       data.ID,
 			NegotiationID:   item.ID,
 			ResumeID:        resume.ID,
+			ExtApplicantID:  resume.Owner.ID,
 			Source:          models.ApplicantSourceHh,
 			NegotiationDate: time.Now(),
 			Status:          models.ApplicantStatusNegotiation,

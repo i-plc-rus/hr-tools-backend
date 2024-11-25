@@ -19,7 +19,7 @@ type Applicant struct {
 	Source                models.ApplicantSource `gorm:"index:idx_negotiation"`
 	NegotiationDate       time.Time              // дата отзыва
 	NegotiationAcceptDate time.Time              // дата принятия по отклику/дата ручного добавления
-	Status                models.ApplicantStatus
+	Status                models.ApplicantStatus `gorm:"index"`
 	NegotiationStatus     models.NegotiationStatus
 	FirstName             string `gorm:"type:varchar(255)"`
 	LastName              string `gorm:"type:varchar(255)"`
@@ -39,6 +39,10 @@ type Applicant struct {
 	SelectionStageID      string          `gorm:"type:varchar(36)"`
 	SelectionStage        *SelectionStage `gorm:"foreignKey:SelectionStageID"`
 	Tags                  pq.StringArray  `gorm:"type:text[]"`
+	ExtApplicantID        string          `gorm:"type:varchar(255)"`      // Идентификатор кандидата во внешней системе
+	NotDuplicates         pq.StringArray  `gorm:"type:text[]"`            // ид кандидатов помеченные как разные кандидаты
+	Duplicates            []Applicant     `gorm:"foreignKey:DuplicateID"` // Список дублей
+	DuplicateID           *string         `gorm:"type:varchar(36)"`       // текущая запись является дублем кандидата (Идентификатор кандидата)
 	StartDate             time.Time       // Дата выхода
 }
 
@@ -91,6 +95,9 @@ func (a Applicant) IsAllowStatusChange(newStatus models.NegotiationStatus) (bool
 	if a.Status == models.ApplicantStatusRejected {
 		return false, errors.New("смена статуса отклика недоступна, кандидат уже отклонен")
 	}
+	if a.Status == models.ApplicantStatusArchive {
+		return false, errors.Errorf("смена статуса отклика недоступна, кандидат находится в статусе '%v'", models.ApplicantStatusArchive)
+	}
 	if a.NegotiationStatus == models.NegotiationStatusAccepted {
 		return false, errors.New("смена статуса отклика недоступна, отклик уже принят")
 	}
@@ -126,4 +133,26 @@ func (n NegotiationFilter) Validate() error {
 		return errors.New("не указан идентификатор вакансии")
 	}
 	return nil
+}
+
+type DuplicateApplicantFilter struct {
+	VacancyID      string
+	FIO            string
+	Phone          string
+	Email          string
+	ExtApplicantID string
+}
+
+func (a Applicant) IsMarkAsNotDuplicate(source Applicant) bool {
+	for _, id := range a.NotDuplicates {
+		if id == source.ID {
+			return true
+		}
+	}
+	for _, id := range source.NotDuplicates {
+		if id == a.ID {
+			return true
+		}
+	}
+	return false
 }

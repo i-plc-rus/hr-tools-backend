@@ -374,6 +374,7 @@ func (i *impl) storeApplicant(resume *avitoapimodels.Resume, apply avitoapimodel
 		},
 		VacancyID:       data.ID,
 		NegotiationID:   apply.ID,
+		ExtApplicantID:  apply.Applicant.ID,
 		ResumeID:        strconv.Itoa(resume.ID),
 		Source:          models.ApplicantSourceAvito,
 		NegotiationDate: time.Now(),
