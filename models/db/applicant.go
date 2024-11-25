@@ -39,7 +39,7 @@ type Applicant struct {
 	SelectionStageID      string          `gorm:"type:varchar(36)"`
 	SelectionStage        *SelectionStage `gorm:"foreignKey:SelectionStageID"`
 	Tags                  pq.StringArray  `gorm:"type:text[]"`
-	//todo Дата выхода - когда перешел на этап принят
+	StartDate             time.Time       // Дата выхода
 }
 
 func (j ApplicantParams) Value() (driver.Value, error) {

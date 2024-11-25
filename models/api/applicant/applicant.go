@@ -12,19 +12,20 @@ import (
 
 type ApplicantView struct {
 	ApplicantData
-	ID                 string                 `json:"id"`                      // Идентификатор кандидата
-	NegotiationID      string                 `json:"negotiation_id"`          // Идентификатор отклика во внешней системе
-	NegotiationDate    string                 `json:"negotiation_date"`        // Дата отклика во внешней системе ДД.ММ.ГГГГ
-	AcceptDate         string                 `json:"accept_date"`             // Дата добавления
-	ResumeID           string                 `gorm:"index;type:varchar(255)"` // Идентификатор резюме во внешней системе
-	ResumeTitle        string                 `json:"resume_title"`            // Заголовок резюме
-	Status             models.ApplicantStatus `json:"status"`                  // Статус кандидата
-	SelectionStageID   string                 `json:"selection_stage_id"`      // Идентификатор этапа подбора кандидата
-	SelectionStageName string                 `json:"selection_stage_name"`    // Название этапа
-	StageTime          string                 `json:"stage_time"`              // Время на этапе
-	VacancyName        string                 `json:"vacancy_name"`            // Название вакансии
-	FIO                string                 `json:"fio"`                     // ФИО кандидата
-	Age                int                    `json:"age"`                     // возраст
+	ID                 string                 `json:"id"`                   // Идентификатор кандидата
+	NegotiationID      string                 `json:"negotiation_id"`       // Идентификатор отклика во внешней системе
+	NegotiationDate    string                 `json:"negotiation_date"`     // Дата отклика во внешней системе ДД.ММ.ГГГГ
+	AcceptDate         string                 `json:"accept_date"`          // Дата добавления
+	StartDate          string                 `json:"start_date"`           // Дата выхода
+	ResumeID           string                 `json:"resume_id"`            // Идентификатор резюме во внешней системе
+	ResumeTitle        string                 `json:"resume_title"`         // Заголовок резюме
+	Status             models.ApplicantStatus `json:"status"`               // Статус кандидата
+	SelectionStageID   string                 `json:"selection_stage_id"`   // Идентификатор этапа подбора кандидата
+	SelectionStageName string                 `json:"selection_stage_name"` // Название этапа
+	StageTime          string                 `json:"stage_time"`           // Время на этапе
+	VacancyName        string                 `json:"vacancy_name"`         // Название вакансии
+	FIO                string                 `json:"fio"`                  // ФИО кандидата
+	Age                int                    `json:"age"`                  // возраст
 }
 
 type ApplicantViewExt struct {
@@ -123,6 +124,9 @@ func ApplicantConvert(rec dbmodels.Applicant) ApplicantView {
 	}
 	if !rec.NegotiationAcceptDate.IsZero() {
 		result.AcceptDate = rec.NegotiationAcceptDate.Format("02.01.2006")
+	}
+	if !rec.StartDate.IsZero() {
+		result.StartDate = rec.StartDate.Format("02.01.2006")
 	}
 	if rec.Vacancy != nil {
 		result.VacancyName = rec.Vacancy.VacancyName
