@@ -43,6 +43,7 @@ type Applicant struct {
 	NotDuplicates         pq.StringArray  `gorm:"type:text[]"`            // ид кандидатов помеченные как разные кандидаты
 	Duplicates            []Applicant     `gorm:"foreignKey:DuplicateID"` // Список дублей
 	DuplicateID           *string         `gorm:"type:varchar(36)"`       // текущая запись является дублем кандидата (Идентификатор кандидата)
+	StartDate             time.Time       // Дата выхода
 }
 
 func (j ApplicantParams) Value() (driver.Value, error) {

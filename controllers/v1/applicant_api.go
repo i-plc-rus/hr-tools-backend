@@ -31,6 +31,7 @@ func InitApplicantApiRouters(app *fiber.App) {
 			idRouter.Put("", controller.update)
 			idRouter.Put("tag", controller.addTag)
 			idRouter.Delete("tag", controller.delTag)
+			idRouter.Put("change_stage", controller.changeStage)
 			idRouter.Put("join", controller.join)
 			idRouter.Put("isolate", controller.isolate)
 		})
@@ -414,6 +415,37 @@ func (c *applicantApiController) isolate(ctx *fiber.Ctx) error {
 	}
 	spaceID := middleware.GetUserSpace(ctx)
 	err = applicant.Instance.ResolveDuplicate(spaceID, id, duplicateID, false)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+
+// @Summary Перевести на другой этап подбора
+// @Tags Кандидат
+// @Description Перевести на другой этап подбора
+// @Param   Authorization		header	string	true	"Authorization token"
+// @Param	stage_id			query 	string							true		 "Идентификатор этапа на который необходимо перевести кандидата"
+// @Param   id          		path    string  				    	true         "Идентификатор кандидата"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/{id}/change_stage [put]
+func (c *applicantApiController) changeStage(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	stageID := ctx.Query("stage_id", "")
+	if stageID == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("не указан идентификатор этапа"))
+	}
+	spaceID := middleware.GetUserSpace(ctx)
+	userID := middleware.GetUserID(ctx)
+	err = applicant.Instance.ChangeStage(spaceID, userID, id, stageID)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}

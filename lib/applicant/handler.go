@@ -29,6 +29,7 @@ type Provider interface {
 	UpdateApplicant(spaceID string, id string, applicant applicantapimodels.ApplicantData) error
 	ApplicantAddTag(spaceID string, id string, tag string) error
 	ApplicantRemoveTag(spaceID string, id string, tag string) error
+	ChangeStage(spaceID, userID string, applicantID, stageID string) error
 	ResolveDuplicate(spaceID string, mainID, minorID string, isDuplicate bool) error
 }
 
@@ -377,6 +378,53 @@ func (i impl) ApplicantRemoveTag(spaceID string, id string, tag string) error {
 		return errors.New("ошибка удаления тега кандидата")
 	}
 	logger.Info("удаленин тег у кандидата")
+	return nil
+}
+
+func (i impl) ChangeStage(spaceID, userID string, applicantID, stageID string) error {
+	logger := log.WithField("space_id", spaceID).
+		WithField("applicant_id", applicantID).
+		WithField("stage_id", stageID)
+	applicantRec, err := i.store.GetByID(spaceID, applicantID)
+	if err != nil {
+		logger.
+			WithError(err).
+			Error("ошибка получения данных кандидата")
+		return errors.New("ошибка получения данных кандидата")
+	}
+	if applicantRec.Status != models.ApplicantStatusInProcess {
+		return errors.Errorf("перевода по этапам возможен только на статусе '%v'", models.ApplicantStatusInProcess)
+	}
+	stageRec, err := i.selectionStageStore.GetByID(spaceID, applicantRec.VacancyID, stageID)
+	if err != nil {
+		return err
+	}
+
+	updMap := map[string]interface{}{
+		"selection_stage_id": stageRec.ID,
+	}
+
+	switch stageRec.Name {
+	case dbmodels.NegotiationStage:
+		return errors.Errorf("перевод кандидата с текущего этапа на этап '%v' невозможен", stageRec.Name)
+	case dbmodels.AddedStage:
+		return errors.Errorf("перевод кандидата с текущего этапа на этап '%v' невозможен", stageRec.Name)
+	case dbmodels.ScreenStage:
+	case dbmodels.ManagerInterviewStage:
+	case dbmodels.ClientInterviewStage:
+	case dbmodels.OfferStage:
+		break
+	case dbmodels.HiredStage:
+		updMap["start_date"] = time.Now()
+	}
+	err = i.store.Update(applicantID, updMap)
+	if err != nil {
+		logger.
+			WithError(err).
+			Error("ошибка изменения этапа подбора для кандидата")
+		return errors.New("ошибка изменения этапа подбора для кандидата")
+	}
+	// TODO обновление истории
 	return nil
 }
 
