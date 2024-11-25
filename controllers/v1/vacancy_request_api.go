@@ -157,7 +157,7 @@ func (c *vacancyReqApiController) delete(ctx *fiber.Ctx) error {
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/v1/space/vacancy/{id}/pin [put]
+// @router /api/v1/space/vacancy_request/{id}/pin [put]
 func (c *vacancyReqApiController) pin(ctx *fiber.Ctx) error {
 	id, err := c.GetID(ctx)
 	if err != nil {
@@ -184,7 +184,7 @@ func (c *vacancyReqApiController) pin(ctx *fiber.Ctx) error {
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/v1/space/vacancy/{id}/favorite [put]
+// @router /api/v1/space/vacancy_request/{id}/favorite [put]
 func (c *vacancyReqApiController) favorite(ctx *fiber.Ctx) error {
 	id, err := c.GetID(ctx)
 	if err != nil {
