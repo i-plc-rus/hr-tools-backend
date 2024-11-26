@@ -1,6 +1,8 @@
 package models
 
-import "github.com/pkg/errors"
+import (
+	"github.com/pkg/errors"
+)
 
 type VRUrgency string
 
@@ -129,6 +131,24 @@ const (
 	EmploymentProbation  Employment = "probation"  //Стажировка
 )
 
+func (e Employment) ToString() string {
+	switch e {
+	case EmploymentTemporary:
+		return "Временная"
+	case EmploymentFull:
+		return "Полная"
+	case EmploymentInternship:
+		return "Стажировка"
+	case EmploymentPartial:
+		return "Частичная"
+	case EmploymentVolunteer:
+		return "Волонтерство"
+	case EmploymentProbation:
+		return "Стажировка"
+	}
+	return ""
+}
+
 type Experience string
 
 const (
@@ -148,6 +168,22 @@ const (
 	ScheduleFlexible    Schedule = "flexible"    // Гибкий
 	ScheduleShift       Schedule = "shift"       // Сменный
 )
+
+func (s Schedule) ToString() string {
+	switch s {
+	case ScheduleFlyInFlyOut:
+		return "Вахта"
+	case SchedulePartTime:
+		return "Неполный день"
+	case ScheduleFullDay:
+		return "Полный день"
+	case ScheduleFlexible:
+		return "Гибкий"
+	case ScheduleShift:
+		return "Сменный"
+	}
+	return ""
+}
 
 type ApplicantStatus string
 
@@ -182,6 +218,18 @@ const (
 	RelocationTypeWant RelocationType = "want"     // "хочу переехать"
 )
 
+func (r RelocationType) ToString() string {
+	switch r {
+	case RelocationTypeNo:
+		return "не могу переехать"
+	case RelocationTypeYes:
+		return "могу переехать"
+	case RelocationTypeWant:
+		return "хочу переехать"
+	}
+	return ""
+}
+
 type EducationType string
 
 const (
@@ -194,6 +242,28 @@ const (
 	EducationTypeCandidate        EducationType = "candidate"         //"Кандидат наук"
 	EducationTypeDoctor           EducationType = "doctor"            //"Доктор наук"
 )
+
+func (e EducationType) ToString() string {
+	switch e {
+	case EducationTypeSecondary:
+		return "Среднее"
+	case EducationTypeSpecialSecondary:
+		return "реднее специальное"
+	case EducationTypeUnfinishedHigher:
+		return "Неоконченное высшее"
+	case EducationTypeHigher:
+		return "Высшее"
+	case EducationTypeBachelor:
+		return "Бакалавр"
+	case EducationTypeMaster:
+		return "Магистр"
+	case EducationTypeCandidate:
+		return "Кандидат наук"
+	case EducationTypeDoctor:
+		return "Доктор наук"
+	}
+	return ""
+}
 
 type ExperienceType string
 
@@ -232,6 +302,16 @@ const (
 	GenderTypeF GenderType = "female" // женский
 )
 
+func (g GenderType) ToString() string {
+	switch g {
+	case GenderTypeM:
+		return "мужской"
+	case GenderTypeF:
+		return "женский"
+	}
+	return ""
+}
+
 type TripReadinessType string
 
 const (
@@ -239,6 +319,18 @@ const (
 	TripReadinessSometimes TripReadinessType = "sometimes" //"готов к редким командировкам
 	TripReadinessNever     TripReadinessType = "never"     //"готов к редким командировкам
 )
+
+func (t TripReadinessType) ToString() string {
+	switch t {
+	case TripReadinessReady:
+		return "готов к командировкам"
+	case TripReadinessSometimes:
+		return "готов к редким командировкам"
+	case TripReadinessNever:
+		return "не готов к командировкам"
+	}
+	return ""
+}
 
 type DriverLicenseType string
 

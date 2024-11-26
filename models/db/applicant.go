@@ -11,39 +11,39 @@ import (
 
 type Applicant struct {
 	BaseSpaceModel
-	VacancyID             string   `gorm:"type:varchar(36)"`
-	Vacancy               *Vacancy `gorm:"foreignKey:VacancyID"`
-	NegotiationID         string   `gorm:"type:varchar(255);index:idx_negotiation"` // ид отклика во внешней системе
-	ResumeID              string   `gorm:"index;type:varchar(255)"`                 // ид резюме во внешней системе
-	ResumeTitle           string
-	Source                models.ApplicantSource `gorm:"index:idx_negotiation"`
-	NegotiationDate       time.Time              // дата отзыва
-	NegotiationAcceptDate time.Time              // дата принятия по отклику/дата ручного добавления
-	Status                models.ApplicantStatus `gorm:"index"`
-	NegotiationStatus     models.NegotiationStatus
-	FirstName             string `gorm:"type:varchar(255)"`
-	LastName              string `gorm:"type:varchar(255)"`
-	MiddleName            string `gorm:"type:varchar(255)"`
-	Phone                 string `gorm:"type:varchar(255)"`
-	Email                 string `gorm:"type:varchar(255)"`
-	Salary                int
-	Address               string
-	BirthDate             time.Time
-	Citizenship           string                `gorm:"type:varchar(255)"` // Гражданство
-	Gender                models.GenderType     `gorm:"type:varchar(50)"`  // Пол кандидата
-	Relocation            models.RelocationType `gorm:"type:varchar(100)"` // Готовность к переезду
-	TotalExperience       int                   //опыт работ в месяцах
-	Comment               string
-	Params                ApplicantParams `gorm:"type:jsonb"`
-	PhotoUrl              string          `gorm:"type:varchar(500)"` //todo s3 photo
-	SelectionStageID      string          `gorm:"type:varchar(36)"`
-	SelectionStage        *SelectionStage `gorm:"foreignKey:SelectionStageID"`
-	Tags                  pq.StringArray  `gorm:"type:text[]"`
-	ExtApplicantID        string          `gorm:"type:varchar(255)"`      // Идентификатор кандидата во внешней системе
-	NotDuplicates         pq.StringArray  `gorm:"type:text[]"`            // ид кандидатов помеченные как разные кандидаты
-	Duplicates            []Applicant     `gorm:"foreignKey:DuplicateID"` // Список дублей
-	DuplicateID           *string         `gorm:"type:varchar(36)"`       // текущая запись является дублем кандидата (Идентификатор кандидата)
-	StartDate             time.Time       // Дата выхода
+	VacancyID             string                   `gorm:"type:varchar(36)" comment:"Идентификатор вакансии"`
+	Vacancy               *Vacancy                 `gorm:"foreignKey:VacancyID"`
+	NegotiationID         string                   `gorm:"type:varchar(255);index:idx_negotiation" comment:"Идентификатор отклика во внешней системе"` // ид отклика во внешней системе
+	ResumeID              string                   `gorm:"index;type:varchar(255)" comment:"Идентификатор резюме во внешней системе"`                  // ид резюме во внешней системе
+	ResumeTitle           string                   `comment:"Заголовок резюме"`
+	Source                models.ApplicantSource   `gorm:"index:idx_negotiation" comment:"Источник"`
+	NegotiationDate       time.Time                `comment:"Дата отзыва"`
+	NegotiationAcceptDate time.Time                `comment:"Дата добавления"` // дата принятия по отклику/дата ручного добавления
+	Status                models.ApplicantStatus   `gorm:"index" comment:"Статус"`
+	NegotiationStatus     models.NegotiationStatus `comment:"Статус отклика"`
+	FirstName             string                   `gorm:"type:varchar(255)" comment:"Имя"`
+	LastName              string                   `gorm:"type:varchar(255)" comment:"Фамилия"`
+	MiddleName            string                   `gorm:"type:varchar(255)" comment:"Отчество"`
+	Phone                 string                   `gorm:"type:varchar(255)" comment:"Телефон"`
+	Email                 string                   `gorm:"type:varchar(255)" comment:"Email"`
+	Salary                int                      `comment:"Ожидаемая дата ЗП"`
+	Address               string                   `comment:"Адрес"`
+	BirthDate             time.Time                `comment:"Дата рождения"`
+	Citizenship           string                   `gorm:"type:varchar(255)" comment:"Гражданство"`           // Гражданство
+	Gender                models.GenderType        `gorm:"type:varchar(50)" comment:"Пол кандидата"`          // Пол кандидата
+	Relocation            models.RelocationType    `gorm:"type:varchar(100)" comment:"Готовность к переезду"` // Готовность к переезду
+	TotalExperience       int                      `comment:"Опыт работ в месяцах"`
+	Comment               string                   `comment:"Комментарий"`
+	Params                ApplicantParams          `gorm:"type:jsonb"`
+	PhotoUrl              string                   `gorm:"type:varchar(500)"` //todo s3 photo
+	SelectionStageID      string                   `gorm:"type:varchar(36)" comment:"Идентификатор этапа подбора"`
+	SelectionStage        *SelectionStage          `gorm:"foreignKey:SelectionStageID"`
+	Tags                  pq.StringArray           `gorm:"type:text[]" comment:"Тэги"`
+	ExtApplicantID        string                   `gorm:"type:varchar(255)" comment:"Идентификатор кандидата во внешней системе"` // Идентификатор кандидата во внешней системе
+	NotDuplicates         pq.StringArray           `gorm:"type:text[]"`                                                            // ид кандидатов помеченные как разные кандидаты
+	Duplicates            []Applicant              `gorm:"foreignKey:DuplicateID"`                                                 // Список дублей
+	DuplicateID           *string                  `gorm:"type:varchar(36)" comment:"Идентификатор кандидата дубликата"`           // текущая запись является дублем кандидата (Идентификатор кандидата)
+	StartDate             time.Time                `comment:"Дата выхода"`
 }
 
 func (j ApplicantParams) Value() (driver.Value, error) {
@@ -59,14 +59,14 @@ func (j *ApplicantParams) Scan(value interface{}) error {
 }
 
 type ApplicantParams struct {
-	Education               models.EducationType       `json:"education"`                 // Образование
-	HaveAdditionalEducation bool                       `json:"have_additional_education"` // Повышение квалификации, курсы
-	Employments             []models.Employment        `json:"employments"`               // Занятость
-	Schedules               []models.Schedule          `json:"schedules"`                 // График работы
-	Languages               []Language                 `json:"languages"`                 // Знание языков
-	TripReadiness           models.TripReadinessType   `json:"trip_readiness"`            // Готовность к командировкам
-	DriverLicenseTypes      []models.DriverLicenseType `json:"driver_license_types"`      // Водительсике права
-	SearchStatus            models.SearchStatusType    `json:"search_status"`             // Статус поиска работы
+	Education               models.EducationType       `json:"education" comment:"Образование"`                            // Образование
+	HaveAdditionalEducation bool                       `json:"have_additional_education" comment:"Повышение квалификации"` // Повышение квалификации, курсы
+	Employments             []models.Employment        `json:"employments" comment:"Занятость"`                            // Занятость
+	Schedules               []models.Schedule          `json:"schedules" comment:"График работы"`                          // График работы
+	Languages               []Language                 `json:"languages" comment:"Знание языков"`                          // Знание языков
+	TripReadiness           models.TripReadinessType   `json:"trip_readiness" comment:"Командировки"`                      // Готовность к командировкам
+	DriverLicenseTypes      []models.DriverLicenseType `json:"driver_license_types" comment:"Водительсике права"`          // Водительсике права
+	SearchStatus            models.SearchStatusType    `json:"search_status" comment:"Статус поиска работы"`               // Статус поиска работы
 }
 
 type Language struct {

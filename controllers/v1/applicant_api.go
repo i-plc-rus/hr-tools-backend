@@ -1,15 +1,17 @@
 package apiv1
 
 import (
-	"github.com/gofiber/fiber/v2"
-	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/controllers"
 	"hr-tools-backend/lib/applicant"
+	applicanthistoryhandler "hr-tools-backend/lib/applicant-history"
 	filestorage "hr-tools-backend/lib/file-storage"
 	"hr-tools-backend/middleware"
 	apimodels "hr-tools-backend/models/api"
 	applicantapimodels "hr-tools-backend/models/api/applicant"
 	"io"
+
+	"github.com/gofiber/fiber/v2"
+	log "github.com/sirupsen/logrus"
 )
 
 type applicantApiController struct {
@@ -34,6 +36,8 @@ func InitApplicantApiRouters(app *fiber.App) {
 			idRouter.Put("change_stage", controller.changeStage)
 			idRouter.Put("join", controller.join)
 			idRouter.Put("isolate", controller.isolate)
+			idRouter.Put("changes", controller.changes)
+			idRouter.Put("note", controller.note)
 		})
 	})
 }
@@ -240,7 +244,8 @@ func (c *applicantApiController) create(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
-	id, err := applicant.Instance.CreateApplicant(spaceID, payload)
+	userID := middleware.GetUserID(ctx)
+	id, err := applicant.Instance.CreateApplicant(spaceID, userID, payload)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
@@ -298,7 +303,8 @@ func (c *applicantApiController) update(ctx *fiber.Ctx) error {
 	}
 
 	spaceID := middleware.GetUserSpace(ctx)
-	err = applicant.Instance.UpdateApplicant(spaceID, id, payload)
+	userID := middleware.GetUserID(ctx)
+	err = applicant.Instance.UpdateApplicant(spaceID, id, userID, payload)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
@@ -327,7 +333,8 @@ func (c *applicantApiController) addTag(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("не указан тэг"))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
-	err = applicant.Instance.ApplicantAddTag(spaceID, id, tag)
+	userID := middleware.GetUserID(ctx)
+	err = applicant.Instance.ApplicantAddTag(spaceID, id, userID, tag)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
@@ -356,7 +363,8 @@ func (c *applicantApiController) delTag(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("не указан тэг"))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
-	err = applicant.Instance.ApplicantRemoveTag(spaceID, id, tag)
+	userID := middleware.GetUserID(ctx)
+	err = applicant.Instance.ApplicantRemoveTag(spaceID, id, userID, tag)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
@@ -385,7 +393,8 @@ func (c *applicantApiController) join(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("не указан идентификатор кандидата - дубликата"))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
-	err = applicant.Instance.ResolveDuplicate(spaceID, id, duplicateID, true)
+	userID := middleware.GetUserID(ctx)
+	err = applicant.Instance.ResolveDuplicate(spaceID, id, duplicateID, userID, true)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
@@ -414,13 +423,13 @@ func (c *applicantApiController) isolate(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("не указан идентификатор кандидата - дубликата"))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
-	err = applicant.Instance.ResolveDuplicate(spaceID, id, duplicateID, false)
+	userID := middleware.GetUserID(ctx)
+	err = applicant.Instance.ResolveDuplicate(spaceID, id, duplicateID, userID, false)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
-
 
 // @Summary Перевести на другой этап подбора
 // @Tags Кандидат
@@ -446,6 +455,64 @@ func (c *applicantApiController) changeStage(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	userID := middleware.GetUserID(ctx)
 	err = applicant.Instance.ChangeStage(spaceID, userID, id, stageID)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Лог действий
+// @Tags Кандидат
+// @Description Лог действий
+// @Param   Authorization		header	string	true	"Authorization token"
+// @Param   id          		path    string  true    "Идентификатор кандидата"
+// @Param	body body	 applicantapimodels.ApplicantHistoryFilter	true	"request filter"
+// @Success 200 {object} apimodels.ScrollerResponse{data=[]applicantapimodels.ApplicantHistoryView}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/{id}/changes [put]
+func (c *applicantApiController) changes(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	var payload applicantapimodels.ApplicantHistoryFilter
+	if err = c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	data, rowCount, err := applicanthistoryhandler.Instance.List(spaceID, id, payload)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewScrollerResponse(data, rowCount))
+}
+
+// @Summary Добавить заметку о кандидате
+// @Tags Кандидат
+// @Description Добавить заметку о кандидате
+// @Param   Authorization	 header		string	true	"Authorization token"
+// @Param   id          	 path    	string  true    "Идентификатор кандидата"
+// @Param	body			 body	 	applicantapimodels.ApplicantNote	true	"request data"
+// @Success 200 {object} apimodels.ScrollerResponse{data=[]applicantapimodels.ApplicantHistoryView}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/{id}/note [put]
+func (c *applicantApiController) note(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	var payload applicantapimodels.ApplicantNote
+	if err = c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	userID := middleware.GetUserID(ctx)
+	spaceID := middleware.GetUserSpace(ctx)
+	err = applicanthistoryhandler.Instance.SaveNote(spaceID, id, userID, payload)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}

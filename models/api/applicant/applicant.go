@@ -189,3 +189,8 @@ type ApplicantSort struct {
 	SalaryDesc     *bool `json:"salary_desc"`      // ЗП, порядок сортировки false = ASC/ true = DESC / nil = нет
 	AcceptDateDesc *bool `json:"accept_date_desc"` // Дата добавления, порядок сортировки false = ASC/ true = DESC / nil = нет
 }
+
+type ApplicantNote struct {
+	Note      string `json:"note"`       // Комментарий
+	IsPrivate bool   `json:"is_private"` // Приватный
+}

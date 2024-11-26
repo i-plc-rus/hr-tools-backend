@@ -91,6 +91,10 @@ func AutoMigrateDB() error {
 		return errors.Wrap(err, "ошибка создания структуры FileStorage")
 	}
 
+	if err := DB.AutoMigrate(&dbmodels.ApplicantHistory{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры ApplicantHistory")
+	}
+
 	log.Info("Миграция прошла успешно")
 	return nil
 }

@@ -2,11 +2,8 @@ package applicant
 
 import (
 	"fmt"
-	"github.com/lib/pq"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 	"hr-tools-backend/db"
+	applicanthistoryhandler "hr-tools-backend/lib/applicant-history"
 	applicantstore "hr-tools-backend/lib/applicant/store"
 	vacancyhandler "hr-tools-backend/lib/vacancy"
 	selectionstagestore "hr-tools-backend/lib/vacancy/selection-stage-store"
@@ -16,21 +13,26 @@ import (
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
 	"time"
+
+	"github.com/lib/pq"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 type Provider interface {
 	ListOfNegotiation(spaceID string, filter dbmodels.NegotiationFilter) (list []negotiationapimodels.NegotiationView, err error)
-	UpdateComment(id string, comment string) error
-	UpdateStatus(spaceID, id string, status models.NegotiationStatus) error
+	UpdateComment(spaceID, id, userID string, comment string) error
+	UpdateStatus(spaceID, id, userID string, status models.NegotiationStatus) error
 	GetByID(spaceID, id string) (negotiationapimodels.NegotiationView, error)
-	CreateApplicant(spaceID string, applicant applicantapimodels.ApplicantData) (string, error)
+	CreateApplicant(spaceID, userID string, applicant applicantapimodels.ApplicantData) (string, error)
 	GetApplicant(spaceID string, id string) (applicantapimodels.ApplicantViewExt, error)
 	ListOfApplicant(spaceID string, filter applicantapimodels.ApplicantFilter) (list []applicantapimodels.ApplicantView, rowCount int64, err error)
-	UpdateApplicant(spaceID string, id string, applicant applicantapimodels.ApplicantData) error
-	ApplicantAddTag(spaceID string, id string, tag string) error
-	ApplicantRemoveTag(spaceID string, id string, tag string) error
+	UpdateApplicant(spaceID string, id, userID string, applicant applicantapimodels.ApplicantData) error
+	ApplicantAddTag(spaceID string, id, userID string, tag string) error
+	ApplicantRemoveTag(spaceID string, id, userID string, tag string) error
 	ChangeStage(spaceID, userID string, applicantID, stageID string) error
-	ResolveDuplicate(spaceID string, mainID, minorID string, isDuplicate bool) error
+	ResolveDuplicate(spaceID string, mainID, minorID, userID string, isDuplicate bool) error
 }
 
 var Instance Provider
@@ -40,6 +42,7 @@ func NewHandler() {
 		store:               applicantstore.NewInstance(db.DB),
 		selectionStageStore: selectionstagestore.NewInstance(db.DB),
 		vacancyProvider:     vacancyhandler.Instance,
+		applicantHistory:    applicanthistoryhandler.Instance,
 	}
 }
 
@@ -47,6 +50,7 @@ type impl struct {
 	store               applicantstore.Provider
 	selectionStageStore selectionstagestore.Provider
 	vacancyProvider     vacancyhandler.Provider
+	applicantHistory    applicanthistoryhandler.Provider
 }
 
 func (i impl) ListOfNegotiation(spaceID string, filter dbmodels.NegotiationFilter) ([]negotiationapimodels.NegotiationView, error) {
@@ -63,14 +67,27 @@ func (i impl) ListOfNegotiation(spaceID string, filter dbmodels.NegotiationFilte
 	return result, nil
 }
 
-func (i impl) UpdateComment(id string, comment string) error {
+func (i impl) UpdateComment(spaceID, id, userID string, comment string) error {
+	rec, err := i.store.GetByID(spaceID, id)
+	if err != nil {
+		return err
+	}
+	if rec == nil {
+		return errors.New("запись не найдена")
+	}
 	updMap := map[string]interface{}{
 		"comment": comment,
 	}
-	return i.store.Update(id, updMap)
+	err = i.store.Update(id, updMap)
+	if err != nil {
+		return err
+	}
+	changes := applicanthistoryhandler.GetUpdateChanges("Изменен профиль", rec.Applicant, updMap)
+	i.applicantHistory.Save(rec.SpaceID, rec.ID, rec.VacancyID, userID, dbmodels.HistoryTypeUpdate, changes)
+	return nil
 }
 
-func (i impl) UpdateStatus(spaceID, id string, status models.NegotiationStatus) error {
+func (i impl) UpdateStatus(spaceID, id, userID string, status models.NegotiationStatus) error {
 	logger := log.
 		WithField("space_id", spaceID).
 		WithField("applicant_id", id)
@@ -85,6 +102,7 @@ func (i impl) UpdateStatus(spaceID, id string, status models.NegotiationStatus) 
 	if err != nil || !ok {
 		return err
 	}
+	changeMsg := fmt.Sprintf("Перевод отклика кандидата на статус %v", status)
 	updMap := map[string]interface{}{
 		"negotiation_status":      status,
 		"negotiation_accept_date": nil,
@@ -103,15 +121,19 @@ func (i impl) UpdateStatus(spaceID, id string, status models.NegotiationStatus) 
 				break
 			}
 		}
+		changeMsg = "Кандидат из отклика, добавлен на вакансию"
 	}
 	if status == models.NegotiationStatusRejected {
 		updMap["negotiation_accept_date"] = time.Now()
+		changeMsg = "Отклик кандидата отклонен"
 	}
 	err = i.store.Update(id, updMap)
 	if err != nil {
 		logger.WithError(err).Error("ошибка обновления кандидата")
 		return errors.New("ошибка обновления кандидата")
 	}
+	changes := applicanthistoryhandler.GetUpdateChanges(changeMsg, rec.Applicant, updMap)
+	i.applicantHistory.Save(rec.SpaceID, id, rec.VacancyID, userID, dbmodels.HistoryTypeUpdate, changes)
 	return nil
 }
 
@@ -130,7 +152,7 @@ func (i impl) GetByID(spaceID, id string) (negotiationapimodels.NegotiationView,
 	return negotiationapimodels.NegotiationConvertExt(*rec), nil
 }
 
-func (i impl) CreateApplicant(spaceID string, data applicantapimodels.ApplicantData) (id string, err error) {
+func (i impl) CreateApplicant(spaceID, userID string, data applicantapimodels.ApplicantData) (id string, err error) {
 	logger := log.WithField("space_id", spaceID)
 	vacancy, err := i.checkDependency(spaceID, data)
 	if err != nil {
@@ -182,6 +204,8 @@ func (i impl) CreateApplicant(spaceID string, data applicantapimodels.ApplicantD
 			Error("ошибка создания кандидата")
 		return "", errors.New("Ошибка создания кандидата")
 	}
+	changes := applicanthistoryhandler.GetCreateChanges("Кандидат добавлен на вакансию", rec)
+	i.applicantHistory.Save(rec.SpaceID, recID, rec.VacancyID, userID, dbmodels.HistoryTypeAdded, changes)
 	logger.
 		WithField("rec_id", recID).
 		Info("Создан кандидат")
@@ -238,7 +262,7 @@ func (i impl) ListOfApplicant(spaceID string, filter applicantapimodels.Applican
 	return result, rowCount, nil
 }
 
-func (i impl) UpdateApplicant(spaceID string, id string, data applicantapimodels.ApplicantData) error {
+func (i impl) UpdateApplicant(spaceID string, id, userID string, data applicantapimodels.ApplicantData) error {
 	logger := log.WithField("space_id", spaceID).
 		WithField("rec_id", id)
 	vacancy, err := i.checkDependency(spaceID, data)
@@ -309,11 +333,15 @@ func (i impl) UpdateApplicant(spaceID string, id string, data applicantapimodels
 			Error("ошибка обновления кандидата")
 		return errors.New("ошибка обновления кандидата")
 	}
+	changes := applicanthistoryhandler.GetUpdateChanges("Изменен профиль", rec.Applicant, updMap)
+	if len(changes.Data) != 0 {
+		i.applicantHistory.Save(rec.SpaceID, id, rec.VacancyID, userID, dbmodels.HistoryTypeUpdate, changes)
+	}
 	logger.Info("Обновлен кандидат")
 	return nil
 }
 
-func (i impl) ApplicantAddTag(spaceID string, id string, tag string) error {
+func (i impl) ApplicantAddTag(spaceID string, id, userID string, tag string) error {
 	logger := log.WithField("space_id", spaceID).
 		WithField("rec_id", id).
 		WithField("tag", tag)
@@ -341,11 +369,13 @@ func (i impl) ApplicantAddTag(spaceID string, id string, tag string) error {
 			Error("ошибка добавления тега кандидата")
 		return errors.New("ошибка добавления тега кандидата")
 	}
+	changes := applicanthistoryhandler.GetUpdateChanges("Добавлен тег", rec.Applicant, updMap)
+	i.applicantHistory.Save(rec.SpaceID, id, rec.VacancyID, userID, dbmodels.HistoryTypeUpdate, changes)
 	logger.Info("кандидату добавлен тег")
 	return nil
 }
 
-func (i impl) ApplicantRemoveTag(spaceID string, id string, tag string) error {
+func (i impl) ApplicantRemoveTag(spaceID string, id, userID string, tag string) error {
 	logger := log.WithField("space_id", spaceID).
 		WithField("rec_id", id)
 	rec, err := i.store.GetByID(spaceID, id)
@@ -377,7 +407,9 @@ func (i impl) ApplicantRemoveTag(spaceID string, id string, tag string) error {
 			Error("ошибка удаления тега кандидата")
 		return errors.New("ошибка удаления тега кандидата")
 	}
-	logger.Info("удаленин тег у кандидата")
+	changes := applicanthistoryhandler.GetUpdateChanges("Удален тег", rec.Applicant, updMap)
+	i.applicantHistory.Save(rec.SpaceID, id, rec.VacancyID, userID, dbmodels.HistoryTypeUpdate, changes)
+	logger.Info("удален тег у кандидата")
 	return nil
 }
 
@@ -399,7 +431,9 @@ func (i impl) ChangeStage(spaceID, userID string, applicantID, stageID string) e
 	if err != nil {
 		return err
 	}
-
+	if stageRec == nil {
+		return errors.New("этапам не найден")
+	}
 	updMap := map[string]interface{}{
 		"selection_stage_id": stageRec.ID,
 	}
@@ -424,21 +458,22 @@ func (i impl) ChangeStage(spaceID, userID string, applicantID, stageID string) e
 			Error("ошибка изменения этапа подбора для кандидата")
 		return errors.New("ошибка изменения этапа подбора для кандидата")
 	}
-	// TODO обновление истории
+	changes := applicanthistoryhandler.GetStageChange(stageRec.Name)
+	i.applicantHistory.Save(spaceID, applicantID, applicantRec.VacancyID, userID, dbmodels.HistoryTypeStageChange, changes)
 	return nil
 }
 
-func (i impl) ResolveDuplicate(spaceID string, mainID, minorID string, isDuplicate bool) error {
+func (i impl) ResolveDuplicate(spaceID string, mainID, minorID, userID string, isDuplicate bool) error {
 	logger := log.WithField("space_id", spaceID).
 		WithField("main_id", mainID).
 		WithField("minor_ID", mainID)
 	if isDuplicate {
-		return i.joinApplicants(spaceID, mainID, minorID, logger)
+		return i.joinApplicants(spaceID, mainID, minorID, userID, logger)
 	}
-	return i.markAsDifferentApplicants(spaceID, mainID, minorID, logger)
+	return i.markAsDifferentApplicants(spaceID, mainID, minorID, userID, logger)
 }
 
-func (i impl) markAsDifferentApplicants(spaceID string, mainID, minorID string, logger *log.Entry) error {
+func (i impl) markAsDifferentApplicants(spaceID string, mainID, minorID, userID string, logger *log.Entry) error {
 	mainRec, err := i.store.GetByID(spaceID, mainID)
 	if err != nil {
 		logger.
@@ -455,6 +490,17 @@ func (i impl) markAsDifferentApplicants(spaceID string, mainID, minorID string, 
 			return nil
 		}
 	}
+	minorRec, err := i.store.GetByID(spaceID, minorID)
+	if err != nil {
+		logger.
+			WithError(err).
+			Error("ошибка получения данных кандидата дубликата")
+		return errors.New("ошибка получения данных кандидата дубликата")
+	}
+	if minorRec == nil {
+		return errors.New("запись с дубликатом кандидата не найдена")
+	}
+
 	notDuplicates := append(mainRec.NotDuplicates, minorID)
 	updMap := map[string]interface{}{
 		"not_duplicates": pq.Array(notDuplicates),
@@ -466,11 +512,13 @@ func (i impl) markAsDifferentApplicants(spaceID string, mainID, minorID string, 
 			Error("ошибка установки признака разных кандидатов")
 		return errors.New("ошибка установки признака разных кандидатов")
 	}
+	descr := applicanthistoryhandler.GetNotDuplicateMark(minorRec.Applicant)
+	i.applicantHistory.Save(spaceID, mainID, mainRec.VacancyID, userID, dbmodels.HistoryTypeDuplicate, descr)
 	logger.Info("установлен признак разных кандидатов")
 	return nil
 }
 
-func (i impl) joinApplicants(spaceID string, mainID, minorID string, logger *log.Entry) error {
+func (i impl) joinApplicants(spaceID string, mainID, minorID, userID string, logger *log.Entry) error {
 	mainRec, err := i.store.GetByID(spaceID, mainID)
 	if err != nil {
 		logger.
@@ -515,7 +563,8 @@ func (i impl) joinApplicants(spaceID string, mainID, minorID string, logger *log
 	if err != nil {
 		return err
 	}
-	//todo лог о переводе в историю действий
+	descr := applicanthistoryhandler.GetDuplicateMark(minorRec.Applicant)
+	i.applicantHistory.Save(spaceID, mainID, mainRec.VacancyID, userID, dbmodels.HistoryTypeDuplicate, descr)
 	logger.Info("дубликат кандидата перемещем в архив")
 	return nil
 }

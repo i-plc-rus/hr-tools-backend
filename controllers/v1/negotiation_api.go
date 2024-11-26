@@ -75,7 +75,8 @@ func (c *negotiationApiController) statusChange(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
-	err = applicant.Instance.UpdateStatus(spaceID, id, payload.Status)
+	userID := middleware.GetUserID(ctx)
+	err = applicant.Instance.UpdateStatus(spaceID, id, userID, payload.Status)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
@@ -127,8 +128,9 @@ func (c *negotiationApiController) updateComment(ctx *fiber.Ctx) error {
 	if err = c.BodyParser(ctx, &payload); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
-
-	err = applicant.Instance.UpdateComment(id, payload.Comment)
+	spaceID := middleware.GetUserSpace(ctx)
+	userID := middleware.GetUserID(ctx)
+	err = applicant.Instance.UpdateComment(spaceID, id, userID, payload.Comment)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
