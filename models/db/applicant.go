@@ -44,6 +44,7 @@ type Applicant struct {
 	Duplicates            []Applicant              `gorm:"foreignKey:DuplicateID"`                                                 // Список дублей
 	DuplicateID           *string                  `gorm:"type:varchar(36)" comment:"Идентификатор кандидата дубликата"`           // текущая запись является дублем кандидата (Идентификатор кандидата)
 	StartDate             time.Time                `comment:"Дата выхода"`
+	RejectReason          string                   `gorm:"type:varchar(255)" comment:"Причина отказа"`
 }
 
 func (j ApplicantParams) Value() (driver.Value, error) {

@@ -4,6 +4,7 @@ import (
 	"hr-tools-backend/controllers"
 	"hr-tools-backend/lib/applicant"
 	applicanthistoryhandler "hr-tools-backend/lib/applicant-history"
+	applicantdict "hr-tools-backend/lib/dicts/applicant"
 	filestorage "hr-tools-backend/lib/file-storage"
 	"hr-tools-backend/middleware"
 	apimodels "hr-tools-backend/models/api"
@@ -23,6 +24,7 @@ func InitApplicantApiRouters(app *fiber.App) {
 	app.Route("applicant", func(router fiber.Router) {
 		router.Get("doc/:id", controller.GetDoc) // скачать документ по id
 		router.Post("list", controller.list)
+		router.Post("reject_list", controller.rejectList)
 		router.Post("", controller.create)
 		router.Route(":id", func(idRouter fiber.Router) {
 			idRouter.Post("upload-resume", controller.UploadResume) // загрузить резюме кандидата
@@ -38,6 +40,7 @@ func InitApplicantApiRouters(app *fiber.App) {
 			idRouter.Put("isolate", controller.isolate)
 			idRouter.Put("changes", controller.changes)
 			idRouter.Put("note", controller.note)
+			idRouter.Put("reject", controller.reject)
 		})
 	})
 }
@@ -222,6 +225,19 @@ func (c *applicantApiController) list(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewScrollerResponse(list, rowCount))
+}
+
+// @Summary Список c причинами отказов
+// @Tags Кандидат
+// @Description Список c причинами отказов
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Success 200 {object} apimodels.Response{data=[]string}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/reject_list [post]
+func (c *applicantApiController) rejectList(ctx *fiber.Ctx) error {
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(applicantdict.GetRejectReasonList()))
 }
 
 // @Summary Создание
@@ -513,6 +529,36 @@ func (c *applicantApiController) note(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 	spaceID := middleware.GetUserSpace(ctx)
 	err = applicanthistoryhandler.Instance.SaveNote(spaceID, id, userID, payload)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Отклонить кандидата
+// @Tags Кандидат
+// @Description Отклонить кандидата
+// @Param   Authorization	 header		string	true	"Authorization token"
+// @Param   id          	 path    	string  true    "Идентификатор кандидата"
+// @Param	reason			 query 		string	true    "Причина отказа"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/{id}/reject [put]
+func (c *applicantApiController) reject(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	reason := ctx.Query("reason", "")
+	if reason == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("не указана причина отклонения кандидатуры"))
+	}
+
+	userID := middleware.GetUserID(ctx)
+	spaceID := middleware.GetUserSpace(ctx)
+	err = applicant.Instance.ApplicantReject(spaceID, id, userID, reason)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}

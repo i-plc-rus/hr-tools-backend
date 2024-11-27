@@ -135,6 +135,10 @@ func GetUpdateChanges(descr string, rec dbmodels.Applicant, updMap map[string]in
 	return result
 }
 
+func GetRejectChange(reason string, rec dbmodels.Applicant, updMap map[string]interface{}) dbmodels.ApplicantChanges {
+	return GetUpdateChanges(fmt.Sprintf("Кандидат отклонен по причине: %v", reason), rec, updMap)
+}
+
 func getParamChanges(oldParams, newParams dbmodels.ApplicantParams) []dbmodels.ApplicantChange {
 	result := []dbmodels.ApplicantChange{}
 	rType := reflect.TypeOf(oldParams)
