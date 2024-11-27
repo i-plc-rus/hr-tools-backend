@@ -24,6 +24,8 @@ func InitVacancyRequestApiRouters(app *fiber.App) {
 			idRoute.Put("", controller.update)
 			idRoute.Get("", controller.get)
 			idRoute.Delete("", controller.delete)
+			idRoute.Put("pin", controller.pin)
+			idRoute.Put("favorite", controller.favorite)
 			idRoute.Put("approval_stages", controller.saveStages)
 			idRoute.Put("on_approval", controller.onApproval) // на согласование
 			idRoute.Put("approve", controller.approve)        // согласовать
@@ -139,6 +141,59 @@ func (c *vacancyReqApiController) delete(ctx *fiber.Ctx) error {
 
 	spaceID := middleware.GetUserSpace(ctx)
 	err = vacancyreqhandler.Instance.Delete(spaceID, id)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Закрепить
+// @Tags Заявка
+// @Description Закрепить
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param	set					query 	bool							false		 "выбрано/не выбрано"
+// @Param   id          		path    string  				    	true         "rec ID"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/vacancy_request/{id}/pin [put]
+func (c *vacancyReqApiController) pin(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	isSet := ctx.QueryBool("set", false)
+
+	userID := middleware.GetUserID(ctx)
+	err = vacancyreqhandler.Instance.ToPin(id, userID, isSet)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary В избранное
+// @Tags Заявка
+// @Description В избранное
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param	set					query 	bool							false		 "выбрано/не выбрано"
+// @Param   id          		path    string  				    	true         "rec ID"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/vacancy_request/{id}/favorite [put]
+func (c *vacancyReqApiController) favorite(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	isSet := ctx.QueryBool("set", false)
+	userID := middleware.GetUserID(ctx)
+	err = vacancyreqhandler.Instance.ToFavorite(id, userID, isSet)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
