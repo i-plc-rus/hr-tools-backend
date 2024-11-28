@@ -194,3 +194,28 @@ type ApplicantNote struct {
 	Note      string `json:"note"`       // Комментарий
 	IsPrivate bool   `json:"is_private"` // Приватный
 }
+
+type RejectReasons struct {
+	HrReasons        []string `json:"hr_reasons"`        //Отказы рекрутера
+	HeadReasons      []string `json:"head_reasons"`      //Отказы руководителя
+	ApplicantReasons []string `json:"applicant_reasons"` //Отказы кандидата
+}
+type RejectRequest struct {
+	Reason    string                 `json:"reason"`    // Причина отказа
+	Initiator models.RejectInitiator `json:"initiator"` // Инициатор отказа
+}
+
+func (r RejectRequest) Validate() error {
+	if r.Reason == "" {
+		return errors.New("не указана причина отказа")
+	}
+	if r.Initiator == "" {
+		return errors.New("не указан инициатор отказа")
+	}
+	if r.Initiator != models.HrReject &&
+		r.Initiator != models.HeadReject &&
+		r.Initiator != models.ApplicantReject {
+		return errors.New("некорректно указан инициатор отказа")
+	}
+	return nil
+}

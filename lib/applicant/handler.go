@@ -33,7 +33,7 @@ type Provider interface {
 	ApplicantRemoveTag(spaceID string, id, userID string, tag string) error
 	ChangeStage(spaceID, userID string, applicantID, stageID string) error
 	ResolveDuplicate(spaceID string, mainID, minorID, userID string, isDuplicate bool) error
-	ApplicantReject(spaceID string, id, userID string, reason string) error
+	ApplicantReject(spaceID string, id, userID string, data applicantapimodels.RejectRequest) error
 }
 
 var Instance Provider
@@ -476,7 +476,7 @@ func (i impl) ResolveDuplicate(spaceID string, mainID, minorID, userID string, i
 	return i.markAsDifferentApplicants(spaceID, mainID, minorID, userID, logger)
 }
 
-func (i impl) ApplicantReject(spaceID string, id, userID string, reason string) error {
+func (i impl) ApplicantReject(spaceID string, id, userID string, data applicantapimodels.RejectRequest) error {
 	logger := i.getLogger(spaceID, id, userID)
 	rec, err := i.store.GetByID(spaceID, id)
 	if err != nil {
@@ -489,8 +489,9 @@ func (i impl) ApplicantReject(spaceID string, id, userID string, reason string) 
 		return nil
 	}
 	updMap := map[string]interface{}{
-		"status":        models.ApplicantStatusRejected,
-		"reject_reason": reason,
+		"status":           models.ApplicantStatusRejected,
+		"reject_reason":    data.Reason,
+		"reject_initiator": data.Initiator,
 	}
 	err = i.store.Update(id, updMap)
 	if err != nil {
@@ -499,7 +500,7 @@ func (i impl) ApplicantReject(spaceID string, id, userID string, reason string) 
 			Error("ошибка перевода кандидата в отклоненные")
 		return errors.New("ошибка перевода кандидата в отклоненные")
 	}
-	changes := applicanthistoryhandler.GetRejectChange(reason, rec.Applicant, updMap)
+	changes := applicanthistoryhandler.GetRejectChange(data.Reason, rec.Applicant, updMap)
 	i.applicantHistory.Save(spaceID, id, rec.VacancyID, userID, dbmodels.HistoryTypeReject, changes)
 	return nil
 }

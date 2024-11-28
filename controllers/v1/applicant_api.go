@@ -231,7 +231,7 @@ func (c *applicantApiController) list(ctx *fiber.Ctx) error {
 // @Tags Кандидат
 // @Description Список c причинами отказов
 // @Param   Authorization		header		string	true	"Authorization token"
-// @Success 200 {object} apimodels.Response{data=[]string}
+// @Success 200 {object} apimodels.Response{data=applicantapimodels.RejectReasons}
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
@@ -540,7 +540,7 @@ func (c *applicantApiController) note(ctx *fiber.Ctx) error {
 // @Description Отклонить кандидата
 // @Param   Authorization	 header		string	true	"Authorization token"
 // @Param   id          	 path    	string  true    "Идентификатор кандидата"
-// @Param	reason			 query 		string	true    "Причина отказа"
+// @Param	body body	 applicantapimodels.RejectRequest	true	"request body"
 // @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
@@ -551,14 +551,18 @@ func (c *applicantApiController) reject(ctx *fiber.Ctx) error {
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
-	reason := ctx.Query("reason", "")
-	if reason == "" {
-		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("не указана причина отклонения кандидатуры"))
+	var payload applicantapimodels.RejectRequest
+	if err = c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	if err = payload.Validate(); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 
 	userID := middleware.GetUserID(ctx)
 	spaceID := middleware.GetUserSpace(ctx)
-	err = applicant.Instance.ApplicantReject(spaceID, id, userID, reason)
+	err = applicant.Instance.ApplicantReject(spaceID, id, userID, payload)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}

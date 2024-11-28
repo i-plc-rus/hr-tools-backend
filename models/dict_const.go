@@ -398,3 +398,11 @@ const (
 	DuplicateTypeByAuthor   DuplicateType = "ByAuthor"
 	DuplicateTypeByContacts DuplicateType = "ByContacts"
 )
+
+type RejectInitiator string
+
+const (
+	HrReject        RejectInitiator = "Рекрутер"
+	HeadReject      RejectInitiator = "Руководитель"
+	ApplicantReject RejectInitiator = "Кандидат"
+)
