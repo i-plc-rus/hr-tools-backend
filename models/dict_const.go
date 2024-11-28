@@ -64,6 +64,10 @@ const (
 	VacancyStatusClosed    VacancyStatus = "Закрыта"
 )
 
+func (v VacancyStatus) IsClosed() bool {
+	return v == VacancyStatusCanceled || v == VacancyStatusClosed
+}
+
 type VRStatus string
 
 const (

@@ -48,4 +48,5 @@ const (
 	HistoryTypeNegotiation ActionType = "negotiation"  // Получен отклик от кандидата
 	HistoryTypeStageChange ActionType = "stage_change" // Кандидат переведеден на другой этап
 	HistoryTypeDuplicate   ActionType = "duplicate"    // Дубликат по кандидату
+	HistoryTypeArchive     ActionType = "archive"      // Перемещен в архив
 )

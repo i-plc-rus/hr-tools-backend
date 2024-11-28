@@ -210,3 +210,18 @@ type VacancyFilter struct {
 	RequestAuthorID  string                 `json:"request_author_id"`
 	Sort             VacancySort            `json:"sort"`
 }
+
+type StatusChangeRequest struct {
+	Status models.VacancyStatus `json:"status"` // новый статус вакансии
+}
+
+func (s StatusChangeRequest) Validate() error {
+	if s.Status == "" {
+		return errors.New("не указан новый статус вакансии")
+	}
+	if s.Status != models.VacancyStatusOpened && s.Status != models.VacancyStatusCanceled &&
+		s.Status != models.VacancyStatusSuspended && s.Status != models.VacancyStatusClosed {
+		return errors.New("указан некорректный статус")
+	}
+	return nil
+}
