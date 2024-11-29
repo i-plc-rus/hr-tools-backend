@@ -77,6 +77,7 @@ const (
 	VRStatusAccepted      VRStatus = "Согласована"
 	VRStatusUnderRevision VRStatus = "На доработке"
 	VRStatusUnderAccepted VRStatus = "На согласовании"
+	VRStatusTemplate      VRStatus = "Шаблон"
 )
 
 func (v VRStatus) IsAllowChange(newStatus VRStatus) bool {
@@ -94,6 +95,8 @@ func (v VRStatus) IsAllowChange(newStatus VRStatus) bool {
 		return v == VRStatusUnderAccepted || v == VRStatusNotAccepted
 	case VRStatusUnderAccepted:
 		return v == VRStatusCreated || v == VRStatusUnderRevision
+	case VRStatusCreated:
+		return v == VRStatusTemplate
 	}
 	return false
 }
