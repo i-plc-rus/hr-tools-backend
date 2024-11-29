@@ -263,6 +263,17 @@ func (i impl) addApplicantFilter(tx *gorm.DB, filter applicantapimodels.Applican
 			tx.Where("negotiation_id is not null")
 		}
 	}
+	if filter.Schedule != "" {
+		jWhere := fmt.Sprintf("(params->'schedules')::jsonb ? '%v'", filter.Schedule)
+		tx.Where(jWhere)
+	}
+	if filter.Gender != "" {
+		tx.Where("gender = ?", filter.Gender)
+	}
+	if filter.Language != "" {
+		jWhere := fmt.Sprintf("(params->'languages')::jsonb @> '[{\"name\":\"%v\"}]'", filter.Language)
+		tx.Where(jWhere)
+	}
 }
 
 func (i impl) addNegotiationFilter(tx *gorm.DB, filter dbmodels.NegotiationFilter) {
