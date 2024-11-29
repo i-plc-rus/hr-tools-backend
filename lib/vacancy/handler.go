@@ -1,22 +1,31 @@
 package vacancyhandler
 
 import (
+	"context"
 	"fmt"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 	"hr-tools-backend/db"
+	applicanthistoryhandler "hr-tools-backend/lib/applicant-history"
+	applicantstore "hr-tools-backend/lib/applicant/store"
 	citystore "hr-tools-backend/lib/dicts/city/store"
 	companyprovider "hr-tools-backend/lib/dicts/company"
 	companystructprovider "hr-tools-backend/lib/dicts/company-struct"
 	departmentprovider "hr-tools-backend/lib/dicts/department"
 	jobtitleprovider "hr-tools-backend/lib/dicts/job-title"
+
+	avitohandler "hr-tools-backend/lib/external-services/avito"
+	hhhandler "hr-tools-backend/lib/external-services/hh"
 	selectionstagestore "hr-tools-backend/lib/vacancy/selection-stage-store"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	"hr-tools-backend/models"
+	apimodels "hr-tools-backend/models/api"
+	applicantapimodels "hr-tools-backend/models/api/applicant"
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
 	"sort"
+
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 type Provider interface {
@@ -31,6 +40,7 @@ type Provider interface {
 	StageCreate(spaceID, id string, data vacancyapimodels.SelectionStageAdd) error
 	StageDelete(spaceID, id, stageID string) error
 	StageChangeOrder(spaceID, id, stageID string, newOrder int) error
+	StatusChange(spaceID, id, userID string, status models.VacancyStatus) error
 }
 
 var Instance Provider
@@ -44,6 +54,7 @@ func NewHandler() {
 		jobTitleProvider:      jobtitleprovider.Instance,
 		cityStore:             citystore.NewInstance(db.DB),
 		companyStructProvider: companystructprovider.Instance,
+		applicantHistory:      applicanthistoryhandler.Instance,
 	}
 }
 
@@ -55,6 +66,7 @@ type impl struct {
 	jobTitleProvider      jobtitleprovider.Provider
 	cityStore             citystore.Provider
 	companyStructProvider companystructprovider.Provider
+	applicantHistory      applicanthistoryhandler.Provider
 }
 
 func (i impl) checkDependency(spaceID string, data vacancyapimodels.VacancyData) (err error) {
@@ -95,7 +107,7 @@ func (i impl) checkDependency(spaceID string, data vacancyapimodels.VacancyData)
 }
 
 func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyData) (id string, err error) {
-	logger := log.WithField("space_id", spaceID)
+	logger := i.getLogger(spaceID, "", userID)
 	err = i.checkDependency(spaceID, data)
 	if err != nil {
 		return "", err
@@ -170,8 +182,7 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyData) 
 }
 
 func (i impl) GetByID(spaceID, id string) (item vacancyapimodels.VacancyView, err error) {
-	logger := log.WithField("space_id", spaceID).
-		WithField("rec_id", id)
+	logger := i.getLogger(spaceID, id, "")
 	rec, err := i.store.GetByID(spaceID, id)
 	if err != nil {
 		logger.
@@ -191,8 +202,7 @@ func (i impl) GetByID(spaceID, id string) (item vacancyapimodels.VacancyView, er
 }
 
 func (i impl) Update(spaceID, id string, data vacancyapimodels.VacancyData) error {
-	logger := log.WithField("space_id", spaceID).
-		WithField("rec_id", id)
+	logger := i.getLogger(spaceID, id, "")
 	err := i.checkDependency(spaceID, data)
 	if err != nil {
 		return err
@@ -233,8 +243,7 @@ func (i impl) Update(spaceID, id string, data vacancyapimodels.VacancyData) erro
 }
 
 func (i impl) Delete(spaceID, id string) error {
-	logger := log.WithField("space_id", spaceID).
-		WithField("rec_id", id)
+	logger := i.getLogger(spaceID, id, "")
 	err := i.store.Delete(spaceID, id)
 	if err != nil {
 		logger.
@@ -247,7 +256,7 @@ func (i impl) Delete(spaceID, id string) error {
 }
 
 func (i impl) List(spaceID, userID string, filter vacancyapimodels.VacancyFilter) (list []vacancyapimodels.VacancyView, rowCount int64, err error) {
-	logger := log.WithField("space_id", spaceID)
+	logger := i.getLogger(spaceID, "", userID)
 	rowCount, err = i.store.ListCount(spaceID, userID, filter)
 	if err != nil {
 		return nil, 0, err
@@ -288,9 +297,7 @@ func (i impl) ToFavorite(id, userID string, isSet bool) error {
 }
 
 func (i impl) StageList(spaceID, id string) (list []vacancyapimodels.SelectionStageView, err error) {
-	logger := log.
-		WithField("space_id", spaceID).
-		WithField("vacancy_id", id)
+	logger := i.getLogger(spaceID, id, "")
 	recList, err := i.selectionStageStore.List(spaceID, id)
 	if err != nil {
 		logger.
@@ -306,9 +313,7 @@ func (i impl) StageList(spaceID, id string) (list []vacancyapimodels.SelectionSt
 }
 
 func (i impl) StageCreate(spaceID, id string, data vacancyapimodels.SelectionStageAdd) error {
-	logger := log.
-		WithField("space_id", spaceID).
-		WithField("vacancy_id", id)
+	logger := i.getLogger(spaceID, id, "")
 	rec := dbmodels.SelectionStage{
 		BaseSpaceModel: dbmodels.BaseSpaceModel{
 			SpaceID: spaceID,
@@ -331,9 +336,7 @@ func (i impl) StageCreate(spaceID, id string, data vacancyapimodels.SelectionSta
 }
 
 func (i impl) StageDelete(spaceID, id, stageID string) error {
-	logger := log.
-		WithField("space_id", spaceID).
-		WithField("vacancy_id", id).
+	logger := i.getLogger(spaceID, id, "").
 		WithField("stage_id", stageID)
 	rec, err := i.selectionStageStore.GetByID(spaceID, id, stageID)
 	if err != nil || rec == nil {
@@ -353,9 +356,8 @@ func (i impl) StageDelete(spaceID, id, stageID string) error {
 }
 
 func (i impl) StageChangeOrder(spaceID, id, stageID string, newOrder int) error {
-	logger := log.
-		WithField("space_id", spaceID).
-		WithField("vacancy_id", id)
+	logger := i.getLogger(spaceID, id, "").
+		WithField("stage_id", stageID)
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
 		selectionStageStore := selectionstagestore.NewInstance(tx)
 		list, err := selectionStageStore.List(spaceID, id)
@@ -421,6 +423,93 @@ func (i impl) StageChangeOrder(spaceID, id, stageID string, newOrder int) error 
 	return nil
 }
 
+func (i impl) StatusChange(spaceID, vacancyID, userID string, status models.VacancyStatus) error {
+	logger := i.getLogger(spaceID, vacancyID, userID).
+		WithField("status", status)
+	rec, err := i.store.GetByID(spaceID, vacancyID)
+	if err != nil {
+		logger.
+			WithError(err).
+			Error("ошибка получения вакансии")
+		return errors.New("ошибка получения вакансии")
+	}
+	if rec == nil {
+		return errors.New("вакансия не найдена")
+	}
+	if rec.Status == status {
+		return nil
+	}
+
+	err = db.DB.Transaction(func(tx *gorm.DB) error {
+		// смена статуса вакансии
+		updMap := map[string]interface{}{
+			"status": status,
+		}
+		store := vacancystore.NewInstance(tx)
+		err = store.Update(spaceID, vacancyID, updMap)
+		if err != nil {
+			logger.
+				WithError(err).
+				Error("ошибка обновления статуса вакансии")
+			return errors.New("ошибка обновления статуса вакансии")
+		}
+		if !status.IsClosed() {
+			return nil
+		}
+
+		//получение списка кандидатов по вакансии
+		applicantStore := applicantstore.NewInstance(tx)
+		filter := applicantapimodels.ApplicantFilter{
+			VacancyID: vacancyID,
+			Pagination: apimodels.Pagination{
+				Limit: 100,
+			},
+		}
+		list, err := applicantStore.ListOfApplicant(spaceID, filter)
+		if err != nil {
+			logger.
+				WithError(err).
+				Error("ошибка получения списка кандидатов по вакансии")
+			return errors.New("ошибка получения списка кандидатов по вакансии")
+		}
+		reason := fmt.Sprintf("Вакансия %v", status)
+		applicantHistory := applicanthistoryhandler.NewTxHandler(tx)
+		for _, applicantRec := range list {
+			if applicantRec.Status == models.ApplicantStatusArchive {
+				continue
+			}
+			//перевод кандидата в архив
+			updMap = map[string]interface{}{
+				"status": models.ApplicantStatusArchive,
+			}
+			err = applicantStore.Update(applicantRec.ID, updMap)
+			if err != nil {
+				logger.
+					WithField("applicant_id", applicantRec.ID).
+					WithError(err).
+					Error("ошибка перевода кандидата в архив")
+				return errors.New("ошибка перевода кандидата в архив")
+			}
+			//добавление в историю по кандидату
+			changes := applicanthistoryhandler.GetArchiveChange(reason)
+			applicantHistory.Save(spaceID, applicantRec.ID, vacancyID, userID, dbmodels.HistoryTypeArchive, changes)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	if status != models.VacancyStatusOpened {
+		err = i.cancelJobSite(*rec, *logger)
+		if err != nil {
+			return err
+		}
+	}
+
+	logger.Info("обновлен статус вакансии")
+	return nil
+}
+
 func (i impl) initSelectionStages(tx *gorm.DB, spaceID, vacancyID string) error {
 	selectionStageStore := selectionstagestore.NewInstance(tx)
 	for k, name := range dbmodels.DefaultSelectionStages {
@@ -438,6 +527,45 @@ func (i impl) initSelectionStages(tx *gorm.DB, spaceID, vacancyID string) error 
 		if err != nil {
 			return errors.Wrapf(err, "ошибка добавления этапа подбора: %v", name)
 		}
+	}
+	return nil
+}
+
+func (i *impl) getLogger(spaceID, vacancyID, userID string) *log.Entry {
+	logger := log.WithField("space_id", spaceID)
+	if vacancyID != "" {
+		logger = logger.WithField("vacancy_id", vacancyID)
+	}
+	if userID != "" {
+		logger = logger.WithField("user_id", userID)
+	}
+	return logger
+}
+
+func (i impl) cancelJobSite(rec dbmodels.Vacancy, logger log.Entry) error {
+	errorList := []string{}
+	if rec.AvitoID != 0 && (rec.AvitoStatus == models.VacancyPubStatusModeration || rec.AvitoStatus != models.VacancyPubStatusPublished) {
+		err := avitohandler.Instance.VacancyClose(context.TODO(), rec.SpaceID, rec.ID)
+		if err != nil {
+			logger.
+				WithError(err).
+				Error("не удалось снять вакансию с публикации на Avito")
+			errorList = append(errorList, "не удалось снять вакансию с публикации на Avito")
+		}
+		logger.Info("вакансия снята с публикации на Avito")
+	}
+	if rec.HhID != "" && (rec.HhStatus == models.VacancyPubStatusModeration || rec.HhStatus != models.VacancyPubStatusPublished) {
+		err := hhhandler.Instance.VacancyClose(context.TODO(), rec.SpaceID, rec.ID)
+		if err != nil {
+			logger.
+				WithError(err).
+				Error("не удалось снять вакансию с публикации на HeadHunter")
+			errorList = append(errorList, "не удалось снять вакансию с публикации на HeadHunter")
+		}
+		logger.Info("вакансия снята с публикации на HeadHunter")
+	}
+	if len(errorList) != 0 {
+		return errors.Errorf("%v", errorList)
 	}
 	return nil
 }

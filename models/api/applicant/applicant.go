@@ -147,6 +147,7 @@ func ApplicantConvert(rec dbmodels.Applicant) ApplicantView {
 
 type ApplicantFilter struct {
 	apimodels.Pagination
+	VacancyID           string                    `json:"vacancy_id"`            // Идентификатор вакансии
 	VacancyName         string                    `json:"vacancy_name"`          // Название вакансии
 	Search              string                    `json:"search"`                // Поиск по ФИО/телефон/емайл/тег
 	Relocation          *models.RelocationType    `json:"relocation"`            // Готовность к переезду
@@ -188,4 +189,9 @@ type ApplicantSort struct {
 	FioDesc        *bool `json:"fio_desc"`         // ФИО, порядок сортировки false = ASC/ true = DESC / nil = нет
 	SalaryDesc     *bool `json:"salary_desc"`      // ЗП, порядок сортировки false = ASC/ true = DESC / nil = нет
 	AcceptDateDesc *bool `json:"accept_date_desc"` // Дата добавления, порядок сортировки false = ASC/ true = DESC / nil = нет
+}
+
+type ApplicantNote struct {
+	Note      string `json:"note"`       // Комментарий
+	IsPrivate bool   `json:"is_private"` // Приватный
 }

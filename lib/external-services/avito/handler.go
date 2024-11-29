@@ -4,9 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
+	applicanthistoryhandler "hr-tools-backend/lib/applicant-history"
 	applicantstore "hr-tools-backend/lib/applicant/store"
 	externalservices "hr-tools-backend/lib/external-services"
 	avitoclient "hr-tools-backend/lib/external-services/avito/client"
@@ -22,6 +21,9 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 var Instance externalservices.JobSiteProvider
@@ -34,6 +36,7 @@ func NewHandler() {
 		vacancyStore:       vacancystore.NewInstance(db.DB),
 		spaceSettingsStore: spacesettingsstore.NewInstance(db.DB),
 		applicantStore:     applicantstore.NewInstance(db.DB),
+		applicantHistory:   applicanthistoryhandler.Instance,
 		tokenMap:           sync.Map{},
 	}
 }
@@ -45,6 +48,7 @@ type impl struct {
 	vacancyStore       vacancystore.Provider
 	spaceSettingsStore spacesettingsstore.Provider
 	applicantStore     applicantstore.Provider
+	applicantHistory   applicanthistoryhandler.Provider
 	tokenMap           sync.Map
 }
 
@@ -423,10 +427,12 @@ func (i *impl) storeApplicant(resume *avitoapimodels.Resume, apply avitoapimodel
 		}
 		applicantData.Params.Languages = append(applicantData.Params.Languages, lng)
 	}
-	_, err = i.applicantStore.Create(applicantData)
+	applicantID, err := i.applicantStore.Create(applicantData)
 	if err != nil {
 		logger.WithError(err).Error("ошибка сохранения кандидата по отклику")
 	}
+	changes := applicanthistoryhandler.GetCreateChanges("Кандидат добавлен с работного сайта на вакансию", applicantData)
+	i.applicantHistory.Save(applicantData.SpaceID, applicantID, applicantData.VacancyID, "", dbmodels.HistoryTypeNegotiation, changes)
 }
 
 func (i *impl) getValue(spaceID string, code models.SpaceSettingCode) (string, error) {

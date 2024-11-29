@@ -25,3 +25,5 @@ func (r UserRole) ToHuman() string {
 func (r UserRole) IsSpaceAdmin() bool {
 	return r == SpaceAdminRole
 }
+
+const SystemUser = "Система"

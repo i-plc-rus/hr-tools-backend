@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+const CommentTag = "comment"
+
 type BaseModel struct {
 	ID        string    `gorm:"primaryKey;default:uuid_generate_v4()" json:"id"`
 	CreatedAt time.Time `gorm:"index" json:"created_at"`

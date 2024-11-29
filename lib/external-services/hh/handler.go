@@ -4,9 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
+	applicanthistoryhandler "hr-tools-backend/lib/applicant-history"
 	applicantstore "hr-tools-backend/lib/applicant/store"
 	externalservices "hr-tools-backend/lib/external-services"
 	"hr-tools-backend/lib/external-services/hh/hhclient"
@@ -23,6 +22,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 var Instance externalservices.JobSiteProvider
@@ -39,6 +41,7 @@ func NewHandler() {
 		tokenMap:           sync.Map{},
 		cityMap:            map[string]string{},
 		filesStorage:       filestorage.Instance,
+		applicantHistory:    applicanthistoryhandler.Instance,
 	}
 }
 
@@ -52,6 +55,7 @@ type impl struct {
 	tokenMap           sync.Map
 	cityMap            map[string]string
 	filesStorage       filestorage.Provider
+	applicantHistory    applicanthistoryhandler.Provider
 }
 
 const (
@@ -451,6 +455,8 @@ func (i *impl) HandleNegotiations(ctx context.Context, data dbmodels.Vacancy) er
 					Error("ошибка загрузки резюме из HH")
 			}
 		}
+		changes := applicanthistoryhandler.GetCreateChanges("Кандидат добавлен с работного сайта на вакансию", applicantData)
+		i.applicantHistory.Save(applicantData.SpaceID, applicantID, applicantData.VacancyID, "", dbmodels.HistoryTypeNegotiation, changes)
 	}
 	return nil
 }
