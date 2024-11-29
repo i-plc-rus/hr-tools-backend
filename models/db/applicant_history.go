@@ -45,8 +45,9 @@ const (
 	HistoryTypeComment     ActionType = "comment"      // Добавлен комментраий к кандидату
 	HistoryTypeAdded       ActionType = "added"        // Кандидат добавлен
 	HistoryTypeUpdate      ActionType = "update"       // Кандидат обновлен
-	HistoryTypeReject      ActionType = "reject"       // Кандидат отклонен
 	HistoryTypeNegotiation ActionType = "negotiation"  // Получен отклик от кандидата
 	HistoryTypeStageChange ActionType = "stage_change" // Кандидат переведеден на другой этап
 	HistoryTypeDuplicate   ActionType = "duplicate"    // Дубликат по кандидату
+	HistoryTypeArchive     ActionType = "archive"      // Перемещен в архив
+	HistoryTypeReject      ActionType = "reject"       // Кандидат отклонен
 )

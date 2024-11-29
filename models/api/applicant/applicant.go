@@ -147,6 +147,7 @@ func ApplicantConvert(rec dbmodels.Applicant) ApplicantView {
 
 type ApplicantFilter struct {
 	apimodels.Pagination
+	VacancyID           string                    `json:"vacancy_id"`            // Идентификатор вакансии
 	VacancyName         string                    `json:"vacancy_name"`          // Название вакансии
 	Search              string                    `json:"search"`                // Поиск по ФИО/телефон/емайл/тег
 	Relocation          *models.RelocationType    `json:"relocation"`            // Готовность к переезду

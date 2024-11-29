@@ -1,14 +1,16 @@
 package applicanthistoryhandler
 
 import (
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
 	applicanthistorystore "hr-tools-backend/lib/applicant-history/store"
 	applicantstore "hr-tools-backend/lib/applicant/store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	applicantapimodels "hr-tools-backend/models/api/applicant"
 	dbmodels "hr-tools-backend/models/db"
+
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 type Provider interface {
@@ -24,6 +26,14 @@ func NewHandler() {
 		store:          applicanthistorystore.NewInstance(db.DB),
 		userStore:      spaceusersstore.NewInstance(db.DB),
 		applicantStore: applicantstore.NewInstance(db.DB),
+	}
+}
+
+func NewTxHandler(tx *gorm.DB) Provider {
+	return impl{
+		store:          applicanthistorystore.NewInstance(tx),
+		userStore:      spaceusersstore.NewInstance(tx),
+		applicantStore: applicantstore.NewInstance(tx),
 	}
 }
 
