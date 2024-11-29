@@ -81,6 +81,8 @@ type VacancyRequestView struct {
 	ApprovalStages       []ApprovalStageView `json:"approval_stages"`
 	ApprovalStageCurrent int                 `json:"approval_stage_current"`
 	ApprovalStageIsLast  bool                `json:"approval_stage_is_last"`
+	Pinned               bool                `json:"pinned"`
+	Favorite             bool                `json:"favorite"`
 }
 
 func VacancyRequestConvert(rec dbmodels.VacancyRequest) VacancyRequestView {
@@ -107,6 +109,8 @@ func VacancyRequestConvert(rec dbmodels.VacancyRequest) VacancyRequestView {
 		ID:           rec.ID,
 		CreationDate: rec.CreatedAt,
 		Status:       rec.Status,
+		Pinned:       rec.Pinned,
+		Favorite:     rec.Favorite,
 	}
 	if rec.CompanyID != nil {
 		result.CompanyID = *rec.CompanyID
