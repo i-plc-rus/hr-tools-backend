@@ -182,6 +182,9 @@ func (i impl) ListOfDuplicateApplicant(spaceID string, filter dbmodels.Duplicate
 }
 
 func (i impl) addApplicantFilter(tx *gorm.DB, filter applicantapimodels.ApplicantFilter) {
+	if filter.VacancyID != "" {
+		tx.Where("applicants.vacancy_id = ?", filter.VacancyID)
+	}
 	if filter.Status != nil {
 		tx.Where("applicants.status = ?", *filter.Status)
 	}

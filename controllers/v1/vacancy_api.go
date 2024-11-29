@@ -1,12 +1,13 @@
 package apiv1
 
 import (
-	"github.com/gofiber/fiber/v2"
 	"hr-tools-backend/controllers"
 	vacancyhandler "hr-tools-backend/lib/vacancy"
 	"hr-tools-backend/middleware"
 	apimodels "hr-tools-backend/models/api"
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 type vacancyApiController struct {
@@ -24,6 +25,7 @@ func InitVacancyApiRouters(app *fiber.App) {
 			idRoute.Delete("", controller.delete)
 			idRoute.Put("pin", controller.pin)
 			idRoute.Put("favorite", controller.favorite)
+			idRoute.Put("change_status", controller.changeStatus)
 			idRoute.Route("stage", func(stageRoute fiber.Router) {
 				stageRoute.Post("list", controller.stageList)
 				stageRoute.Post("", controller.stageCreate)
@@ -215,6 +217,40 @@ func (c *vacancyApiController) favorite(ctx *fiber.Ctx) error {
 	isSet := ctx.QueryBool("set", false)
 	userID := middleware.GetUserID(ctx)
 	err = vacancyhandler.Instance.ToFavorite(id, userID, isSet)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Изменение статуса вакансии
+// @Tags Вакансия
+// @Description Изменение статуса вакансии
+// @Param   Authorization		header		string					true	"Authorization token"
+// @Param   id          		path    string  				    true    "rec ID"
+// @Param	body body	 vacancyapimodels.StatusChangeRequest	true	"request body"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/vacancy/{id}/change_status [put]
+func (c *vacancyApiController) changeStatus(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	var payload vacancyapimodels.StatusChangeRequest
+	if err = c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	if err = payload.Validate(); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	userID := middleware.GetUserID(ctx)
+	err = vacancyhandler.Instance.StatusChange(spaceID, id, userID, payload.Status)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
