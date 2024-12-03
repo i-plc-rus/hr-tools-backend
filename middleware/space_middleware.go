@@ -34,8 +34,8 @@ func GetUserID(ctx *fiber.Ctx) string {
 func GetSpaceRole(ctx *fiber.Ctx) models.UserRole {
 	claims := authutils.GetClaims(ctx)
 	if role, exist := claims["role"]; exist {
-		if userRole, ok := role.(models.UserRole); ok {
-			return userRole
+		if stringRole, ok := role.(string); ok && stringRole != "" {
+			return models.UserRole(stringRole)
 		}
 	}
 	return ""
