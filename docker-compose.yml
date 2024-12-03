@@ -34,9 +34,9 @@ services:
       - dokploy-network
   minio:
     image: docker.io/bitnami/minio:2024.11.7
-    ports:
-      - '9000:9000'
-      - '9001:9001'
+    expose:
+      - "9000"
+      - "9001"
     volumes:
       - 'minio_data:/data'
     env_file:
