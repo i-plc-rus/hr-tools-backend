@@ -35,6 +35,8 @@ services:
   minio:
     restart: unless-stopped
     image: docker.io/bitnami/minio:2024.11.7
+    ports:
+      - 9001:9001
     expose:
       - "9000"
       - "9001"
