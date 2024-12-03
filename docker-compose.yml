@@ -33,12 +33,13 @@ services:
     networks:
       - dokploy-network
   minio:
+    restart: unless-stopped
     image: docker.io/bitnami/minio:2024.11.7
     expose:
       - "9000"
       - "9001"
     volumes:
-      - 'minio_data:/data'
+      - 'minio_data:/bitnami/minio/data'
     env_file:
       - .env
     networks:
