@@ -10,7 +10,7 @@ import (
 
 func InitS3() {
 	minioClient, err := minio.New(config.Conf.S3.Endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(config.Conf.S3.AccessKeyID, config.Conf.S3.SecretAccessKey, ""),
+		Creds:  credentials.NewStaticV2(config.Conf.S3.AccessKeyID, config.Conf.S3.SecretAccessKey, ""),
 		Secure: *config.Conf.S3.UseSSL,
 	})
 	if err != nil {

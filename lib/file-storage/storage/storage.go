@@ -23,7 +23,7 @@ type impl struct {
 func (i impl) GetFileListByType(applicantID string, fileType dbmodels.FileType) (list []dbmodels.FileStorage, err error) {
 	err = i.db.
 		Model(&dbmodels.FileStorage{}).
-		Where("applicant_id = ? AND file_type = ?", applicantID, fileType).
+		Where("applicant_id = ? AND type = ?", applicantID, fileType).
 		Find(&list).
 		Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -36,7 +36,7 @@ func (i impl) GetFileIDByType(applicantID string, fileType dbmodels.FileType) (i
 	rec := dbmodels.FileStorage{}
 	err = i.db.
 		Model(&dbmodels.FileStorage{}).
-		Where("applicant_id = ? AND file_type = ?", applicantID, fileType).
+		Where("applicant_id = ? AND type = ?", applicantID, fileType).
 		First(&rec).
 		Error
 	if err != nil {
