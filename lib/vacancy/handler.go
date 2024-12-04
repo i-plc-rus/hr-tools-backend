@@ -55,6 +55,7 @@ func NewHandler() {
 		cityStore:             citystore.NewInstance(db.DB),
 		companyStructProvider: companystructprovider.Instance,
 		applicantHistory:      applicanthistoryhandler.Instance,
+		applicantStore:        applicantstore.NewInstance(db.DB),
 	}
 }
 
@@ -67,6 +68,7 @@ type impl struct {
 	cityStore             citystore.Provider
 	companyStructProvider companystructprovider.Provider
 	applicantHistory      applicanthistoryhandler.Provider
+	applicantStore        applicantstore.Provider
 }
 
 func (i impl) checkDependency(spaceID string, data vacancyapimodels.VacancyData) (err error) {
@@ -275,9 +277,43 @@ func (i impl) List(spaceID, userID string, filter vacancyapimodels.VacancyFilter
 			Error("ошибка получения списка заявок")
 		return nil, 0, err
 	}
+	if len(recList) == 0 {
+		return nil, 0, nil
+	}
+
+	ids := make([]string, 0, len(list))
+	for _, rec := range recList {
+		ids = append(ids, rec.ID)
+	}
+	stagesMap := map[string][]dbmodels.ApplicantsStage{}
+	stages, err := i.applicantStore.ApplicantsByStages(spaceID, ids)
+	if err != nil {
+		logger.
+			WithError(err).
+			Error("ошибка получения списка активных кандидатов по этапам")
+	} else {
+		for _, stage := range stages {
+			list, ok := stagesMap[stage.VacancyID]
+			if !ok {
+				list = make([]dbmodels.ApplicantsStage, 0, 10)
+			}
+			list = append(list, stage)
+			stagesMap[stage.VacancyID] = list
+		}
+	}
 	result := make([]vacancyapimodels.VacancyView, 0, len(list))
 	for _, rec := range recList {
-		result = append(result, vacancyapimodels.VacancyConvert(rec))
+		item := vacancyapimodels.VacancyConvert(rec)
+		if stages, ok := stagesMap[rec.ID]; ok {
+			for k, selectionStage := range item.SelectionStages {
+				for _, stage := range stages {
+					if stage.SelectionStageID == selectionStage.ID {
+						item.SelectionStages[k].Total = stage.Total
+					}
+				}
+			}
+		}
+		result = append(result, item)
 	}
 	return result, rowCount, nil
 }

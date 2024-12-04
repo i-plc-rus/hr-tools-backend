@@ -23,6 +23,7 @@ type Provider interface {
 	ListCountOfApplicant(spaceID string, filter applicantapimodels.ApplicantFilter) (count int64, err error)
 	ListOfApplicant(spaceID string, filter applicantapimodels.ApplicantFilter) ([]dbmodels.Applicant, error)
 	ListOfDuplicateApplicant(spaceID string, filter dbmodels.DuplicateApplicantFilter) (list []dbmodels.Applicant, err error)
+	ApplicantsByStages(spaceID string, vacancyIDs []string) (list []dbmodels.ApplicantsStage, err error)
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -176,6 +177,21 @@ func (i impl) ListOfDuplicateApplicant(spaceID string, filter dbmodels.Duplicate
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
+		return nil, err
+	}
+	return list, nil
+}
+
+func (i impl) ApplicantsByStages(spaceID string, vacancyIDs []string) (list []dbmodels.ApplicantsStage, err error) {
+	tx := i.db.
+		Select("count(id) as total, vacancy_id, selection_stage_id").
+		Model(dbmodels.Applicant{}).
+		Group("vacancy_id, selection_stage_id").
+		Where("vacancy_id in (?)", vacancyIDs)
+		// Where("status in (?)", []models.ApplicantStatus{models.ApplicantStatusInProcess, models.ApplicantStatusNegotiation})
+
+	err = tx.Find(&list).Error
+	if err != nil {
 		return nil, err
 	}
 	return list, nil

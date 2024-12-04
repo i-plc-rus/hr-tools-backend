@@ -105,7 +105,7 @@ func (i impl) ListCount(spaceID, userID string, filter vacancyapimodels.VacancyF
 	tx := i.db.
 		Model(dbmodels.Vacancy{}).
 		Where("space_id = ?", spaceID)
-	i.addFilter(tx, filter)
+	i.addFilter(tx, filter, userID)
 	err = tx.Count(&rowCount).Error
 	if err != nil {
 		log.WithError(err).Error("ошибка получения общего количества вакансий")
@@ -122,7 +122,7 @@ func (i impl) List(spaceID, userID string, filter vacancyapimodels.VacancyFilter
 		Joins("left join favorites as f on vacancies.id = f.vacancy_id and f.space_user_id = ?", userID).
 		Joins("left join pinneds as p on vacancies.id = p.vacancy_id and p.space_user_id = ?", userID).
 		Where("space_id = ?", spaceID)
-	i.addFilter(tx, filter)
+	i.addFilter(tx, filter, userID)
 	page, limit := filter.GetPage()
 	i.setPage(tx, page, limit)
 	err = tx.Preload(clause.Associations).Find(&list).Error
@@ -239,7 +239,17 @@ func (i impl) addSort(tx *gorm.DB, sort vacancyapimodels.VacancySort) {
 	}
 }
 
-func (i impl) addFilter(tx *gorm.DB, filter vacancyapimodels.VacancyFilter) {
+func (i impl) addFilter(tx *gorm.DB, filter vacancyapimodels.VacancyFilter, userID string) {
+	if filter.Tab > 0 {
+		switch filter.Tab {
+		case vacancyapimodels.VacancyTabMy:
+			tx = tx.Where("author_id = ?", userID)
+		case vacancyapimodels.VacancyTabOther:
+			tx = tx.Where("author_id <> ?", userID)
+		case vacancyapimodels.VacancyTabArch:
+			tx = tx.Where("status = ?", models.VacancyStatusClosed)
+		}
+	}
 	if filter.VacancyRequestID != "" {
 		tx = tx.Where("vacancy_request_id = ?", filter.VacancyRequestID)
 	}

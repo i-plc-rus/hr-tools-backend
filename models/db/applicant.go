@@ -80,6 +80,12 @@ type ApplicantExt struct {
 	AuthorLastName  string
 }
 
+type ApplicantsStage struct {
+	VacancyID        string
+	SelectionStageID string
+	Total            int
+}
+
 func (a Applicant) IsAllowStatusChange(newStatus models.NegotiationStatus) (bool, error) {
 	if newStatus != models.NegotiationStatusWait &&
 		newStatus != models.NegotiationStatusRejected &&
