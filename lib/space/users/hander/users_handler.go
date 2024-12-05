@@ -67,6 +67,7 @@ func (i impl) CreateUser(request spaceapimodels.CreateUser) error {
 		IsActive:    true,
 		PhoneNumber: request.PhoneNumber,
 		SpaceID:     request.SpaceID,
+		TextSign:    request.TextSign,
 	}
 	if request.IsAdmin {
 		rec.Role = models.SpaceAdminRole
@@ -92,6 +93,7 @@ func (i impl) UpdateUser(userID string, request spaceapimodels.UpdateUser) error
 		"is_admin":     request.IsAdmin,
 		"password":     authutils.GetMD5Hash(request.Password),
 		"phone_number": request.PhoneNumber,
+		"text_sign":    request.TextSign,
 	}
 	err := i.spaceUserStore.Update(userID, updMap)
 	if err != nil {

@@ -18,6 +18,7 @@ type SpaceUser struct {
 	SpaceID     string
 	Role        models.UserRole `gorm:"type:varchar(50)"`
 	LastLogin   time.Time
+	TextSign    string `gorm:"type:varchar(1000)"` // текст подписи
 }
 
 func (r SpaceUser) ToModel() spaceapimodels.SpaceUser {
@@ -31,6 +32,7 @@ func (r SpaceUser) ToModel() spaceapimodels.SpaceUser {
 			IsAdmin:     r.Role.IsSpaceAdmin(),
 			SpaceID:     r.SpaceID,
 			Role:        r.Role.ToHuman(),
+			TextSign:    r.TextSign,
 		},
 	}
 }
