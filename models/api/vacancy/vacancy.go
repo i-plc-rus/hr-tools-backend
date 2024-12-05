@@ -1,11 +1,12 @@
 package vacancyapimodels
 
 import (
-	"github.com/pkg/errors"
 	"hr-tools-backend/models"
 	apimodels "hr-tools-backend/models/api"
 	dbmodels "hr-tools-backend/models/db"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type VacancyData struct {
@@ -197,19 +198,29 @@ type VacancySort struct {
 
 type VacancyFilter struct {
 	apimodels.Pagination
-	VacancyRequestID string                 `json:"request_id"`
-	Favorite         bool                   `json:"favorite"`
-	Search           string                 `json:"search"`
-	Statuses         []models.VacancyStatus `json:"statuses"`
-	CityID           string                 `json:"city_id"`
-	DepartmentID     string                 `json:"department_id"`
-	SelectionType    models.VRSelectionType `json:"selection_type"`
-	RequestType      models.VRType          `json:"request_type"`
-	Urgency          models.VRUrgency       `json:"urgency"`
-	AuthorID         string                 `json:"author_id"`
-	RequestAuthorID  string                 `json:"request_author_id"`
-	Sort             VacancySort            `json:"sort"`
+	VacancyRequestID string                 `json:"request_id"`        // Идентификатор запроса на вакансию
+	Favorite         bool                   `json:"favorite"`          // Отображать избранные
+	Search           string                 `json:"search"`            // Поиск
+	Statuses         []models.VacancyStatus `json:"statuses"`          // Фильтр по статусам
+	CityID           string                 `json:"city_id"`           // Фильтр по идентификатору города
+	DepartmentID     string                 `json:"department_id"`     // Фильтр по идентификатору подразделения
+	SelectionType    models.VRSelectionType `json:"selection_type"`    // Фильтр по виду подбора
+	RequestType      models.VRType          `json:"request_type"`      // Фильтр по тип вакансии
+	Urgency          models.VRUrgency       `json:"urgency"`           // Фильтр по срочности
+	AuthorID         string                 `json:"author_id"`         // Фильтр по автору вакансии
+	RequestAuthorID  string                 `json:"request_author_id"` // Фильтр по автору запроса на вкансию
+	Sort             VacancySort            `json:"sort"`              // Сортировка
+	Tab              VacancyTab             `json:"tab"`               // Фильтр по вкладке: 0 - Все, 1 - Мои, 2 - Другие, 3 - Архив
 }
+
+type VacancyTab int
+
+const (
+	VacancyTabAll   VacancyTab = iota
+	VacancyTabMy    VacancyTab = iota
+	VacancyTabOther VacancyTab = iota
+	VacancyTabArch  VacancyTab = iota
+)
 
 type StatusChangeRequest struct {
 	Status models.VacancyStatus `json:"status"` // новый статус вакансии

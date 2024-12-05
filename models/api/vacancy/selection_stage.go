@@ -33,6 +33,7 @@ type SelectionStageView struct {
 	CanDelete  bool             `json:"can_delete"`  // Возможность удаления этапа
 	LimitValue int64            `json:"limit_value"` // Лимит времени на этапе
 	LimitType  models.LimitType `json:"limit_type"`  // Лимит времени на этапе - единицы измерения
+	Total      int              `json:"total"`       // Количество активных кандидатов
 }
 
 type SelectionStageID struct {
