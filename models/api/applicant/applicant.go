@@ -163,6 +163,9 @@ type ApplicantFilter struct {
 	AddedPeriod         *models.ApAddedPeriodType `json:"added_period"`          // Период добавления кандидата
 	AddedDay            string                    `json:"added_day"`             // Дата добавления кандидата ДД.ММ.ГГГГ
 	AddedType           *models.AddedType         `json:"added_type"`            // Тип добавления
+	Schedule            models.Schedule           `json:"schedule"`              // График работы
+	Language            string                    `json:"language"`              // Знание языков
+	Gender              models.GenderType         `json:"gender"`                // Пол кандидата
 	Sort                ApplicantSort             `json:"sort"`
 }
 
