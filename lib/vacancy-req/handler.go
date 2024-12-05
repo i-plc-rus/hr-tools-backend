@@ -21,7 +21,7 @@ import (
 )
 
 type Provider interface {
-	Create(spaceID, userID string, data vacancyapimodels.VacancyRequestEditData) (id string, err error)
+	Create(spaceID, userID string, data vacancyapimodels.VacancyRequestCreateData) (id string, err error)
 	GetByID(spaceID, id string) (item vacancyapimodels.VacancyRequestView, err error)
 	Update(spaceID, id string, data vacancyapimodels.VacancyRequestEditData) error
 	Delete(spaceID, id string) error
@@ -99,7 +99,7 @@ func (i impl) checkDependency(spaceID string, data vacancyapimodels.VacancyReque
 	return nil
 }
 
-func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyRequestEditData) (id string, err error) {
+func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyRequestCreateData) (id string, err error) {
 	logger := log.WithField("space_id", spaceID)
 	err = i.checkDependency(spaceID, data.VacancyRequestData)
 	if err != nil {
@@ -127,6 +127,9 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyReques
 		Employment:      data.Employment,
 		Experience:      data.Experience,
 		Schedule:        data.Schedule,
+	}
+	if data.AsTemplate {
+		rec.Status = models.VRStatusTemplate
 	}
 	if data.CompanyID != "" {
 		rec.CompanyID = &data.CompanyID

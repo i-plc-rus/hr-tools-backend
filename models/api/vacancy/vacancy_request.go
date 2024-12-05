@@ -55,6 +55,11 @@ func (v VacancyRequestData) Validate() error {
 	return nil
 }
 
+type VacancyRequestCreateData struct {
+	VacancyRequestEditData
+	AsTemplate bool `json:"as_template"` // сохранить как шаблон
+}
+
 type VacancyRequestEditData struct {
 	VacancyRequestData
 	ApprovalStages

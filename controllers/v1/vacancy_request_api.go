@@ -27,6 +27,7 @@ func InitVacancyRequestApiRouters(app *fiber.App) {
 			idRoute.Put("pin", controller.pin)
 			idRoute.Put("favorite", controller.favorite)
 			idRoute.Put("approval_stages", controller.saveStages)
+			idRoute.Put("on_create", controller.onCreate)     // перевести шаблон на статус заявка создана
 			idRoute.Put("on_approval", controller.onApproval) // на согласование
 			idRoute.Put("approve", controller.approve)        // согласовать
 			idRoute.Put("publish", controller.publish)        // создать вакансию
@@ -41,14 +42,14 @@ func InitVacancyRequestApiRouters(app *fiber.App) {
 // @Tags Заявка
 // @Description Создание
 // @Param   Authorization		header		string	true	"Authorization token"
-// @Param	body body	 vacancyapimodels.VacancyRequestEditData	true	"request body"
+// @Param	body body	 vacancyapimodels.VacancyRequestCreateData	true	"request body"
 // @Success 200 {object} apimodels.Response{data=string}
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
 // @router /api/v1/space/vacancy_request [post]
 func (c *vacancyReqApiController) create(ctx *fiber.Ctx) error {
-	var payload vacancyapimodels.VacancyRequestEditData
+	var payload vacancyapimodels.VacancyRequestCreateData
 	if err := c.BodyParser(ctx, &payload); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
@@ -255,6 +256,30 @@ func (c *vacancyReqApiController) saveStages(ctx *fiber.Ctx) error {
 
 	spaceID := middleware.GetUserSpace(ctx)
 	err = aprovalstageshandler.Instance.Save(spaceID, id, payload.ApprovalStages)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Перевести шаблон на статус заявка создана
+// @Tags Заявка
+// @Description Перевести шаблон на статус заявка создана
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    string  				    	true         "rec ID"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/vacancy_request/{id}/on_create [put]
+func (c *vacancyReqApiController) onCreate(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	spaceID := middleware.GetUserSpace(ctx)
+	userID := middleware.GetUserID(ctx)
+	err = vacancyreqhandler.Instance.ChangeStatus(spaceID, id, userID, models.VRStatusCreated)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
