@@ -33,6 +33,7 @@ type Provider interface {
 	ApplicantRemoveTag(spaceID string, id, userID string, tag string) error
 	ChangeStage(spaceID, userID string, applicantID, stageID string) error
 	ResolveDuplicate(spaceID string, mainID, minorID, userID string, isDuplicate bool) error
+	ApplicantReject(spaceID string, id, userID string, data applicantapimodels.RejectRequest) error
 }
 
 var Instance Provider
@@ -53,10 +54,22 @@ type impl struct {
 	applicantHistory    applicanthistoryhandler.Provider
 }
 
+func (i *impl) getLogger(spaceID, applicantID, userID string) *log.Entry {
+	logger := log.WithField("space_id", spaceID)
+	if applicantID != "" {
+		logger = logger.WithField("applicant_id", applicantID)
+	}
+	if userID != "" {
+		logger = logger.WithField("user_id", userID)
+	}
+	return logger
+}
+
 func (i impl) ListOfNegotiation(spaceID string, filter dbmodels.NegotiationFilter) ([]negotiationapimodels.NegotiationView, error) {
+	logger := i.getLogger(spaceID, "", "")
 	list, err := i.store.ListOfNegotiation(spaceID, filter)
 	if err != nil {
-		log.WithField("filter", fmt.Sprintf("%+v", filter)).
+		logger.WithField("filter", fmt.Sprintf("%+v", filter)).
 			WithError(err).Error("ошибка получения списка откликов")
 		return nil, errors.New("ошибка получения списка откликов")
 	}
@@ -88,9 +101,7 @@ func (i impl) UpdateComment(spaceID, id, userID string, comment string) error {
 }
 
 func (i impl) UpdateStatus(spaceID, id, userID string, status models.NegotiationStatus) error {
-	logger := log.
-		WithField("space_id", spaceID).
-		WithField("applicant_id", id)
+	logger := i.getLogger(spaceID, id, userID)
 	rec, err := i.store.GetByID(spaceID, id)
 	if err != nil {
 		return err
@@ -138,9 +149,7 @@ func (i impl) UpdateStatus(spaceID, id, userID string, status models.Negotiation
 }
 
 func (i impl) GetByID(spaceID, id string) (negotiationapimodels.NegotiationView, error) {
-	logger := log.
-		WithField("space_id", spaceID).
-		WithField("rec_id", id)
+	logger := i.getLogger(spaceID, id, "")
 	rec, err := i.store.GetByID(spaceID, id)
 	if err != nil {
 		logger.WithError(err).Error("ошибка получения отклика")
@@ -153,7 +162,7 @@ func (i impl) GetByID(spaceID, id string) (negotiationapimodels.NegotiationView,
 }
 
 func (i impl) CreateApplicant(spaceID, userID string, data applicantapimodels.ApplicantData) (id string, err error) {
-	logger := log.WithField("space_id", spaceID)
+	logger := i.getLogger(spaceID, "", userID)
 	vacancy, err := i.checkDependency(spaceID, data)
 	if err != nil {
 		return "", err
@@ -236,7 +245,7 @@ func (i impl) GetApplicant(spaceID string, id string) (applicantapimodels.Applic
 }
 
 func (i impl) ListOfApplicant(spaceID string, filter applicantapimodels.ApplicantFilter) (list []applicantapimodels.ApplicantView, rowCount int64, err error) {
-	logger := log.WithField("space_id", spaceID)
+	logger := i.getLogger(spaceID, "", "")
 	rowCount, err = i.store.ListCountOfApplicant(spaceID, filter)
 	if err != nil {
 		return nil, 0, err
@@ -263,8 +272,7 @@ func (i impl) ListOfApplicant(spaceID string, filter applicantapimodels.Applican
 }
 
 func (i impl) UpdateApplicant(spaceID string, id, userID string, data applicantapimodels.ApplicantData) error {
-	logger := log.WithField("space_id", spaceID).
-		WithField("rec_id", id)
+	logger := i.getLogger(spaceID, id, userID)
 	vacancy, err := i.checkDependency(spaceID, data)
 	if err != nil {
 		return err
@@ -342,9 +350,7 @@ func (i impl) UpdateApplicant(spaceID string, id, userID string, data applicanta
 }
 
 func (i impl) ApplicantAddTag(spaceID string, id, userID string, tag string) error {
-	logger := log.WithField("space_id", spaceID).
-		WithField("rec_id", id).
-		WithField("tag", tag)
+	logger := i.getLogger(spaceID, id, userID).WithField("tag", tag)
 	rec, err := i.store.GetByID(spaceID, id)
 	if err != nil {
 		return err
@@ -376,8 +382,7 @@ func (i impl) ApplicantAddTag(spaceID string, id, userID string, tag string) err
 }
 
 func (i impl) ApplicantRemoveTag(spaceID string, id, userID string, tag string) error {
-	logger := log.WithField("space_id", spaceID).
-		WithField("rec_id", id)
+	logger := i.getLogger(spaceID, id, userID).WithField("tag", tag)
 	rec, err := i.store.GetByID(spaceID, id)
 	if err != nil {
 		return err
@@ -402,7 +407,6 @@ func (i impl) ApplicantRemoveTag(spaceID string, id, userID string, tag string) 
 	err = i.store.Update(id, updMap)
 	if err != nil {
 		logger.
-			WithField("tag", tag).
 			WithError(err).
 			Error("ошибка удаления тега кандидата")
 		return errors.New("ошибка удаления тега кандидата")
@@ -414,8 +418,7 @@ func (i impl) ApplicantRemoveTag(spaceID string, id, userID string, tag string) 
 }
 
 func (i impl) ChangeStage(spaceID, userID string, applicantID, stageID string) error {
-	logger := log.WithField("space_id", spaceID).
-		WithField("applicant_id", applicantID).
+	logger := i.getLogger(spaceID, applicantID, userID).
 		WithField("stage_id", stageID)
 	applicantRec, err := i.store.GetByID(spaceID, applicantID)
 	if err != nil {
@@ -464,13 +467,42 @@ func (i impl) ChangeStage(spaceID, userID string, applicantID, stageID string) e
 }
 
 func (i impl) ResolveDuplicate(spaceID string, mainID, minorID, userID string, isDuplicate bool) error {
-	logger := log.WithField("space_id", spaceID).
+	logger := i.getLogger(spaceID, "", userID).
 		WithField("main_id", mainID).
 		WithField("minor_ID", mainID)
 	if isDuplicate {
 		return i.joinApplicants(spaceID, mainID, minorID, userID, logger)
 	}
 	return i.markAsDifferentApplicants(spaceID, mainID, minorID, userID, logger)
+}
+
+func (i impl) ApplicantReject(spaceID string, id, userID string, data applicantapimodels.RejectRequest) error {
+	logger := i.getLogger(spaceID, id, userID)
+	rec, err := i.store.GetByID(spaceID, id)
+	if err != nil {
+		return err
+	}
+	if rec == nil {
+		return errors.New("кандидат не найден")
+	}
+	if rec.Status == models.ApplicantStatusRejected {
+		return nil
+	}
+	updMap := map[string]interface{}{
+		"status":           models.ApplicantStatusRejected,
+		"reject_reason":    data.Reason,
+		"reject_initiator": data.Initiator,
+	}
+	err = i.store.Update(id, updMap)
+	if err != nil {
+		logger.
+			WithError(err).
+			Error("ошибка перевода кандидата в отклоненные")
+		return errors.New("ошибка перевода кандидата в отклоненные")
+	}
+	changes := applicanthistoryhandler.GetRejectChange(data.Reason, rec.Applicant, updMap)
+	i.applicantHistory.Save(spaceID, id, rec.VacancyID, userID, dbmodels.HistoryTypeReject, changes)
+	return nil
 }
 
 func (i impl) markAsDifferentApplicants(spaceID string, mainID, minorID, userID string, logger *log.Entry) error {
@@ -581,8 +613,7 @@ func (i impl) checkDependency(spaceID string, data applicantapimodels.ApplicantD
 }
 
 func (i impl) checkDuplicate(originRec *dbmodels.ApplicantExt) applicantapimodels.ApplicantDuplicate {
-	logger := log.WithField("space_id", originRec.SpaceID).
-		WithField("rec_id", originRec.ID)
+	logger := i.getLogger(originRec.SpaceID, originRec.ID, "")
 	applicantFIO := getLowerFio(originRec.Applicant)
 	filter := dbmodels.DuplicateApplicantFilter{
 		VacancyID:      originRec.VacancyID,
