@@ -12,6 +12,7 @@ var Instance Provider
 
 type Provider interface {
 	SendEMail(from, to, message, subject string) error
+	IsConfigured() bool
 }
 
 func Connect(user, password, host, port string, tlsEnabled bool) error {
@@ -62,4 +63,8 @@ func (i impl) SendEMail(from, to, message, subject string) (err error) {
 	}
 	logger.Info("письмо отправлено")
 	return nil
+}
+
+func (i impl) IsConfigured() bool {
+	return i.user != "" && i.host != "" && i.port != ""
 }

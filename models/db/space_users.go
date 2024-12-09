@@ -9,16 +9,18 @@ import (
 
 type SpaceUser struct {
 	BaseModel
-	Password    string `gorm:"type:varchar(128)"`
-	FirstName   string `gorm:"type:varchar(150)"`
-	LastName    string `gorm:"type:varchar(150)"`
-	Email       string `gorm:"type:varchar(255)"`
-	IsActive    bool
-	PhoneNumber string `gorm:"type:varchar(15)"`
-	SpaceID     string
-	Role        models.UserRole `gorm:"type:varchar(50)"`
-	LastLogin   time.Time
-	TextSign    string `gorm:"type:varchar(1000)"` // текст подписи
+	Password        string          `gorm:"type:varchar(128)"`
+	FirstName       string          `gorm:"type:varchar(150)"`
+	LastName        string          `gorm:"type:varchar(150)"`
+	Email           string          `gorm:"type:varchar(255)"`
+	IsActive        bool            `json:"is_active"`
+	PhoneNumber     string          `gorm:"type:varchar(15)"`
+	SpaceID         string          `json:"space_id"`
+	Role            models.UserRole `gorm:"type:varchar(50)"`
+	LastLogin       time.Time       `json:"last_login"`
+	TextSign        string          `gorm:"type:varchar(1000)"` // текст подписи
+	NewEmail        string          `gorm:"type:varchar(255)"`
+	IsEmailVerified bool
 }
 
 func (r SpaceUser) ToModel() spaceapimodels.SpaceUser {
@@ -34,6 +36,8 @@ func (r SpaceUser) ToModel() spaceapimodels.SpaceUser {
 			Role:        r.Role.ToHuman(),
 			TextSign:    r.TextSign,
 		},
+		IsEmailVerified: r.IsEmailVerified,
+		NewEmail:        r.NewEmail,
 	}
 }
 

@@ -1,5 +1,7 @@
 package spaceapimodels
 
+import "errors"
+
 type CreateUser struct {
 	Password string `json:"password"`
 	SpaceUserCommonData
@@ -13,11 +15,13 @@ type UpdateUser struct {
 type SpaceUser struct {
 	ID string `json:"id"`
 	SpaceUserCommonData
+	IsEmailVerified bool   `json:"is_email_verified"` // Email подтвержден
+	NewEmail        string `json:"new_email"`         // Новый email, который станет основным после подтверждения
 }
 
 type SpaceUserCommonData struct {
 	SpaceID     string `json:"space_id"`
-	Email       string `json:"email"`
+	Email       string `json:"email"` // Email пользователя
 	FirstName   string `json:"first_name"`
 	LastName    string `json:"last_name"`
 	PhoneNumber string `json:"phone_number"`
@@ -28,5 +32,8 @@ type SpaceUserCommonData struct {
 
 func (r SpaceUserCommonData) Validate() error {
 	//TODO: add data validators
+	if r.Email == "" {
+		return errors.New("не указан емайл")
+	}
 	return nil
 }

@@ -57,6 +57,9 @@ func (c *regController) SendEmailConfirm(ctx *fiber.Ctx) error {
 // @router /api/v1/auth/verify-email [get]
 func (c *regController) VerifyEmail(ctx *fiber.Ctx) error {
 	verifyCode := ctx.Query("code", "")
+	if verifyCode == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("не указан код подтверждения"))
+	}
 	err := spaceauthhandler.Instance.VerifyEmail(verifyCode)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
