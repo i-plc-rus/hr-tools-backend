@@ -41,7 +41,8 @@ func (c *msgTemplateApiController) SendEmailMessage(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
-	err := messagetemplate.Instance.SendEmailMessage(spaceID, payload.MsgTemplateID, payload.ApplicantID)
+	userID := middleware.GetUserID(ctx)
+	err := messagetemplate.Instance.SendEmailMessage(spaceID, payload.MsgTemplateID, payload.ApplicantID, userID)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
