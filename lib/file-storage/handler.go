@@ -18,15 +18,23 @@ import (
 )
 
 type Provider interface {
-	UploadResume(ctx context.Context, spaceID, applicantID string, file []byte, fileName string) error
-	UploadDoc(ctx context.Context, spaceID, applicantID string, file []byte, fileName string) error
-	GetFile(ctx context.Context, spaceID, fileID string) ([]byte, error)
-	GetResume(ctx context.Context, spaceID, applicantID string) ([]byte, error)
 	GetDocList(ctx context.Context, applicantID string) ([]filesapimodels.FileView, error)
+	GetFileByType(ctx context.Context, spaceID, applicantID string, fileType dbmodels.FileType) ([]byte, error)
+	GetFile(ctx context.Context, spaceID, fileID string) ([]byte, error)
+	Upload(ctx context.Context, spaceID, applicantID string, file []byte, fileName string, fileType dbmodels.FileType) error
+	DeleteFile(ctx context.Context, spaceID, fileID string) error
+	DeleteFileByType(ctx context.Context, spaceID, applicantID string, fileType dbmodels.FileType) error
 	MakeSpaceBucket(ctx context.Context, spaceID string) error
 }
 
 var Instance Provider
+
+func NewHandler() {
+	Instance = &impl{
+		s3client:       s3client.Client,
+		filesDBStorage: filesdbstorage.NewInstance(db.DB),
+	}
+}
 
 type impl struct {
 	s3client       *minio.Client
@@ -48,7 +56,7 @@ func (i impl) GetDocList(ctx context.Context, applicantID string) (listView []fi
 	return listView, nil
 }
 
-func (i impl) GetResume(ctx context.Context, spaceID, applicantID string) ([]byte, error) {
+func (i impl) GetFileByType(ctx context.Context, spaceID, applicantID string, fileType dbmodels.FileType) ([]byte, error) {
 	logger := log.WithFields(log.Fields{
 		"space_id":     spaceID,
 		"applicant_id": applicantID,
@@ -57,7 +65,7 @@ func (i impl) GetResume(ctx context.Context, spaceID, applicantID string) ([]byt
 	if err != nil {
 		logger.
 			WithError(err).
-			Error("ошибка поиска ID файла резюме")
+			Error("ошибка поиска ID файла")
 		return nil, err
 	}
 	return i.GetFile(ctx, spaceID, fileID)
@@ -86,80 +94,120 @@ func (i impl) GetFile(ctx context.Context, spaceID string, fileID string) ([]byt
 	return body, nil
 }
 
-func (i impl) UploadResume(ctx context.Context, spaceID, applicantID string, file []byte, fileName string) error {
+func (i impl) Upload(ctx context.Context, spaceID, applicantID string, file []byte, fileName string, fileType dbmodels.FileType) error {
 	logger := log.WithFields(log.Fields{
 		"space_id":     spaceID,
 		"applicant_id": applicantID,
 		"file_name":    fileName,
+		"file_type":    fileType,
 	})
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
 		fileDB := filesdbstorage.NewInstance(tx)
+		removedID, err := i.deletingIrrelevantFile(fileDB, spaceID, applicantID, fileType)
+		if err != nil {
+			logger.
+				WithError(err).
+				Error("ошибка удаления информации о существующем файле")
+			removedID = ""
+		}
 		rec := dbmodels.FileStorage{
 			BaseSpaceModel: dbmodels.BaseSpaceModel{
 				SpaceID: spaceID,
 			},
 			Name:        fileName,
 			ApplicantID: applicantID,
-			Type:        dbmodels.ApplicantResume,
+			Type:        fileType,
 		}
 		fileID, err := fileDB.SaveFile(rec)
 		if err != nil {
-			return errors.Wrap(err, "ошибка сохранения информации о файле резюме")
+			return errors.Wrap(err, "ошибка сохранения информации о файле")
 		}
-		err = i.uploadFile(ctx, i.getSpaceBucketName(spaceID), fileID, bytes.NewReader(file), len(file))
+		bucketName := i.getSpaceBucketName(spaceID)
+		err = i.uploadFile(ctx, bucketName, fileID, bytes.NewReader(file), len(file))
 		if err != nil {
-			return errors.Wrap(err, "ошибка загрузки резюме в S3")
+			return errors.Wrap(err, "ошибка сохранения файла в S3")
+		}
+		if removedID != "" {
+			err = i.s3client.RemoveObject(ctx, bucketName, fileID, minio.RemoveObjectOptions{})
+			if err != nil {
+				logger.
+					WithError(err).
+					WithField("file_id", removedID).
+					Error("ошибка удаления существующего файла")
+			}
 		}
 		return nil
 	})
 	if err != nil {
 		logger.
 			WithError(err).
-			Error("ошибка загрузки резюме кандидата")
+			Error("ошибка сохранения файла")
 		return err
 	}
 	return nil
 }
 
-func (i impl) UploadDoc(ctx context.Context, spaceID, applicantID string, file []byte, fileName string) error {
+func (i impl) DeleteFile(ctx context.Context, spaceID, fileID string) error {
 	logger := log.WithFields(log.Fields{
-		"space_id":     spaceID,
-		"applicant_id": applicantID,
-		"file_name":    fileName,
+		"space_id": spaceID,
+		"file_id":  fileID,
 	})
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
 		fileDB := filesdbstorage.NewInstance(tx)
-		rec := dbmodels.FileStorage{
-			BaseSpaceModel: dbmodels.BaseSpaceModel{
-				SpaceID: spaceID,
-			},
-			Name:        fileName,
-			ApplicantID: applicantID,
-			Type:        dbmodels.ApplicantDoc,
-		}
-		fileID, err := fileDB.SaveFile(rec)
+		ok, err := fileDB.DeleteFile(fileID, spaceID)
 		if err != nil {
-			return errors.Wrap(err, "ошибка сохранения информации о файле документа")
+			return errors.Wrap(err, "ошибка удаления информации о файле")
 		}
-		err = i.uploadFile(ctx, i.getSpaceBucketName(spaceID), fileID, bytes.NewReader(file), len(file))
+		if !ok {
+			return nil
+		}
+		bucketName := i.getSpaceBucketName(spaceID)
+		err = i.s3client.RemoveObject(ctx, bucketName, fileID, minio.RemoveObjectOptions{})
 		if err != nil {
-			return errors.Wrap(err, "ошибка загрузки документа в S3")
+			return errors.Wrap(err, "ошибка удаления файла")
 		}
 		return nil
 	})
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка загрузки документа кандидата")
-		return err
+		logger.WithError(err).Error("ошибка удаления файла")
+		return errors.New("ошибка удаления файла из S3")
 	}
 	return nil
 }
 
-func (i impl) uploadFile(ctx context.Context, bucketName, fileID string, fileReader io.Reader, fileSize int) error {
-	_, err := i.s3client.PutObject(ctx, bucketName, fileID, fileReader, int64(fileSize), minio.PutObjectOptions{ContentType: "application/octet-stream"})
+func (i impl) DeleteFileByType(ctx context.Context, spaceID, applicantID string, fileType dbmodels.FileType) error {
+	logger := log.WithFields(log.Fields{
+		"space_id":     spaceID,
+		"applicant_id": applicantID,
+		"file_type":    fileType,
+	})
+	err := db.DB.Transaction(func(tx *gorm.DB) error {
+		fileDB := filesdbstorage.NewInstance(tx)
+		fileID, err := fileDB.GetFileIDByType(applicantID, fileType)
+		if err != nil {
+			return errors.Wrap(err, "ошибка получения информации о файле")
+		}
+
+		if fileID == "" {
+			return nil
+		}
+		ok, err := fileDB.DeleteFile(fileID, spaceID)
+		if err != nil {
+			return errors.Wrap(err, "ошибка удаления информации о файле")
+		}
+		if !ok {
+			return nil
+		}
+		bucketName := i.getSpaceBucketName(spaceID)
+		err = i.s3client.RemoveObject(ctx, bucketName, fileID, minio.RemoveObjectOptions{})
+		if err != nil {
+			return errors.Wrap(err, "ошибка удаления файла из S3")
+		}
+		return nil
+	})
 	if err != nil {
-		return err
+		logger.WithError(err).Error("ошибка удаления файла")
+		return errors.New("ошибка удаления файла")
 	}
 	return nil
 }
@@ -182,13 +230,33 @@ func (i impl) MakeSpaceBucket(ctx context.Context, spaceID string) error {
 	return nil
 }
 
+func (i impl) uploadFile(ctx context.Context, bucketName, fileID string, fileReader io.Reader, fileSize int) error {
+	_, err := i.s3client.PutObject(ctx, bucketName, fileID, fileReader, int64(fileSize), minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (i impl) getSpaceBucketName(spaceID string) string {
 	return fmt.Sprintf("%s-%s", config.Conf.S3.BucketNamePrefix, spaceID)
 }
 
-func NewHandler() {
-	Instance = &impl{
-		s3client:       s3client.Client,
-		filesDBStorage: filesdbstorage.NewInstance(db.DB),
+func (i impl) deletingIrrelevantFile(fileDB filesdbstorage.Provider, spaceID, applicantID string, fileType dbmodels.FileType) (removedID string, err error) {
+	if fileType == dbmodels.ApplicantDoc {
+		return "", nil
 	}
+	fileID, err := fileDB.GetFileIDByType(applicantID, fileType)
+	if err != nil {
+		return "", errors.Wrap(err, "ошибка получения информации о существующем файле")
+	}
+	if fileID == "" {
+		return "", nil
+	}
+	_, err = fileDB.DeleteFile(fileID, spaceID)
+	if err != nil {
+		return "", errors.Wrap(err, "ошибка удаления информации о существующем файле")
+	}
+
+	return fileID, nil
 }

@@ -210,7 +210,16 @@ func (i impl) addApplicantFilter(tx *gorm.DB, filter applicantapimodels.Applican
 	}
 	if filter.Search != "" {
 		searchValue := "%" + strings.ToLower(filter.Search) + "%"
-		tx.Where("LOWER(CONCAT(last_name,' ', first_name, ' ' , middle_name)) like ? or phone like ? or email like ? or LOWER(array_to_string(tags,',', '*')) like ?", searchValue, searchValue, searchValue, searchValue)
+		sql := "LOWER(CONCAT(last_name,' ', first_name, ' ' , middle_name)) like ?" +
+			" or phone like ? or email like ?" +
+			" or LOWER(array_to_string(tags,',', '*')) like ?" +
+			" or lower(params::TEXT) like ?" +
+			" or lower(comment) like ?" +
+			" or lower(citizenship) like ?" +
+			" or lower(address) like ?" +
+			" or lower(source) like ?"
+		tx.Where(sql, searchValue, searchValue, searchValue, searchValue, searchValue,
+			searchValue, searchValue, searchValue, searchValue)
 	}
 	if filter.Relocation != nil {
 		tx.Where("relocation = ?", *filter.Relocation)
