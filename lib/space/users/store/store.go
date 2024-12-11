@@ -12,7 +12,7 @@ type Provider interface {
 	Delete(userID string) error
 	GetList(spaceID string, page, limit int) (userList []dbmodels.SpaceUser, err error)
 	ExistByEmail(email string) (bool, error)
-	FindByEmail(email string) (rec *dbmodels.SpaceUser, err error)
+	FindByEmail(email string, checkNew bool) (rec *dbmodels.SpaceUser, err error)
 	GetByID(userID string) (rec *dbmodels.SpaceUser, err error)
 }
 
@@ -51,7 +51,7 @@ func (i impl) Delete(userID string) error {
 
 func (i impl) Update(userID string, updMap map[string]interface{}) error {
 	err := i.db.
-		Model(&dbmodels.Space{}).
+		Model(&dbmodels.SpaceUser{}).
 		Where("id = ?", userID).
 		Updates(updMap).
 		Error
@@ -62,7 +62,7 @@ func (i impl) Update(userID string, updMap map[string]interface{}) error {
 }
 
 func (i impl) GetByID(userID string) (rec *dbmodels.SpaceUser, err error) {
-	err = i.db.
+	err = i.db.Model(dbmodels.SpaceUser{}).
 		Where("id = ?", userID).
 		First(&rec).
 		Error
@@ -75,10 +75,13 @@ func (i impl) GetByID(userID string) (rec *dbmodels.SpaceUser, err error) {
 	return rec, nil
 }
 
-func (i impl) FindByEmail(email string) (rec *dbmodels.SpaceUser, err error) {
-	err = i.db.
-		Where("email = ?", email).
-		First(&rec).
+func (i impl) FindByEmail(email string, checkNew bool) (rec *dbmodels.SpaceUser, err error) {
+	tx := i.db.Model(dbmodels.SpaceUser{}).
+		Where("email = ?", email)
+	if checkNew {
+		tx.Or("new_email = ?", email)
+	}
+	err = tx.First(&rec).
 		Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

@@ -2,17 +2,19 @@ package spaceauthhandler
 
 import (
 	"fmt"
-	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/config"
 	"hr-tools-backend/db"
 	emailverify "hr-tools-backend/lib/email-verify"
+	"hr-tools-backend/lib/smtp"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	authutils "hr-tools-backend/lib/utils/auth-utils"
 	authapimodels "hr-tools-backend/models/api/auth"
 	spaceapimodels "hr-tools-backend/models/api/space"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 type Provider interface {
@@ -94,7 +96,7 @@ func (i impl) Me(ctx *fiber.Ctx) (spaceUser spaceapimodels.SpaceUser, err error)
 
 func (i impl) Login(email, password string) (response authapimodels.JWTResponse, err error) {
 	logger := log.WithField("email", email)
-	user, err := i.spaceUsersStore.FindByEmail(email)
+	user, err := i.spaceUsersStore.FindByEmail(email, false)
 	if err != nil {
 		logger.
 			WithError(err).
@@ -108,6 +110,9 @@ func (i impl) Login(email, password string) (response authapimodels.JWTResponse,
 	if authutils.GetMD5Hash(password) != user.Password {
 		logger.Debug("пользователь не прошел проверку пароля")
 		return authapimodels.JWTResponse{}, errors.New("пользователь не прошел проверку пароля")
+	}
+	if smtp.Instance.IsConfigured() && !user.Role.IsSpaceAdmin() && !user.IsEmailVerified {
+		return authapimodels.JWTResponse{}, errors.New("необходимо подтвердить почту")
 	}
 	tokenString, err := authutils.GetToken(user.ID, user.GetFullName(), user.SpaceID, user.Role.IsSpaceAdmin(), string(user.Role))
 	if err != nil {

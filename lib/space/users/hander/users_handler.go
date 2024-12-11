@@ -3,13 +3,17 @@ package spaceusershander
 import (
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
+	"hr-tools-backend/lib/smtp"
+	spaceauthhandler "hr-tools-backend/lib/space/auth"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	authutils "hr-tools-backend/lib/utils/auth-utils"
 	"hr-tools-backend/models"
 	spaceapimodels "hr-tools-backend/models/api/space"
 	dbmodels "hr-tools-backend/models/db"
+
+	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 type Provider interface {
@@ -42,7 +46,7 @@ func (i impl) GetByID(userID string) (user spaceapimodels.SpaceUser, err error) 
 		return spaceapimodels.SpaceUser{}, err
 	}
 	if userDB == nil {
-		return spaceapimodels.SpaceUser{}, nil
+		return spaceapimodels.SpaceUser{}, errors.New("пользователь не найден")
 	}
 	return userDB.ToModel(), nil
 }
@@ -60,14 +64,15 @@ func (i impl) CreateUser(request spaceapimodels.CreateUser) error {
 		return errors.New("пользователь с такой почтой уже существует")
 	}
 	rec := dbmodels.SpaceUser{
-		Password:    authutils.GetMD5Hash(request.Password),
-		FirstName:   request.FirstName,
-		LastName:    request.LastName,
-		Email:       request.Email,
-		IsActive:    true,
-		PhoneNumber: request.PhoneNumber,
-		SpaceID:     request.SpaceID,
-		TextSign:    request.TextSign,
+		Password:        authutils.GetMD5Hash(request.Password),
+		FirstName:       request.FirstName,
+		LastName:        request.LastName,
+		Email:           request.Email,
+		IsActive:        true,
+		PhoneNumber:     request.PhoneNumber,
+		SpaceID:         request.SpaceID,
+		TextSign:        request.TextSign,
+		IsEmailVerified: !smtp.Instance.IsConfigured(),
 	}
 	if request.IsAdmin {
 		rec.Role = models.SpaceAdminRole
@@ -86,24 +91,50 @@ func (i impl) CreateUser(request spaceapimodels.CreateUser) error {
 }
 
 func (i impl) UpdateUser(userID string, request spaceapimodels.UpdateUser) error {
-	updMap := map[string]interface{}{
-		"email":        request.Email,
-		"first_name":   request.FirstName,
-		"last_name":    request.LastName,
-		"is_admin":     request.IsAdmin,
-		"password":     authutils.GetMD5Hash(request.Password),
-		"phone_number": request.PhoneNumber,
-		"text_sign":    request.TextSign,
-	}
-	err := i.spaceUserStore.Update(userID, updMap)
+	user, err := i.GetByID(userID)
 	if err != nil {
-		log.
-			WithField("request", fmt.Sprintf("%+v", request)).
-			WithError(err).
-			Error("ошибка обновления пользователя space")
 		return err
 	}
-	return nil
+
+	err = db.DB.Transaction(func(tx *gorm.DB) error {
+		updMap := map[string]interface{}{
+			"first_name":   request.FirstName,
+			"last_name":    request.LastName,
+			"is_admin":     request.IsAdmin,
+			"password":     authutils.GetMD5Hash(request.Password),
+			"phone_number": request.PhoneNumber,
+			"text_sign":    request.TextSign,
+		}
+		isEmailChanged := user.Email != request.Email
+		if isEmailChanged {
+			if smtp.Instance.IsConfigured() {
+				updMap["new_email"] = request.Email
+			} else {
+				updMap["email"] = request.Email
+				updMap["is_email_verified"] = true
+			}
+		}
+		spaceUserStore := spaceusersstore.NewInstance(tx)
+		err := spaceUserStore.Update(userID, updMap)
+		if err != nil {
+			log.
+				WithField("request", fmt.Sprintf("%+v", request)).
+				WithError(err).
+				Error("ошибка обновления пользователя space")
+			return err
+		}
+
+		if isEmailChanged && smtp.Instance.IsConfigured() {
+			// при смене мыла, отправляем подтверждение
+			err := spaceauthhandler.Instance.SendEmailConfirmation(request.Email)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	return err
 }
 
 func (i impl) DeleteUser(userID string) error {
