@@ -12,6 +12,7 @@ var Instance Provider
 
 type Provider interface {
 	SendEMail(from, to, message, subject string) error
+	IsConfigured() bool
 }
 
 func Connect(user, password, host, port string, tlsEnabled bool) error {
@@ -35,9 +36,12 @@ type impl struct {
 }
 
 func (i impl) SendEMail(from, to, message, subject string) (err error) {
-	logger := log.WithField("sender", from)
+	logger := log.
+		WithField("sender", from).
+		WithField("to", to).
+		WithField("subject", subject)
 	if i.user == "" || i.host == "" || i.port == "" {
-		logger.Warn("Письмо для подтверждения почты не отправлено, тк не настроен smtp клиент")
+		logger.Warn("Письмо не отправлено, тк не настроен smtp клиент")
 		return nil
 	}
 	// Receiver email address.
@@ -62,4 +66,8 @@ func (i impl) SendEMail(from, to, message, subject string) (err error) {
 	}
 	logger.Info("письмо отправлено")
 	return nil
+}
+
+func (i impl) IsConfigured() bool {
+	return i.user != "" && i.host != "" && i.port != ""
 }

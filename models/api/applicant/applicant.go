@@ -1,12 +1,10 @@
 package applicantapimodels
 
 import (
-	"fmt"
 	"github.com/pkg/errors"
 	"hr-tools-backend/models"
 	apimodels "hr-tools-backend/models/api"
 	dbmodels "hr-tools-backend/models/db"
-	"strings"
 	"time"
 )
 
@@ -139,9 +137,7 @@ func ApplicantConvert(rec dbmodels.Applicant) ApplicantView {
 	if rec.Vacancy != nil {
 		result.VacancyName = rec.Vacancy.VacancyName
 	}
-	fio := strings.TrimSpace(fmt.Sprintf("%v %v", rec.LastName, rec.FirstName))
-	fio = strings.TrimSpace(fmt.Sprintf("%v %v", fio, rec.MiddleName))
-	result.FIO = fio
+	result.FIO = rec.GetFIO()
 	return result
 }
 
@@ -222,4 +218,55 @@ func (r RejectRequest) Validate() error {
 		return errors.New("некорректно указан инициатор отказа")
 	}
 	return nil
+}
+
+type MultiRejectRequest struct {
+	IDs    []string      `json:"ids"` // идентификаторы кандидатов
+	Reject RejectRequest `json:"reject"`
+}
+
+func (r MultiRejectRequest) Validate() error {
+	if len(r.IDs) == 0 {
+		return errors.New("не указан список кандидатов")
+	}
+	return r.Reject.Validate()
+}
+
+type MultiChangeStageRequest struct {
+	IDs     []string `json:"ids"`      // идентификаторы кандидатов
+	StageID string   `json:"stage_id"` // идентификаторы этапа
+}
+
+func (r MultiChangeStageRequest) Validate() error {
+	if len(r.IDs) == 0 {
+		return errors.New("не указан список кандидатов")
+	}
+	if r.StageID == "" {
+		return errors.New("не указан идентификатор этапа")
+	}
+	return nil
+}
+
+type MultiEmailRequest struct {
+	IDs           []string `json:"ids"`             // идентификаторы кандидатов
+	MsgTemplateID string   `json:"msg_template_id"` // идентификатор шаблона сообщения
+}
+
+type MultiEmailResponse struct {
+	FailMails []string `json:"fail_mails"` // список ФИО кандидатов которым не удалось отправить письма
+}
+
+func (r MultiEmailRequest) Validate() error {
+	if len(r.IDs) == 0 {
+		return errors.New("не указан список кандидатов")
+	}
+	if r.MsgTemplateID == "" {
+		return errors.New("не указан идентификатор шаблона сообщения")
+	}
+	return nil
+}
+
+type XlsExportRequest struct {
+	IDs    []string         `json:"ids"`    // список идентификатов кандидатов
+	Filter *ApplicantFilter `json:"filter"` // Фильтр скроллера, в случае если не указан список идентификатов
 }

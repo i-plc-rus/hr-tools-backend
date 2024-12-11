@@ -5,6 +5,7 @@ import (
 	applicanthistorystore "hr-tools-backend/lib/applicant-history/store"
 	applicantstore "hr-tools-backend/lib/applicant/store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
+	"hr-tools-backend/models"
 	applicantapimodels "hr-tools-backend/models/api/applicant"
 	dbmodels "hr-tools-backend/models/db"
 
@@ -16,6 +17,7 @@ import (
 type Provider interface {
 	List(spaceID, applicantID string, filter applicantapimodels.ApplicantHistoryFilter) ([]applicantapimodels.ApplicantHistoryView, int64, error)
 	Save(spaceID, applicantID, vacancyID, userID string, action dbmodels.ActionType, changes dbmodels.ApplicantChanges)
+	SaveWithUser(spaceID, applicantID, vacancyID, userID, userName string, action dbmodels.ActionType, changes dbmodels.ApplicantChanges)
 	SaveNote(spaceID, applicantID, userID string, action applicantapimodels.ApplicantNote) error
 }
 
@@ -96,11 +98,36 @@ func (i impl) Save(spaceID, applicantID, vacancyID, userID string, action dbmode
 		}
 		rec.UserName = user.GetFullName()
 	} else {
-		rec.UserName = "Система"
+		rec.UserName = models.SystemUser
 	}
 	_, err := i.store.Create(rec)
 	if err != nil {
 		logger.WithError(err).Error("ошибка сохранения истории действий по кандидату")
+	}
+}
+
+func (i impl) SaveWithUser(spaceID, applicantID, vacancyID, userID, userName string, action dbmodels.ActionType, changes dbmodels.ApplicantChanges) {
+	rec := dbmodels.ApplicantHistory{
+		BaseSpaceModel: dbmodels.BaseSpaceModel{
+			SpaceID: spaceID,
+		},
+		ApplicantID: applicantID,
+		VacancyID:   vacancyID,
+		ActionType:  action,
+		Changes:     changes,
+		UserName:    userName,
+	}
+	if userID != "" {
+		rec.UserID = &userID
+	}
+	_, err := i.store.Create(rec)
+	if err != nil {
+		log.WithField("space_id", spaceID).
+		WithField("applicant_id", applicantID).
+		WithField("vacancy_id", vacancyID).
+		WithField("action", action).
+		WithField("description", changes.Description).
+		WithError(err).Error("ошибка сохранения истории действий по кандидату")
 	}
 }
 

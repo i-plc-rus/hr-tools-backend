@@ -1,10 +1,13 @@
 package applicant
 
 import (
+	"bytes"
 	"fmt"
 	"hr-tools-backend/db"
 	applicanthistoryhandler "hr-tools-backend/lib/applicant-history"
 	applicantstore "hr-tools-backend/lib/applicant/store"
+	xlsexport "hr-tools-backend/lib/export/xls"
+	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	vacancyhandler "hr-tools-backend/lib/vacancy"
 	selectionstagestore "hr-tools-backend/lib/vacancy/selection-stage-store"
 	"hr-tools-backend/models"
@@ -32,8 +35,11 @@ type Provider interface {
 	ApplicantAddTag(spaceID string, id, userID string, tag string) error
 	ApplicantRemoveTag(spaceID string, id, userID string, tag string) error
 	ChangeStage(spaceID, userID string, applicantID, stageID string) error
+	MultiChangeStage(spaceID, userID string, data applicantapimodels.MultiChangeStageRequest) error
 	ResolveDuplicate(spaceID string, mainID, minorID, userID string, isDuplicate bool) error
 	ApplicantReject(spaceID string, id, userID string, data applicantapimodels.RejectRequest) error
+	ApplicantMultiReject(spaceID string, userID string, data applicantapimodels.MultiRejectRequest) error
+	ExportToXls(spaceID string, data applicantapimodels.XlsExportRequest) (*bytes.Buffer, error)
 }
 
 var Instance Provider
@@ -44,6 +50,7 @@ func NewHandler() {
 		selectionStageStore: selectionstagestore.NewInstance(db.DB),
 		vacancyProvider:     vacancyhandler.Instance,
 		applicantHistory:    applicanthistoryhandler.Instance,
+		userStore:           spaceusersstore.NewInstance(db.DB),
 	}
 }
 
@@ -52,6 +59,7 @@ type impl struct {
 	selectionStageStore selectionstagestore.Provider
 	vacancyProvider     vacancyhandler.Provider
 	applicantHistory    applicanthistoryhandler.Provider
+	userStore           spaceusersstore.Provider
 }
 
 func (i *impl) getLogger(spaceID, applicantID, userID string) *log.Entry {
@@ -418,52 +426,38 @@ func (i impl) ApplicantRemoveTag(spaceID string, id, userID string, tag string) 
 }
 
 func (i impl) ChangeStage(spaceID, userID string, applicantID, stageID string) error {
-	logger := i.getLogger(spaceID, applicantID, userID).
-		WithField("stage_id", stageID)
-	applicantRec, err := i.store.GetByID(spaceID, applicantID)
+	userName, err := i.getUserName(userID)
 	if err != nil {
-		logger.
+		i.getLogger(spaceID, applicantID, userID).
 			WithError(err).
-			Error("ошибка получения данных кандидата")
-		return errors.New("ошибка получения данных кандидата")
+			Error("ошибка перевода кандидата на этап")
+		return errors.New("ошибка перевода кандидата на этап")
 	}
-	if applicantRec.Status != models.ApplicantStatusInProcess {
-		return errors.Errorf("перевода по этапам возможен только на статусе '%v'", models.ApplicantStatusInProcess)
-	}
-	stageRec, err := i.selectionStageStore.GetByID(spaceID, applicantRec.VacancyID, stageID)
+	err = i.сhangeStage(nil, spaceID, userID, userName, applicantID, stageID)
 	if err != nil {
 		return err
 	}
-	if stageRec == nil {
-		return errors.New("этапам не найден")
-	}
-	updMap := map[string]interface{}{
-		"selection_stage_id": stageRec.ID,
-	}
-
-	switch stageRec.Name {
-	case dbmodels.NegotiationStage:
-		return errors.Errorf("перевод кандидата с текущего этапа на этап '%v' невозможен", stageRec.Name)
-	case dbmodels.AddedStage:
-		return errors.Errorf("перевод кандидата с текущего этапа на этап '%v' невозможен", stageRec.Name)
-	case dbmodels.ScreenStage:
-	case dbmodels.ManagerInterviewStage:
-	case dbmodels.ClientInterviewStage:
-	case dbmodels.OfferStage:
-		break
-	case dbmodels.HiredStage:
-		updMap["start_date"] = time.Now()
-	}
-	err = i.store.Update(applicantID, updMap)
-	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка изменения этапа подбора для кандидата")
-		return errors.New("ошибка изменения этапа подбора для кандидата")
-	}
-	changes := applicanthistoryhandler.GetStageChange(stageRec.Name)
-	i.applicantHistory.Save(spaceID, applicantID, applicantRec.VacancyID, userID, dbmodels.HistoryTypeStageChange, changes)
 	return nil
+}
+
+func (i impl) MultiChangeStage(spaceID, userID string, data applicantapimodels.MultiChangeStageRequest) error {
+	userName, err := i.getUserName(userID)
+	if err != nil {
+		i.getLogger(spaceID, "", userID).
+			WithError(err).
+			Error("ошибка перевода кандидата на этап")
+		return errors.New("ошибка перевода кандидата на этап")
+	}
+	err = db.DB.Transaction(func(tx *gorm.DB) error {
+		for _, id := range data.IDs {
+			err = i.сhangeStage(nil, spaceID, userID, userName, id, data.StageID)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return err
 }
 
 func (i impl) ResolveDuplicate(spaceID string, mainID, minorID, userID string, isDuplicate bool) error {
@@ -477,32 +471,47 @@ func (i impl) ResolveDuplicate(spaceID string, mainID, minorID, userID string, i
 }
 
 func (i impl) ApplicantReject(spaceID string, id, userID string, data applicantapimodels.RejectRequest) error {
-	logger := i.getLogger(spaceID, id, userID)
-	rec, err := i.store.GetByID(spaceID, id)
+	userName, err := i.getUserName(userID)
 	if err != nil {
-		return err
-	}
-	if rec == nil {
-		return errors.New("кандидат не найден")
-	}
-	if rec.Status == models.ApplicantStatusRejected {
-		return nil
-	}
-	updMap := map[string]interface{}{
-		"status":           models.ApplicantStatusRejected,
-		"reject_reason":    data.Reason,
-		"reject_initiator": data.Initiator,
-	}
-	err = i.store.Update(id, updMap)
-	if err != nil {
-		logger.
+		i.getLogger(spaceID, id, userID).
 			WithError(err).
 			Error("ошибка перевода кандидата в отклоненные")
 		return errors.New("ошибка перевода кандидата в отклоненные")
 	}
-	changes := applicanthistoryhandler.GetRejectChange(data.Reason, rec.Applicant, updMap)
-	i.applicantHistory.Save(spaceID, id, rec.VacancyID, userID, dbmodels.HistoryTypeReject, changes)
+	err = i.applicantReject(nil, spaceID, id, userID, userName, data)
+	if err != nil {
+		return err
+	}
 	return nil
+}
+
+func (i impl) ApplicantMultiReject(spaceID string, userID string, data applicantapimodels.MultiRejectRequest) error {
+	userName, err := i.getUserName(userID)
+	if err != nil {
+		i.getLogger(spaceID, "", userID).
+			WithError(err).
+			Error("ошибка перевода кандидатов в отклоненные")
+		return errors.New("ошибка перевода кандидатов в отклоненные")
+	}
+
+	err = db.DB.Transaction(func(tx *gorm.DB) error {
+		for _, id := range data.IDs {
+			err := i.applicantReject(tx, spaceID, id, userID, userName, data.Reject)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return err
+}
+
+func (i impl) ExportToXls(spaceID string, data applicantapimodels.XlsExportRequest) (*bytes.Buffer, error) {
+	list, err := i.store.ListOfApplicantByIDs(spaceID, data.IDs, data.Filter)
+	if err != nil {
+		return nil, err
+	}
+	return xlsexport.Instance.ExportApplicantList(list)
 }
 
 func (i impl) markAsDifferentApplicants(spaceID string, mainID, minorID, userID string, logger *log.Entry) error {
@@ -683,4 +692,113 @@ func (i impl) checkDuplicate(originRec *dbmodels.ApplicantExt) applicantapimodel
 
 func getLowerFio(rec dbmodels.Applicant) string {
 	return fmt.Sprintf("%v %v %v", rec.LastName, rec.FirstName, rec.MiddleName)
+}
+
+func (i impl) applicantReject(tx *gorm.DB, spaceID string, id, userID, userName string, data applicantapimodels.RejectRequest) error {
+	logger := i.getLogger(spaceID, id, userID)
+	store := i.store
+	applicantHistory := i.applicantHistory
+	if tx != nil {
+		store = applicantstore.NewInstance(tx)
+		applicantHistory = applicanthistoryhandler.NewTxHandler(tx)
+	}
+
+	rec, err := store.GetByID(spaceID, id)
+	if err != nil {
+		return err
+	}
+	if rec == nil {
+		return errors.New("кандидат не найден")
+	}
+	if rec.Status == models.ApplicantStatusRejected {
+		return nil
+	}
+	updMap := map[string]interface{}{
+		"status":           models.ApplicantStatusRejected,
+		"reject_reason":    data.Reason,
+		"reject_initiator": data.Initiator,
+	}
+	err = store.Update(id, updMap)
+	if err != nil {
+		logger.
+			WithError(err).
+			Error("ошибка перевода кандидата в отклоненные")
+		return errors.New("ошибка перевода кандидата в отклоненные")
+	}
+
+	// История изменений
+	changes := applicanthistoryhandler.GetRejectChange(data.Reason, rec.Applicant, updMap)
+	applicantHistory.SaveWithUser(spaceID, id, rec.VacancyID, userID, userName, dbmodels.HistoryTypeReject, changes)
+	return err
+}
+
+func (i impl) getUserName(userID string) (string, error) {
+	if userID != "" {
+		user, err := i.userStore.GetByID(userID)
+		if err != nil {
+			return "", errors.Wrap(err, "не удалось получить автора изменений")
+		}
+		if user == nil {
+			return "", errors.New("автор изменений не найден")
+		}
+		return user.GetFullName(), nil
+	}
+	return models.SystemUser, nil
+}
+
+func (i impl) сhangeStage(tx *gorm.DB, spaceID, userID, userName string, applicantID, stageID string) error {
+	logger := i.getLogger(spaceID, applicantID, userID).
+		WithField("stage_id", stageID)
+	store := i.store
+	applicantHistory := i.applicantHistory
+	selectionStageStore := i.selectionStageStore
+	if tx != nil {
+		store = applicantstore.NewInstance(tx)
+		applicantHistory = applicanthistoryhandler.NewTxHandler(tx)
+		selectionStageStore = selectionstagestore.NewInstance(tx)
+	}
+	applicantRec, err := store.GetByID(spaceID, applicantID)
+	if err != nil {
+		logger.
+			WithError(err).
+			Error("ошибка получения данных кандидата")
+		return errors.New("ошибка получения данных кандидата")
+	}
+	if applicantRec.Status != models.ApplicantStatusInProcess {
+		return errors.Errorf("перевода по этапам возможен только на статусе '%v'", models.ApplicantStatusInProcess)
+	}
+	stageRec, err := selectionStageStore.GetByID(spaceID, applicantRec.VacancyID, stageID)
+	if err != nil {
+		return err
+	}
+	if stageRec == nil {
+		return errors.New("этап не найден")
+	}
+	updMap := map[string]interface{}{
+		"selection_stage_id": stageRec.ID,
+	}
+
+	switch stageRec.Name {
+	case dbmodels.NegotiationStage:
+		return errors.Errorf("перевод кандидата с текущего этапа на этап '%v' невозможен", stageRec.Name)
+	case dbmodels.AddedStage:
+		return errors.Errorf("перевод кандидата с текущего этапа на этап '%v' невозможен", stageRec.Name)
+	case dbmodels.ScreenStage:
+	case dbmodels.ManagerInterviewStage:
+	case dbmodels.ClientInterviewStage:
+	case dbmodels.OfferStage:
+		break
+	case dbmodels.HiredStage:
+		updMap["start_date"] = time.Now()
+	}
+	err = store.Update(applicantID, updMap)
+	if err != nil {
+		logger.
+			WithError(err).
+			Error("ошибка изменения этапа подбора для кандидата")
+		return errors.New("ошибка изменения этапа подбора для кандидата")
+	}
+	changes := applicanthistoryhandler.GetStageChange(stageRec.Name)
+	applicantHistory.SaveWithUser(spaceID, applicantID, applicantRec.VacancyID, userID, userName, dbmodels.HistoryTypeStageChange, changes)
+	return nil
 }

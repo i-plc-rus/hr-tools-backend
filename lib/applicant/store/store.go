@@ -24,6 +24,7 @@ type Provider interface {
 	ListOfApplicant(spaceID string, filter applicantapimodels.ApplicantFilter) ([]dbmodels.Applicant, error)
 	ListOfDuplicateApplicant(spaceID string, filter dbmodels.DuplicateApplicantFilter) (list []dbmodels.Applicant, err error)
 	ApplicantsByStages(spaceID string, vacancyIDs []string) (list []dbmodels.ApplicantsStage, err error)
+	ListOfApplicantByIDs(spaceID string, ids []string, filter *applicantapimodels.ApplicantFilter) ([]dbmodels.ApplicantWithJob, error)
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -192,6 +193,35 @@ func (i impl) ApplicantsByStages(spaceID string, vacancyIDs []string) (list []db
 
 	err = tx.Find(&list).Error
 	if err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (i impl) ListOfApplicantByIDs(spaceID string, ids []string, filter *applicantapimodels.ApplicantFilter) (list []dbmodels.ApplicantWithJob, err error) {
+	if len(ids) == 0 && filter == nil {
+		return nil, nil
+	}
+	list = []dbmodels.ApplicantWithJob{}
+	tx := i.db.
+		Select("applicants.*, jt.name as job_title_name").
+		Model(dbmodels.Applicant{}).
+		Joins("left join vacancies as v on vacancy_id = v.id").
+		Joins("left join job_titles as jt on v.job_title_id = jt.id").
+		Joins("left join selection_stages as st on selection_stage_id = st.id").
+		Where("applicants.space_id = ?", spaceID)
+	if len(ids) > 0 {
+		tx = tx.Where("applicants.id in (?)", ids)
+	} else {
+		i.addApplicantFilter(tx, *filter)
+		i.addSort(tx, filter.Sort)
+	}
+	err = tx.Preload(clause.Associations).Find(&list).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return list, nil
