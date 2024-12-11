@@ -41,7 +41,7 @@ func NewHandler() {
 		tokenMap:           sync.Map{},
 		cityMap:            map[string]string{},
 		filesStorage:       filestorage.Instance,
-		applicantHistory:    applicanthistoryhandler.Instance,
+		applicantHistory:   applicanthistoryhandler.Instance,
 	}
 }
 
@@ -55,7 +55,7 @@ type impl struct {
 	tokenMap           sync.Map
 	cityMap            map[string]string
 	filesStorage       filestorage.Provider
-	applicantHistory    applicanthistoryhandler.Provider
+	applicantHistory   applicanthistoryhandler.Provider
 }
 
 const (
@@ -649,5 +649,5 @@ func (i *impl) downloadResumePdf(ctx context.Context, spaceID, applicantID, resu
 	if err != nil {
 		return err
 	}
-	return i.filesStorage.UploadResume(ctx, spaceID, applicantID, body, "resume.pdf")
+	return i.filesStorage.Upload(ctx, spaceID, applicantID, body, "resume.pdf", dbmodels.ApplicantResume)
 }

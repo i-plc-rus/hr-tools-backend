@@ -23,4 +23,5 @@ type FileType string
 const (
 	ApplicantResume FileType = "applicant_resume"
 	ApplicantDoc    FileType = "applicant_doc"
+	ApplicantPhoto  FileType = "applicant_photo"
 )
