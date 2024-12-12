@@ -18,6 +18,8 @@ func InitAuthApiRouters(app *fiber.App) {
 	app.Route("auth", func(router fiber.Router) {
 		router.Post("login", controller.login)
 		router.Post("refresh-token", controller.refreshToken)
+		router.Post("recovery", controller.recovery)
+		router.Post("reset", controller.reset)
 		router.Use(middleware.AuthorizationRequired()).Get("me", controller.me)
 	})
 }
@@ -87,4 +89,54 @@ func (c *authApiController) refreshToken(ctx *fiber.Ctx) error {
 		return ctx.SendStatus(fiber.StatusUnauthorized)
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(resp))
+}
+
+// @Summary Восстановить пароль, запрос на отправку письма
+// @Tags Аутентификация пользователей
+// @Description Восстановить пароль, запрос на отправку письма
+// @Param	body				body		authapimodels.PasswordRecovery	true	"request body"
+// @Success 200 {object} apimodels.Response{data=authapimodels.PasswordRecovery}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/auth/recovery [post]
+func (c *authApiController) recovery(ctx *fiber.Ctx) error {
+	var payload authapimodels.PasswordRecovery
+	if err := c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	if err := payload.Validate(); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	err := spaceauthhandler.Instance.PasswordRecovery(payload.Email)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(payload))
+}
+
+// @Summary Восстановить пароль, запрос на сброс пароля по коду
+// @Tags Аутентификация пользователей
+// @Description Восстановить пароль, запрос на сброс пароля по коду
+// @Param	body				body		authapimodels.PasswordResetRequest	true	"request body"
+// @Success 200
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/auth/reset [post]
+func (c *authApiController) reset(ctx *fiber.Ctx) error {
+	var payload authapimodels.PasswordResetRequest
+	if err := c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	if err := payload.Validate(); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	err := spaceauthhandler.Instance.PasswordReset(payload.ResetCode, payload.NewPassword)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }

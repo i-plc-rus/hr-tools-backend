@@ -21,6 +21,8 @@ type SpaceUser struct {
 	TextSign        string          `gorm:"type:varchar(1000)"` // текст подписи
 	NewEmail        string          `gorm:"type:varchar(255)"`
 	IsEmailVerified bool
+	ResetCode       string `gorm:"type:varchar(36);index"`
+	ResetTime       time.Time
 }
 
 func (r SpaceUser) ToModel() spaceapimodels.SpaceUser {

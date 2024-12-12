@@ -28,6 +28,7 @@ type Configuration struct {
 		TLSEnabled            *bool  `default:"true" env:"SMTP_TLS_ENABLED"`
 		EmailSendVerification string `default:"" env:"EMAIL_SEND_VERIFICATION"`
 		DomainForVerifyLink   string `default:"http://localhost:8000" env:"DOMAIN_FOR_VERIFY_LINK"`
+		ResetUI               string `default:"https://s.hr-tools.pro/auth/password-recovery-reset" env:"PASSWORD_RESET_UI_LINK"`
 	}
 	DaData struct {
 		ApiKey  string `default:"" env:"DADATA_API_KEY"`
