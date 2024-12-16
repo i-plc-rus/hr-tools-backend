@@ -15,6 +15,7 @@ import (
 	negotiationapimodels "hr-tools-backend/models/api/negotiation"
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
+	"math"
 	"time"
 
 	"github.com/lib/pq"
@@ -40,6 +41,7 @@ type Provider interface {
 	ApplicantReject(spaceID string, id, userID string, data applicantapimodels.RejectRequest) error
 	ApplicantMultiReject(spaceID string, userID string, data applicantapimodels.MultiRejectRequest) error
 	ExportToXls(spaceID string, data applicantapimodels.XlsExportRequest) (*bytes.Buffer, error)
+	ListOfSource(spaceID string, filter applicantapimodels.ApplicantFilter) (data applicantapimodels.ApplicantSourceData, err error)
 }
 
 var Instance Provider
@@ -183,7 +185,7 @@ func (i impl) CreateApplicant(spaceID, userID string, data applicantapimodels.Ap
 		NegotiationID:         "",
 		ResumeID:              "",
 		ResumeTitle:           "",
-		Source:                models.ApplicantSourceManual,
+		Source:                data.Source,
 		NegotiationDate:       time.Time{},
 		NegotiationAcceptDate: time.Now(),
 		Status:                models.ApplicantStatusInProcess,
@@ -294,7 +296,7 @@ func (i impl) UpdateApplicant(spaceID string, id, userID string, data applicanta
 	updMap := map[string]interface{}{
 		"SpaceID":         spaceID,
 		"VacancyID":       data.VacancyID,
-		"Source":          models.ApplicantSourceManual,
+		"Source":          data.Source,
 		"Status":          models.ApplicantStatusInProcess,
 		"FirstName":       data.FirstName,
 		"LastName":        data.LastName,
@@ -512,6 +514,50 @@ func (i impl) ExportToXls(spaceID string, data applicantapimodels.XlsExportReque
 		return nil, err
 	}
 	return xlsexport.Instance.ExportApplicantList(list)
+}
+
+func (i impl) ListOfSource(spaceID string, filter applicantapimodels.ApplicantFilter) (data applicantapimodels.ApplicantSourceData, err error) {
+	logger := i.getLogger(spaceID, "", "")
+	recList, err := i.store.ListOfApplicantSource(spaceID, filter)
+	if err != nil {
+		logger.
+			WithError(err).
+			Error("ошибка получения аналитики по источникам кандидатов")
+		return applicantapimodels.ApplicantSourceData{}, errors.New("ошибка получения аналитики по источникам кандидатов")
+	}
+
+	result := applicantapimodels.ApplicantSourceData{
+		NegotiationSource: applicantapimodels.SourceData{Data: []applicantapimodels.SourceItem{}},
+		AddingSource:      applicantapimodels.SourceData{Data: []applicantapimodels.SourceItem{}},
+	}
+	for _, rec := range recList {
+		if rec.IsNegotiation {
+			result.NegotiationSource.Total += rec.Total
+
+			result.NegotiationSource.Data = append(result.NegotiationSource.Data,
+				applicantapimodels.SourceItem{
+					Name:  string(rec.Source),
+					Count: rec.Total,
+				})
+		} else {
+			result.AddingSource.Total += rec.Total
+			result.AddingSource.Data = append(result.AddingSource.Data,
+				applicantapimodels.SourceItem{
+					Name:  string(rec.Source),
+					Count: rec.Total,
+				})
+		}
+	}
+	result.NegotiationSource.Data = calcPercent(result.NegotiationSource.Data, result.NegotiationSource.Total)
+	result.AddingSource.Data = calcPercent(result.AddingSource.Data, result.AddingSource.Total)
+	result.TotalSource = applicantapimodels.SourceData{
+		Total: result.NegotiationSource.Total + result.AddingSource.Total,
+		Data: []applicantapimodels.SourceItem{
+			{Name: "Откликнулись", Count: result.NegotiationSource.Total},
+			{Name: "Добавлены", Count: result.AddingSource.Total},
+		}}
+	result.TotalSource.Data = calcPercent(result.TotalSource.Data, result.TotalSource.Total)
+	return result, nil
 }
 
 func (i impl) markAsDifferentApplicants(spaceID string, mainID, minorID, userID string, logger *log.Entry) error {
@@ -801,4 +847,21 @@ func (i impl) сhangeStage(tx *gorm.DB, spaceID, userID, userName string, applic
 	changes := applicanthistoryhandler.GetStageChange(stageRec.Name)
 	applicantHistory.SaveWithUser(spaceID, applicantID, applicantRec.VacancyID, userID, userName, dbmodels.HistoryTypeStageChange, changes)
 	return nil
+}
+
+func calcPercent(sourceData []applicantapimodels.SourceItem, sourceTotal int) []applicantapimodels.SourceItem {
+	totalPercent := 0
+	lastIdx := len(sourceData) - 1
+	for idx, data := range sourceData {
+		if idx == lastIdx {
+			sourceData[idx].Percent = 100 - totalPercent
+		} else {
+			sourceData[idx].Percent = int(math.Round(float64(data.Count) / float64(sourceTotal) * 100))
+			totalPercent += sourceData[idx].Percent
+		}
+	}
+	return sourceData
+}
+func percent(count int, all int) int {
+	return int(math.Round(float64(count) / float64(all) * 100))
 }
