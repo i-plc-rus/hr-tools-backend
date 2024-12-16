@@ -104,6 +104,8 @@ func (i impl) ListCount(spaceID, userID string, filter vacancyapimodels.VacancyF
 	var rowCount int64
 	tx := i.db.
 		Model(dbmodels.Vacancy{}).
+		Joins("left join favorites as f on vacancies.id = f.vacancy_id and f.space_user_id = ?", userID).
+		Joins("left join pinneds as p on vacancies.id = p.vacancy_id and p.space_user_id = ?", userID).
 		Where("space_id = ?", spaceID)
 	i.addFilter(tx, filter, userID)
 	err = tx.Count(&rowCount).Error
