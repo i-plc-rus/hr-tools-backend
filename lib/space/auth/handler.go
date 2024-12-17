@@ -10,6 +10,7 @@ import (
 	authutils "hr-tools-backend/lib/utils/auth-utils"
 	authapimodels "hr-tools-backend/models/api/auth"
 	spaceapimodels "hr-tools-backend/models/api/space"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -37,6 +38,8 @@ func NewHandler() {
 		emailVerify:     emailverify.NewInstance(config.Conf.Smtp.EmailSendVerification),
 		spaceUsersStore: spaceusersstore.NewInstance(db.DB),
 		systemEmail:     config.Conf.Smtp.EmailSendVerification,
+		recoveryTitle:   config.Conf.Recovery.MailTitle,
+		recoveryBody:    config.Conf.Recovery.MailBody,
 	}
 }
 
@@ -44,6 +47,8 @@ type impl struct {
 	emailVerify     emailverify.Provider
 	spaceUsersStore spaceusersstore.Provider
 	systemEmail     string
+	recoveryTitle   string
+	recoveryBody    string
 }
 
 func (i impl) RefreshToken(ctx *fiber.Ctx, refreshToken string) (response authapimodels.JWTResponse, err error) {
@@ -199,12 +204,9 @@ func (i impl) PasswordRecovery(email string) error {
 			Error("ошибка сохранения кода для восстановления")
 		return errors.New("произошла ошибка, попробуйте запросить восстановление пароля чуть позже")
 	}
-	message := "Здравствуйте,\r\n" +
-		"Вы запросили сброс пароля вашей учетной записи.\r\n" +
-		"Пожалуйста, нажмите кнопку ниже, чтобы создать новый пароль. Если вы не хотели сбрасывать свой пароль, просто проигнорируйте это письмо.\r\n" +
-		fmt.Sprintf("[ %s?reset_code=%s ]\r\n", config.Conf.Smtp.ResetUI, resetCode) +
-		"Обратите внимание, что эту ссылку можно использовать только один раз. Если вы отправили более 1 запроса на сброс пароля, используйте последнюю полученную вами ссылку."
-	err = smtp.Instance.SendEMail(i.systemEmail, email, message, "Восстановление пароля")
+	message := strings.Replace(i.recoveryBody, "[link]", fmt.Sprintf("[ %s?reset_code=%s ]", config.Conf.Smtp.ResetUI, resetCode), 1)
+	message = strings.Replace(message, "<br>", "\r\n", -1)
+	err = smtp.Instance.SendEMail(i.systemEmail, email, message, i.recoveryTitle)
 	if err != nil {
 		return err
 	}

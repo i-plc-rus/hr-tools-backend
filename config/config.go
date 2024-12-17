@@ -65,6 +65,10 @@ type Configuration struct {
 		UseSSL           *bool  `default:"false" env:"S3_USE_SSL"`
 		BucketNamePrefix string `default:"hr-tools" env:"S3_BUCKET_NAME_PREFIX"`
 	}
+	Recovery struct {
+		MailTitle string `default:"Восстановление пароля" env:"RECOVERY_MAIL_TITLE"`
+		MailBody  string `default:"Здравствуйте,<br>Вы запросили сброс пароля вашей учетной записи.<br>Пожалуйста, нажмите кнопку ниже, чтобы создать новый пароль. Если вы не хотели сбрасывать свой пароль, просто проигнорируйте это письмо.<br>[link]<br>Обратите внимание, что эту ссылку можно использовать только один раз. Если вы отправили более 1 запроса на сброс пароля, используйте последнюю полученную вами ссылку." env:"RECOVERY_MAIL_BODY"`
+	}
 }
 
 func configFiles() []string {
