@@ -14,6 +14,7 @@ type Provider interface {
 	ExistByEmail(email string) (bool, error)
 	FindByEmail(email string, checkNew bool) (rec *dbmodels.SpaceUser, err error)
 	GetByID(userID string) (rec *dbmodels.SpaceUser, err error)
+	GetByResetCode(code string) (rec *dbmodels.SpaceUser, err error)
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -110,6 +111,20 @@ func (i impl) ExistByEmail(email string) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+func (i impl) GetByResetCode(code string) (rec *dbmodels.SpaceUser, err error) {
+	err = i.db.Model(dbmodels.SpaceUser{}).
+		Where("reset_code = ?", code).
+		First(&rec).
+		Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return rec, nil
 }
 
 func (i impl) setPage(tx *gorm.DB, pageValue, limitValue int) {

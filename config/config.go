@@ -28,6 +28,7 @@ type Configuration struct {
 		TLSEnabled            *bool  `default:"true" env:"SMTP_TLS_ENABLED"`
 		EmailSendVerification string `default:"" env:"EMAIL_SEND_VERIFICATION"`
 		DomainForVerifyLink   string `default:"http://localhost:8000" env:"DOMAIN_FOR_VERIFY_LINK"`
+		ResetUI               string `default:"https://s.hr-tools.pro/auth/password-recovery-reset" env:"PASSWORD_RESET_UI_LINK"`
 	}
 	DaData struct {
 		ApiKey  string `default:"" env:"DADATA_API_KEY"`
@@ -63,6 +64,10 @@ type Configuration struct {
 		SecretAccessKey  string `default:"" env:"S3_SECRET_KEY"`
 		UseSSL           *bool  `default:"false" env:"S3_USE_SSL"`
 		BucketNamePrefix string `default:"hr-tools" env:"S3_BUCKET_NAME_PREFIX"`
+	}
+	Recovery struct {
+		MailTitle string `default:"Восстановление пароля" env:"RECOVERY_MAIL_TITLE"`
+		MailBody  string `default:"Здравствуйте,<br>Вы запросили сброс пароля вашей учетной записи.<br>Пожалуйста, нажмите кнопку ниже, чтобы создать новый пароль. Если вы не хотели сбрасывать свой пароль, просто проигнорируйте это письмо.<br>[link]<br>Обратите внимание, что эту ссылку можно использовать только один раз. Если вы отправили более 1 запроса на сброс пароля, используйте последнюю полученную вами ссылку." env:"RECOVERY_MAIL_BODY"`
 	}
 }
 
