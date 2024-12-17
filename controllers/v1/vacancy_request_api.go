@@ -61,7 +61,7 @@ func (c *vacancyReqApiController) create(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 	id, err := vacancyreqhandler.Instance.Create(spaceID, userID, payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка создания заявки")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(id))
 }
@@ -95,7 +95,7 @@ func (c *vacancyReqApiController) update(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	err = vacancyreqhandler.Instance.Update(spaceID, id, payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка обновления заявки")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -119,7 +119,7 @@ func (c *vacancyReqApiController) get(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	resp, err := vacancyreqhandler.Instance.GetByID(spaceID, id)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения заявки")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(resp))
 }
@@ -143,7 +143,7 @@ func (c *vacancyReqApiController) delete(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	err = vacancyreqhandler.Instance.Delete(spaceID, id)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка удаления заявки")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -170,7 +170,7 @@ func (c *vacancyReqApiController) pin(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 	err = vacancyreqhandler.Instance.ToPin(id, userID, isSet)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка закрепления заявки")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -196,7 +196,7 @@ func (c *vacancyReqApiController) favorite(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 	err = vacancyreqhandler.Instance.ToFavorite(id, userID, isSet)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка добавления заявки в избранное")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -223,7 +223,7 @@ func (c *vacancyReqApiController) list(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 	list, rowCount, err := vacancyreqhandler.Instance.List(spaceID, userID, payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения списка заявок")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewScrollerResponse(list, rowCount))
 }
@@ -257,7 +257,7 @@ func (c *vacancyReqApiController) saveStages(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	err = aprovalstageshandler.Instance.Save(spaceID, id, payload.ApprovalStages)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка обновления цепочки согласования")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -279,9 +279,12 @@ func (c *vacancyReqApiController) onCreate(ctx *fiber.Ctx) error {
 	}
 	spaceID := middleware.GetUserSpace(ctx)
 	userID := middleware.GetUserID(ctx)
-	err = vacancyreqhandler.Instance.ChangeStatus(spaceID, id, userID, models.VRStatusCreated)
+	hMsg, err := vacancyreqhandler.Instance.ChangeStatus(spaceID, id, userID, models.VRStatusCreated)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка перевода шаблока в заявку")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -303,9 +306,12 @@ func (c *vacancyReqApiController) onApproval(ctx *fiber.Ctx) error {
 	}
 	spaceID := middleware.GetUserSpace(ctx)
 	userID := middleware.GetUserID(ctx)
-	err = vacancyreqhandler.Instance.ChangeStatus(spaceID, id, userID, models.VRStatusUnderAccepted)
+	hMsg, err := vacancyreqhandler.Instance.ChangeStatus(spaceID, id, userID, models.VRStatusUnderAccepted)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка отравки заявки на согласование")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -338,9 +344,12 @@ func (c *vacancyReqApiController) approve(ctx *fiber.Ctx) error {
 
 	spaceID := middleware.GetUserSpace(ctx)
 	userID := middleware.GetUserID(ctx)
-	err = vacancyreqhandler.Instance.Approve(spaceID, id, userID, payload)
+	hMsg, err := vacancyreqhandler.Instance.Approve(spaceID, id, userID, payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка согласования заявки")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -373,9 +382,12 @@ func (c *vacancyReqApiController) reject(ctx *fiber.Ctx) error {
 
 	spaceID := middleware.GetUserSpace(ctx)
 	userID := middleware.GetUserID(ctx)
-	err = vacancyreqhandler.Instance.Reject(spaceID, id, userID, payload)
+	hMsg, err := vacancyreqhandler.Instance.Reject(spaceID, id, userID, payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка отклонения заявки")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -397,9 +409,12 @@ func (c *vacancyReqApiController) toRevision(ctx *fiber.Ctx) error {
 	}
 	spaceID := middleware.GetUserSpace(ctx)
 	userID := middleware.GetUserID(ctx)
-	err = vacancyreqhandler.Instance.ChangeStatus(spaceID, id, userID, models.VRStatusUnderRevision)
+	hMsg, err := vacancyreqhandler.Instance.ChangeStatus(spaceID, id, userID, models.VRStatusUnderRevision)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка перевода заявки в доработку")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -421,9 +436,12 @@ func (c *vacancyReqApiController) cancel(ctx *fiber.Ctx) error {
 	}
 	spaceID := middleware.GetUserSpace(ctx)
 	userID := middleware.GetUserID(ctx)
-	err = vacancyreqhandler.Instance.ChangeStatus(spaceID, id, userID, models.VRStatusCanceled)
+	hMsg, err := vacancyreqhandler.Instance.ChangeStatus(spaceID, id, userID, models.VRStatusCanceled)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка отмены заявки")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -447,7 +465,7 @@ func (c *vacancyReqApiController) publish(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 	err = vacancyreqhandler.Instance.CreateVacancy(spaceID, id, userID)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка создания вакансии")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }

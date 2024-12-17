@@ -38,7 +38,7 @@ type Provider interface {
 	ToFavorite(id, userID string, isSet bool) error
 	StageList(spaceID, id string) (list []vacancyapimodels.SelectionStageView, err error)
 	StageCreate(spaceID, id string, data vacancyapimodels.SelectionStageAdd) error
-	StageDelete(spaceID, id, stageID string) error
+	StageDelete(spaceID, id, stageID string) (hMsh string, err error)
 	StageChangeOrder(spaceID, id, stageID string, newOrder int) error
 	StatusChange(spaceID, id, userID string, status models.VacancyStatus) error
 }
@@ -161,16 +161,11 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyData) 
 		store := vacancystore.NewInstance(tx)
 		recID, err = store.Create(rec)
 		if err != nil {
-			logger.
-				WithField("request", fmt.Sprintf("%+v", data)).
-				WithError(err).
-				Error("ошибка создания вакансии")
-			return errors.New("ошибка создания вакансии")
+			return err
 		}
 		err = i.initSelectionStages(tx, spaceID, recID)
 		if err != nil {
-			logger.WithError(err).Error("ошибка инициализации этапов подбора")
-			return errors.New("ошибка инициализации этапов подбора")
+			return errors.Wrap(err, "ошибка инициализации этапов подбора")
 		}
 		return nil
 	})
@@ -184,13 +179,9 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyData) 
 }
 
 func (i impl) GetByID(spaceID, id string) (item vacancyapimodels.VacancyView, err error) {
-	logger := i.getLogger(spaceID, id, "")
 	rec, err := i.store.GetByID(spaceID, id)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения вакансии")
-		return vacancyapimodels.VacancyView{}, errors.New("ошибка получения вакансии")
+		return vacancyapimodels.VacancyView{}, err
 	}
 	if rec == nil {
 		return vacancyapimodels.VacancyView{}, errors.New("вакансия не найдена")
@@ -234,10 +225,6 @@ func (i impl) Update(spaceID, id string, data vacancyapimodels.VacancyData) erro
 	}
 	err = i.store.Update(spaceID, id, updMap)
 	if err != nil {
-		logger.
-			WithField("request", fmt.Sprintf("%+v", data)).
-			WithError(err).
-			Error("ошибка обновления вакансии")
 		return err
 	}
 	logger.Info("обновлена вакансия")
@@ -248,9 +235,6 @@ func (i impl) Delete(spaceID, id string) error {
 	logger := i.getLogger(spaceID, id, "")
 	err := i.store.Delete(spaceID, id)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка удаления вакансии")
 		return err
 	}
 	logger.Info("удалена вакансия")
@@ -272,9 +256,6 @@ func (i impl) List(spaceID, userID string, filter vacancyapimodels.VacancyFilter
 
 	recList, err := i.store.List(spaceID, userID, filter)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения списка заявок")
 		return nil, 0, err
 	}
 	if len(recList) == 0 {
@@ -333,13 +314,9 @@ func (i impl) ToFavorite(id, userID string, isSet bool) error {
 }
 
 func (i impl) StageList(spaceID, id string) (list []vacancyapimodels.SelectionStageView, err error) {
-	logger := i.getLogger(spaceID, id, "")
 	recList, err := i.selectionStageStore.List(spaceID, id)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения списка этапов подбора")
-		return nil, errors.New("ошибка получения списка этапов подбора")
+		return nil, err
 	}
 	result := make([]vacancyapimodels.SelectionStageView, 0, len(list))
 	for _, rec := range recList {
@@ -349,7 +326,6 @@ func (i impl) StageList(spaceID, id string) (list []vacancyapimodels.SelectionSt
 }
 
 func (i impl) StageCreate(spaceID, id string, data vacancyapimodels.SelectionStageAdd) error {
-	logger := i.getLogger(spaceID, id, "")
 	rec := dbmodels.SelectionStage{
 		BaseSpaceModel: dbmodels.BaseSpaceModel{
 			SpaceID: spaceID,
@@ -363,32 +339,24 @@ func (i impl) StageCreate(spaceID, id string, data vacancyapimodels.SelectionSta
 	}
 	id, err := i.selectionStageStore.Create(rec)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка добавления этапа подбора")
-		return errors.New("ошибка добавления этапа подбора")
+		return err
 	}
 	return nil
 }
 
-func (i impl) StageDelete(spaceID, id, stageID string) error {
-	logger := i.getLogger(spaceID, id, "").
-		WithField("stage_id", stageID)
+func (i impl) StageDelete(spaceID, id, stageID string) (hMsh string, err error) {
 	rec, err := i.selectionStageStore.GetByID(spaceID, id, stageID)
 	if err != nil || rec == nil {
-		return err
+		return "", err
 	}
 	if !rec.CanDelete {
-		return errors.New("этап нельзя удалить")
+		return "этап нельзя удалить", nil
 	}
 	err = i.selectionStageStore.Delete(spaceID, id, stageID)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка удаления этапа подбора")
-		return errors.New("ошибка удаления этапа подбора")
+		return "", err
 	}
-	return nil
+	return "", nil
 }
 
 func (i impl) StageChangeOrder(spaceID, id, stageID string, newOrder int) error {
@@ -398,10 +366,7 @@ func (i impl) StageChangeOrder(spaceID, id, stageID string, newOrder int) error 
 		selectionStageStore := selectionstagestore.NewInstance(tx)
 		list, err := selectionStageStore.List(spaceID, id)
 		if err != nil {
-			logger.
-				WithError(err).
-				Error("ошибка получения списка этапов подбора")
-			return errors.New("ошибка получения списка этапов подбора")
+			return errors.Wrap(err, "ошибка получения списка этапов подбора")
 		}
 
 		var changed *dbmodels.SelectionStage
@@ -450,10 +415,7 @@ func (i impl) StageChangeOrder(spaceID, id, stageID string, newOrder int) error 
 		return nil
 	})
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка изменения порядка в списке этапов подбора")
-		return errors.New("ошибка изменения порядка в списке этапов подбора")
+		return err
 	}
 	logger.Info("изменен порядок списка этапов подбора")
 	return nil
@@ -464,10 +426,7 @@ func (i impl) StatusChange(spaceID, vacancyID, userID string, status models.Vaca
 		WithField("status", status)
 	rec, err := i.store.GetByID(spaceID, vacancyID)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения вакансии")
-		return errors.New("ошибка получения вакансии")
+		return errors.Wrap(err, "ошибка получения вакансии")
 	}
 	if rec == nil {
 		return errors.New("вакансия не найдена")
@@ -484,10 +443,7 @@ func (i impl) StatusChange(spaceID, vacancyID, userID string, status models.Vaca
 		store := vacancystore.NewInstance(tx)
 		err = store.Update(spaceID, vacancyID, updMap)
 		if err != nil {
-			logger.
-				WithError(err).
-				Error("ошибка обновления статуса вакансии")
-			return errors.New("ошибка обновления статуса вакансии")
+			return errors.Wrap(err, "ошибка обновления статуса вакансии")
 		}
 		if !status.IsClosed() {
 			return nil
@@ -503,10 +459,7 @@ func (i impl) StatusChange(spaceID, vacancyID, userID string, status models.Vaca
 		}
 		list, err := applicantStore.ListOfApplicant(spaceID, filter)
 		if err != nil {
-			logger.
-				WithError(err).
-				Error("ошибка получения списка кандидатов по вакансии")
-			return errors.New("ошибка получения списка кандидатов по вакансии")
+			return errors.Wrap(err, "ошибка получения списка кандидатов по вакансии")
 		}
 		reason := fmt.Sprintf("Вакансия %v", status)
 		applicantHistory := applicanthistoryhandler.NewTxHandler(tx)
@@ -520,11 +473,7 @@ func (i impl) StatusChange(spaceID, vacancyID, userID string, status models.Vaca
 			}
 			err = applicantStore.Update(applicantRec.ID, updMap)
 			if err != nil {
-				logger.
-					WithField("applicant_id", applicantRec.ID).
-					WithError(err).
-					Error("ошибка перевода кандидата в архив")
-				return errors.New("ошибка перевода кандидата в архив")
+				return errors.Wrapf(err, "ошибка перевода кандидата (%v) в архив", applicantRec.ID)
 			}
 			//добавление в историю по кандидату
 			changes := applicanthistoryhandler.GetArchiveChange(reason)
