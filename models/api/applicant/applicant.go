@@ -141,6 +141,7 @@ func ApplicantConvert(rec dbmodels.Applicant) ApplicantView {
 		result.VacancyName = rec.Vacancy.VacancyName
 	}
 	result.FIO = rec.GetFIO()
+	result.FIO = rec.GetFIO()
 	return result
 }
 

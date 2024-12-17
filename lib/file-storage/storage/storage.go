@@ -8,6 +8,7 @@ import (
 
 type Provider interface {
 	SaveFile(rec dbmodels.FileStorage) (id string, err error)
+	DeleteFile(id, spaceID string) (ok bool, err error)
 	GetFileIDByType(applicantID string, fileType dbmodels.FileType) (id string, err error)
 	GetFileListByType(applicantID string, fileType dbmodels.FileType) (list []dbmodels.FileStorage, err error)
 }
@@ -54,4 +55,22 @@ func (i impl) SaveFile(rec dbmodels.FileStorage) (id string, err error) {
 		return "", err
 	}
 	return rec.ID, nil
+}
+
+func (i impl) DeleteFile(id, spaceID string) (ok bool, err error) {
+	rec := dbmodels.FileStorage{
+		BaseSpaceModel: dbmodels.BaseSpaceModel{
+			BaseModel: dbmodels.BaseModel{ID: id},
+			SpaceID:   spaceID,
+		},
+	}
+	tx := i.db.Delete(&rec)
+
+	err = tx.Error
+	ok = tx.RowsAffected > 0
+
+	if err != nil {
+		return ok, err
+	}
+	return ok, nil
 }

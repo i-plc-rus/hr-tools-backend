@@ -11,6 +11,7 @@ import (
 	"hr-tools-backend/middleware"
 	apimodels "hr-tools-backend/models/api"
 	applicantapimodels "hr-tools-backend/models/api/applicant"
+	dbmodels "hr-tools-backend/models/db"
 	"io"
 	"time"
 
@@ -25,7 +26,8 @@ type applicantApiController struct {
 func InitApplicantApiRouters(app *fiber.App) {
 	controller := applicantApiController{}
 	app.Route("applicant", func(router fiber.Router) {
-		router.Get("doc/:id", controller.GetDoc) // скачать документ по id
+		router.Get("doc/:id", controller.GetDoc)       // скачать документ по id
+		router.Delete("doc/:id", controller.deleteDoc) // удлить документ по id
 		router.Post("list", controller.list)
 		router.Post("reject_list", controller.rejectList)
 		router.Post("", controller.create)
@@ -38,8 +40,12 @@ func InitApplicantApiRouters(app *fiber.App) {
 		router.Route(":id", func(idRouter fiber.Router) {
 			idRouter.Post("upload-resume", controller.UploadResume) // загрузить резюме кандидата
 			idRouter.Post("upload-doc", controller.UploadDoc)       // загрузить документ кандидата
-			idRouter.Get("doc/list", controller.GetDocList)         // получить список документов кандидата
-			idRouter.Get("resume", controller.GetResume)            // скачать резюме кандидата
+			idRouter.Post("upload-photo", controller.uploadPhoto)   // загрузить фото кандидата
+			idRouter.Delete("photo", controller.deletePhoto)
+			idRouter.Delete("resume", controller.deleteResume)
+			idRouter.Get("doc/list", controller.GetDocList) // получить список документов кандидата
+			idRouter.Get("resume", controller.GetResume)    // скачать резюме кандидата
+			idRouter.Get("photo", controller.getPhoto)      // скачать фото кандидата
 			idRouter.Get("", controller.get)
 			idRouter.Put("", controller.update)
 			idRouter.Put("tag", controller.addTag)
@@ -71,7 +77,7 @@ func (c *applicantApiController) UploadResume(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 
-	file, err := ctx.FormFile("profile_photo")
+	file, err := ctx.FormFile("resume")
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
@@ -88,7 +94,7 @@ func (c *applicantApiController) UploadResume(ctx *fiber.Ctx) error {
 	}
 
 	spaceID := middleware.GetUserSpace(ctx)
-	err = filestorage.Instance.UploadResume(ctx.UserContext(), spaceID, applicantID, fileBody, file.Filename)
+	err = filestorage.Instance.Upload(ctx.UserContext(), spaceID, applicantID, fileBody, file.Filename, dbmodels.ApplicantResume)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
@@ -99,8 +105,8 @@ func (c *applicantApiController) UploadResume(ctx *fiber.Ctx) error {
 // @Tags Кандидат
 // @Description Загрузить документ кандидата
 // @Param   Authorization		header		string	true	"Authorization token"
-// @Param   id          		path    string  				    	true         "ID кандидата"
-// @Param   resume		formData	file 	true 	"file to upload"
+// @Param   id          		path    	string  true    "ID кандидата"
+// @Param   document			formData	file 	true 	"file to upload"
 // @Success 200
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
@@ -112,7 +118,7 @@ func (c *applicantApiController) UploadDoc(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 
-	file, err := ctx.FormFile("profile_photo")
+	file, err := ctx.FormFile("document")
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
@@ -129,10 +135,101 @@ func (c *applicantApiController) UploadDoc(ctx *fiber.Ctx) error {
 	}
 
 	spaceID := middleware.GetUserSpace(ctx)
-	err = filestorage.Instance.UploadDoc(ctx.UserContext(), spaceID, applicantID, fileBody, file.Filename)
+	err = filestorage.Instance.Upload(ctx.UserContext(), spaceID, applicantID, fileBody, file.Filename, dbmodels.ApplicantDoc)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Загрузить фото кандидата
+// @Tags Кандидат
+// @Description Загрузить фото кандидата
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    	string  true    "ID кандидата"
+// @Param   photo				formData	file 	true 	"Фото кандидата"
+// @Success 200
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/{id}/upload-photo [post]
+func (c *applicantApiController) uploadPhoto(ctx *fiber.Ctx) error {
+	applicantID, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	file, err := ctx.FormFile("photo")
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	buffer, err := file.Open()
+	if err != nil {
+		log.WithError(err).Error("Ошибка при получении файла с фото кандидата")
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	defer buffer.Close()
+	fileBody, err := io.ReadAll(buffer)
+	if err != nil {
+		log.WithError(err).Error("Ошибка при загрузке файла с фото кандидата")
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	err = filestorage.Instance.Upload(ctx.UserContext(), spaceID, applicantID, fileBody, file.Filename, dbmodels.ApplicantPhoto)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Удалить фото кандидата
+// @Tags Кандидат
+// @Description Удалить фото кандидата
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    	string  true    "ID кандидата"
+// @Success 200
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/{id}/photo [delete]
+func (c *applicantApiController) deletePhoto(ctx *fiber.Ctx) error {
+	applicantID, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	err = filestorage.Instance.DeleteFileByType(ctx.UserContext(), spaceID, applicantID, dbmodels.ApplicantPhoto)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Удалить резюме кандидата
+// @Tags Кандидат
+// @Description Удалить резюме кандидата
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    	string  true    "ID кандидата"
+// @Success 200
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/{id}/resume [delete]
+func (c *applicantApiController) deleteResume(ctx *fiber.Ctx) error {
+	applicantID, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	err = filestorage.Instance.DeleteFileByType(ctx.UserContext(), spaceID, applicantID, dbmodels.ApplicantResume)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
 
@@ -161,6 +258,31 @@ func (c *applicantApiController) GetDoc(ctx *fiber.Ctx) error {
 	return ctx.Send(body)
 }
 
+// @Summary Удалить документ кандидата
+// @Tags Кандидат
+// @Description Удалить документ кандидата
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    	string  true    "ID документа"
+// @Success 200
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/doc/{id} [delete]
+func (c *applicantApiController) deleteDoc(ctx *fiber.Ctx) error {
+	docID, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	err = filestorage.Instance.DeleteFile(ctx.UserContext(), spaceID, docID)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
 // @Summary Скачать резюме кандидата
 // @Tags Кандидат
 // @Description Скачать резюме кандидата
@@ -178,7 +300,32 @@ func (c *applicantApiController) GetResume(ctx *fiber.Ctx) error {
 	}
 
 	spaceID := middleware.GetUserSpace(ctx)
-	body, err := filestorage.Instance.GetResume(ctx.UserContext(), spaceID, applicantID)
+	body, err := filestorage.Instance.GetFileByType(ctx.UserContext(), spaceID, applicantID, dbmodels.ApplicantResume)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+
+	return ctx.Send(body)
+}
+
+// @Summary Скачать фото кандидата
+// @Tags Кандидат
+// @Description Скачать фото кандидата
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    string  				    	true         "ID кандидата"
+// @Success 200
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/{id}/photo [get]
+func (c *applicantApiController) getPhoto(ctx *fiber.Ctx) error {
+	applicantID, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	body, err := filestorage.Instance.GetFileByType(ctx.UserContext(), spaceID, applicantID, dbmodels.ApplicantPhoto)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
