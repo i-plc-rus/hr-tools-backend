@@ -1,16 +1,19 @@
 package apiv1
 
 import (
+	"fmt"
 	"hr-tools-backend/controllers"
 	"hr-tools-backend/lib/applicant"
 	applicanthistoryhandler "hr-tools-backend/lib/applicant-history"
 	applicantdict "hr-tools-backend/lib/dicts/applicant"
 	filestorage "hr-tools-backend/lib/file-storage"
+	messagetemplate "hr-tools-backend/lib/message-template"
 	"hr-tools-backend/middleware"
 	apimodels "hr-tools-backend/models/api"
 	applicantapimodels "hr-tools-backend/models/api/applicant"
 	dbmodels "hr-tools-backend/models/db"
 	"io"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	log "github.com/sirupsen/logrus"
@@ -28,6 +31,12 @@ func InitApplicantApiRouters(app *fiber.App) {
 		router.Post("list", controller.list)
 		router.Post("reject_list", controller.rejectList)
 		router.Post("", controller.create)
+		router.Route("multi-actions", func(mRouter fiber.Router) {
+			mRouter.Put("reject", controller.multiReject)
+			mRouter.Put("change_stage", controller.multiChangeStage)
+			mRouter.Put("export_xls", controller.multiExportXls)
+			mRouter.Put("send_email", controller.multiSendMail)
+		})
 		router.Route(":id", func(idRouter fiber.Router) {
 			idRouter.Post("upload-resume", controller.UploadResume) // загрузить резюме кандидата
 			idRouter.Post("upload-doc", controller.UploadDoc)       // загрузить документ кандидата
@@ -714,4 +723,118 @@ func (c *applicantApiController) reject(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Отклонить кандидатов
+// @Tags Кандидат
+// @Description Отклонить кандидатов
+// @Param   Authorization	 header		string	true	"Authorization token"
+// @Param	body body	 applicantapimodels.MultiRejectRequest	true	"request body"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/multi-actions/reject [put]
+func (c *applicantApiController) multiReject(ctx *fiber.Ctx) error {
+	var payload applicantapimodels.MultiRejectRequest
+	if err := c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	if err := payload.Validate(); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	userID := middleware.GetUserID(ctx)
+	spaceID := middleware.GetUserSpace(ctx)
+	err := applicant.Instance.ApplicantMultiReject(spaceID, userID, payload)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Перевести на другой этап подбора
+// @Tags Кандидат
+// @Description Перевести на другой этап подбора
+// @Param   Authorization		header	string	true	"Authorization token"
+// @Param	body body	 applicantapimodels.MultiChangeStageRequest	true	"request body"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/multi-actions/change_stage [put]
+func (c *applicantApiController) multiChangeStage(ctx *fiber.Ctx) error {
+	var payload applicantapimodels.MultiChangeStageRequest
+	if err := c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	if err := payload.Validate(); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	userID := middleware.GetUserID(ctx)
+	err := applicant.Instance.MultiChangeStage(spaceID, userID, payload)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Отправить письма кандидатам
+// @Tags Кандидат
+// @Description Отправить письма кандидатам
+// @Param   Authorization		header	string	true	"Authorization token"
+// @Param	body body	 applicantapimodels.MultiChangeStageRequest	true	"request body"
+// @Success 200 {object} apimodels.Response{data=applicantapimodels.MultiEmailResponse}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/multi-actions/send_email [put]
+func (c *applicantApiController) multiSendMail(ctx *fiber.Ctx) error {
+	var payload applicantapimodels.MultiEmailRequest
+	if err := c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	if err := payload.Validate(); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	userID := middleware.GetUserID(ctx)
+	failMails, err := messagetemplate.Instance.MultiSendEmail(spaceID, userID, payload)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(failMails))
+}
+
+// @Summary Выгрузить в Excel
+// @Tags Кандидат
+// @Description Выгрузить в Excel
+// @Param   Authorization		header	string	true	"Authorization token"
+// @Param	body body	 applicantapimodels.XlsExportRequest	true	"request body"
+// @Success 200
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/multi-actions/export_xls [put]
+func (c *applicantApiController) multiExportXls(ctx *fiber.Ctx) error {
+	var payload applicantapimodels.XlsExportRequest
+	if err := c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	data, err := applicant.Instance.ExportToXls(spaceID, payload)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+	}
+	fileName := fmt.Sprintf("applicants-%v.xlsx", time.Now().Format("20060102-150405"))
+	ctx.Set("Content-Type", "application/vnd.ms-excel")
+	ctx.Set(fiber.HeaderContentDisposition, `attachment; filename="`+fileName+`"`)
+	return ctx.SendStream(data)
 }

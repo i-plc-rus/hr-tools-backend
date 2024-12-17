@@ -36,9 +36,12 @@ type impl struct {
 }
 
 func (i impl) SendEMail(from, to, message, subject string) (err error) {
-	logger := log.WithField("sender", from)
+	logger := log.
+		WithField("sender", from).
+		WithField("to", to).
+		WithField("subject", subject)
 	if i.user == "" || i.host == "" || i.port == "" {
-		logger.Warn("Письмо для подтверждения почты не отправлено, тк не настроен smtp клиент")
+		logger.Warn("Письмо не отправлено, тк не настроен smtp клиент")
 		return nil
 	}
 	// Receiver email address.

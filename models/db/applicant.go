@@ -3,9 +3,11 @@ package dbmodels
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"hr-tools-backend/models"
+	"strings"
 	"time"
 )
 
@@ -46,6 +48,11 @@ type Applicant struct {
 	StartDate             time.Time                `comment:"Дата выхода"`
 	RejectReason          string                   `gorm:"type:varchar(255)" comment:"Причина отказа"`
 	RejectInitiator       models.RejectInitiator   `gorm:"type:varchar(255)" comment:"Инициатор отказа"`
+}
+
+type ApplicantWithJob struct {
+	Applicant
+	JobTitleName string
 }
 
 func (j ApplicantParams) Value() (driver.Value, error) {
@@ -163,4 +170,9 @@ func (a Applicant) IsMarkAsNotDuplicate(source Applicant) bool {
 		}
 	}
 	return false
+}
+
+func (a Applicant) GetFIO() string {
+	fio := strings.TrimSpace(fmt.Sprintf("%v %v", a.LastName, a.FirstName))
+	return strings.TrimSpace(fmt.Sprintf("%v %v", fio, a.MiddleName))
 }

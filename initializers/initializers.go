@@ -14,6 +14,7 @@ import (
 	companystructprovider "hr-tools-backend/lib/dicts/company-struct"
 	departmentprovider "hr-tools-backend/lib/dicts/department"
 	jobtitleprovider "hr-tools-backend/lib/dicts/job-title"
+	xlsexport "hr-tools-backend/lib/export/xls"
 	avitohandler "hr-tools-backend/lib/external-services/avito"
 	avitoclient "hr-tools-backend/lib/external-services/avito/client"
 	hhhandler "hr-tools-backend/lib/external-services/hh"
@@ -64,4 +65,5 @@ func InitAllServices(ctx context.Context) {
 	externalserviceworker.StartWorker(ctx)
 	negotiationworker.StartWorker(ctx)
 	messagetemplate.NewHandler()
+	xlsexport.NewHandler()
 }
