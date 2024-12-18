@@ -9,9 +9,9 @@ import (
 	citystore "hr-tools-backend/lib/dicts/city/store"
 	companyprovider "hr-tools-backend/lib/dicts/company"
 	companystructprovider "hr-tools-backend/lib/dicts/company-struct"
+	companystore "hr-tools-backend/lib/dicts/company/store"
 	departmentprovider "hr-tools-backend/lib/dicts/department"
 	jobtitleprovider "hr-tools-backend/lib/dicts/job-title"
-
 	avitohandler "hr-tools-backend/lib/external-services/avito"
 	hhhandler "hr-tools-backend/lib/external-services/hh"
 	selectionstagestore "hr-tools-backend/lib/vacancy/selection-stage-store"
@@ -158,6 +158,13 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyData) 
 		if data.CompanyStructID != "" {
 			rec.CompanyStructID = &data.CompanyStructID
 		}
+		if rec.CompanyID == nil && data.CompanyName != "" {
+			companyID, err := createCompany(tx, spaceID, data.CompanyName)
+			if err != nil {
+				return errors.Wrap(err, "ошибка создания компании")
+			}
+			rec.CompanyID = &companyID
+		}
 		store := vacancystore.NewInstance(tx)
 		recID, err = store.Create(rec)
 		if err != nil {
@@ -209,35 +216,46 @@ func (i impl) Update(spaceID, id string, data vacancyapimodels.VacancyData) erro
 	if err != nil {
 		return err
 	}
-	updMap := map[string]interface{}{
-		"SpaceID":         spaceID,
-		"CompanyID":       data.CompanyID,
-		"DepartmentID":    data.DepartmentID,
-		"JobTitleID":      data.JobTitleID,
-		"CityID":          data.CityID,
-		"CompanyStructID": data.CompanyStructID,
-		"VacancyName":     data.VacancyName,
-		"OpenedPositions": data.OpenedPositions,
-		"Urgency":         data.Urgency,
-		"RequestType":     data.RequestType,
-		"SelectionType":   data.SelectionType,
-		"PlaceOfWork":     data.PlaceOfWork,
-		"ChiefFio":        data.ChiefFio,
-		"Requirements":    data.Requirements,
-		"salary_from":     data.Salary.From,
-		"salary_to":       data.Salary.To,
-		"salary_result":   data.Salary.ByResult,
-		"salary_in_hand":  data.Salary.InHand,
-		"Employment":      data.Employment,
-		"Experience":      data.Experience,
-		"Schedule":        data.Schedule,
-	}
-	err = i.store.Update(spaceID, id, updMap)
+	err = db.DB.Transaction(func(tx *gorm.DB) error {
+		if data.CompanyID == "" && data.CompanyName != "" {
+			companyID, err := createCompany(tx, spaceID, data.CompanyName)
+			if err != nil {
+				return errors.Wrap(err, "ошибка создания компании")
+			}
+			data.CompanyID = companyID
+		}
+
+		updMap := map[string]interface{}{
+			"SpaceID":         spaceID,
+			"CompanyID":       data.CompanyID,
+			"DepartmentID":    data.DepartmentID,
+			"JobTitleID":      data.JobTitleID,
+			"CityID":          data.CityID,
+			"CompanyStructID": data.CompanyStructID,
+			"VacancyName":     data.VacancyName,
+			"OpenedPositions": data.OpenedPositions,
+			"Urgency":         data.Urgency,
+			"RequestType":     data.RequestType,
+			"SelectionType":   data.SelectionType,
+			"PlaceOfWork":     data.PlaceOfWork,
+			"ChiefFio":        data.ChiefFio,
+			"Requirements":    data.Requirements,
+			"salary_from":     data.Salary.From,
+			"salary_to":       data.Salary.To,
+			"salary_result":   data.Salary.ByResult,
+			"salary_in_hand":  data.Salary.InHand,
+			"Employment":      data.Employment,
+			"Experience":      data.Experience,
+			"Schedule":        data.Schedule,
+		}
+		store := vacancystore.NewInstance(tx)
+		err = store.Update(spaceID, id, updMap)
+		if err != nil {
+			return errors.Wrap(err, "ошибка обновления вакансии")
+		}
+		return nil
+	})
 	if err != nil {
-		logger.
-			WithField("request", fmt.Sprintf("%+v", data)).
-			WithError(err).
-			Error("ошибка обновления вакансии")
 		return err
 	}
 	logger.Info("обновлена вакансия")
@@ -604,4 +622,9 @@ func (i impl) cancelJobSite(rec dbmodels.Vacancy, logger log.Entry) error {
 		return errors.Errorf("%v", errorList)
 	}
 	return nil
+}
+
+func createCompany(tx *gorm.DB, spaceID, name string) (string, error) {
+	companyStore := companystore.NewInstance(tx)
+	return companyStore.FindOrCreate(spaceID, name)
 }

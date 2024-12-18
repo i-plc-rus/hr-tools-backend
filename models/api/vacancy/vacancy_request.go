@@ -10,6 +10,7 @@ import (
 
 type VacancyRequestData struct {
 	CompanyID       string                 `json:"company_id"`        // ид компании
+	CompanyName     string                 `json:"company_name"`      // название компании
 	DepartmentID    string                 `json:"department_id"`     // ид подразделения
 	JobTitleID      string                 `json:"job_title_id"`      // ид штатной должности
 	CityID          string                 `json:"city_id"`           // ид города
@@ -78,7 +79,6 @@ type VacancyRequestView struct {
 	ID                   string              `json:"id"`
 	CreationDate         time.Time           `json:"creation_date"`
 	Status               models.VRStatus     `json:"status"`
-	CompanyName          string              `json:"company_name"`
 	DepartmentName       string              `json:"department_name"`
 	JobTitleName         string              `json:"job_title_name"`
 	City                 string              `json:"city"`
