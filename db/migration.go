@@ -95,6 +95,10 @@ func AutoMigrateDB() error {
 		return errors.Wrap(err, "ошибка создания структуры ApplicantHistory")
 	}
 
+	if err := DB.AutoMigrate(&dbmodels.VacancyTeam{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры VacancyTeam")
+	}
+
 	log.Info("Миграция прошла успешно")
 	return nil
 }

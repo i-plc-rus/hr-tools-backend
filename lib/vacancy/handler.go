@@ -11,11 +11,12 @@ import (
 	companystructprovider "hr-tools-backend/lib/dicts/company-struct"
 	departmentprovider "hr-tools-backend/lib/dicts/department"
 	jobtitleprovider "hr-tools-backend/lib/dicts/job-title"
-
 	avitohandler "hr-tools-backend/lib/external-services/avito"
 	hhhandler "hr-tools-backend/lib/external-services/hh"
+	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	selectionstagestore "hr-tools-backend/lib/vacancy/selection-stage-store"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
+	teamstore "hr-tools-backend/lib/vacancy/team-store"
 	"hr-tools-backend/models"
 	apimodels "hr-tools-backend/models/api"
 	applicantapimodels "hr-tools-backend/models/api/applicant"
@@ -41,6 +42,11 @@ type Provider interface {
 	StageDelete(spaceID, id, stageID string) (hMsh string, err error)
 	StageChangeOrder(spaceID, id, stageID string, newOrder int) error
 	StatusChange(spaceID, id, userID string, status models.VacancyStatus) error
+	GetTeam(spaceID, vacancyID string) (result []vacancyapimodels.TeamPerson, err error)
+	InviteToTeam(tx *gorm.DB, spaceID, vacancyID, userID string, responsible bool) (id string, err error)
+	UsersList(spaceID, vacancyID string, filter vacancyapimodels.PersonFilter) (result []vacancyapimodels.Person, err error)
+	ExecuteFromTeam(spaceID, vacancyID, userID string) (hMsg string, err error)
+	SetAsResponsible(spaceID, vacancyID, userID string) error
 }
 
 var Instance Provider
@@ -56,6 +62,8 @@ func NewHandler() {
 		companyStructProvider: companystructprovider.Instance,
 		applicantHistory:      applicanthistoryhandler.Instance,
 		applicantStore:        applicantstore.NewInstance(db.DB),
+		teamStore:             teamstore.NewInstance(db.DB),
+		spaceUserStore:        spaceusersstore.NewInstance(db.DB),
 	}
 }
 
@@ -69,6 +77,8 @@ type impl struct {
 	companyStructProvider companystructprovider.Provider
 	applicantHistory      applicanthistoryhandler.Provider
 	applicantStore        applicantstore.Provider
+	teamStore             teamstore.Provider
+	spaceUserStore        spaceusersstore.Provider
 }
 
 func (i impl) checkDependency(spaceID string, data vacancyapimodels.VacancyData) (err error) {
@@ -167,6 +177,11 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyData) 
 		if err != nil {
 			return errors.Wrap(err, "ошибка инициализации этапов подбора")
 		}
+		_, err = i.InviteToTeam(tx, spaceID, recID, userID, true)
+		if err != nil {
+			return errors.Wrap(err, "Ошибка приглашения участника в команду")
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -493,6 +508,93 @@ func (i impl) StatusChange(spaceID, vacancyID, userID string, status models.Vaca
 
 	logger.Info("обновлен статус вакансии")
 	return nil
+}
+
+func (i impl) GetTeam(spaceID, vacancyID string) (result []vacancyapimodels.TeamPerson, err error) {
+	recList, err := i.teamStore.List(spaceID, vacancyID)
+	if err != nil {
+		return nil, err
+	}
+	result = make([]vacancyapimodels.TeamPerson, 0, len(recList))
+
+	for _, rec := range recList {
+		result = append(result, vacancyapimodels.TeamPersonConvert(rec))
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].FullName < result[j].FullName
+	})
+	return result, nil
+}
+
+func (i impl) InviteToTeam(tx *gorm.DB, spaceID, vacancyID, userID string, responsible bool) (id string, err error) {
+	vt, err := i.teamStore.GetByID(spaceID, vacancyID, userID)
+	if err != nil || vt != nil {
+		return "", err
+	}
+
+	user, err := i.spaceUserStore.GetByID(userID)
+	if err != nil {
+		return "", err
+	}
+	if user == nil || user.SpaceID != spaceID {
+		return "", errors.New("Участник не найден")
+	}
+	rec := dbmodels.VacancyTeam{
+		BaseSpaceModel: dbmodels.BaseSpaceModel{
+			BaseModel: dbmodels.BaseModel{
+				ID: userID,
+			},
+			SpaceID: spaceID,
+		},
+		VacancyID:   vacancyID,
+		Responsible: responsible,
+	}
+	teamStore := i.teamStore
+	if tx != nil {
+		teamStore = teamstore.NewInstance(tx)
+	}
+	id, err = teamStore.Create(rec)
+	if err != nil {
+		return "", errors.Wrap(err, "Ошибка добавления участника в команду")
+	}
+	return id, nil
+}
+
+func (i impl) UsersList(spaceID, vacancyID string, filter vacancyapimodels.PersonFilter) (result []vacancyapimodels.Person, err error) {
+	recList, err := i.spaceUserStore.GetListForVacancy(spaceID, vacancyID, filter)
+	if err != nil {
+		return nil, err
+	}
+	result = make([]vacancyapimodels.Person, 0, len(recList))
+	for _, rec := range recList {
+		result = append(result, vacancyapimodels.PersonConvert(rec))
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].FullName < result[j].FullName
+	})
+	return result, nil
+}
+
+func (i impl) ExecuteFromTeam(spaceID, vacancyID, userID string) (hMsg string, err error) {
+	vt, err := i.teamStore.GetByID(spaceID, vacancyID, userID)
+	if err != nil || vt == nil {
+		return "", err
+	}
+	if vt.Responsible {
+		return "Перед исключением из команды, необходимо назначить другого ответственного", nil
+	}
+	return "", i.teamStore.Delete(spaceID, vacancyID, userID)
+}
+
+func (i impl) SetAsResponsible(spaceID, vacancyID, userID string) error {
+	vt, err := i.teamStore.GetByID(spaceID, vacancyID, userID)
+	if err != nil {
+		return err
+	}
+	if vt == nil {
+		return errors.New("пользователь не в команде")
+	}
+	return i.teamStore.SetAsResponsible(spaceID, vacancyID, userID)
 }
 
 func (i impl) initSelectionStages(tx *gorm.DB, spaceID, vacancyID string) error {
