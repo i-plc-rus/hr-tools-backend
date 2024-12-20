@@ -1,9 +1,7 @@
 package aprovalstageshandler
 
 import (
-	"fmt"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"hr-tools-backend/db"
 	aprovalstagestore "hr-tools-backend/lib/aproval-stages/store"
@@ -35,14 +33,9 @@ type impl struct {
 }
 
 func (i impl) Save(spaceID, vrID string, stages []vacancyapimodels.ApprovalStageData) (err error) {
-	logger := log.WithField("space_id", spaceID).
-		WithField("vacancy_request_id", vrID)
 	err = i.store.DeleteByVacancyRequest(spaceID, vrID)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("Ошибка сохранения цепочки согласования")
-		return errors.Wrap(err, "Ошибка сохранения цепочки согласования")
+		return err
 	}
 
 	if len(stages) == 0 {
@@ -63,11 +56,7 @@ func (i impl) Save(spaceID, vrID string, stages []vacancyapimodels.ApprovalStage
 		}
 		_, err = i.store.Create(rec)
 		if err != nil {
-			logger.
-				WithField("stage", fmt.Sprintf("%+v", stage)).
-				WithError(err).
-				Error("Ошибка сохранения цепочки согласования")
-			return errors.Wrap(err, "Ошибка сохранения цепочки согласования")
+			return errors.Wrapf(err, "Ошибка сохранения цепочки согласования, stage=%+v", stage)
 		}
 	}
 	return nil
