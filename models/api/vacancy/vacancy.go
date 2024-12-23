@@ -12,6 +12,7 @@ import (
 type VacancyData struct {
 	VacancyRequestID string                 `json:"vacancy_request_id"` // ид заявки на вакансию
 	CompanyID        string                 `json:"company_id"`         // ид компании
+	CompanyName      string                 `json:"company_name"`       // название компании
 	DepartmentID     string                 `json:"department_id"`      // ид подразделения
 	JobTitleID       string                 `json:"job_title_id"`       // ид штатной должности
 	CityID           string                 `json:"city_id"`            // ид города
@@ -72,7 +73,6 @@ func (v VacancyData) Validate(isFromRequest bool) error {
 }
 
 type VacancyInfo struct {
-	CompanyName         string               `json:"company_name"`
 	DepartmentName      string               `json:"department_name"`
 	JobTitleName        string               `json:"job_title_name"`
 	City                string               `json:"city"`
@@ -116,6 +116,7 @@ func VacancyConvert(rec dbmodels.VacancyExt) VacancyView {
 	result := VacancyView{
 		VacancyData: VacancyData{
 			CompanyID:       "",
+			CompanyName:     "",
 			DepartmentID:    "",
 			JobTitleID:      "",
 			CityID:          "",
@@ -141,7 +142,6 @@ func VacancyConvert(rec dbmodels.VacancyExt) VacancyView {
 		ID:           rec.ID,
 		CreationDate: rec.CreatedAt,
 		VacancyInfo: VacancyInfo{
-			CompanyName:       "",
 			DepartmentName:    "",
 			JobTitleName:      "",
 			City:              "",

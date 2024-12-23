@@ -2,15 +2,13 @@ package vacancyreqhandler
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 	"hr-tools-backend/db"
 	aprovalstageshandler "hr-tools-backend/lib/aproval-stages"
 	approvalstagestore "hr-tools-backend/lib/aproval-stages/store"
 	citystore "hr-tools-backend/lib/dicts/city/store"
 	companyprovider "hr-tools-backend/lib/dicts/company"
 	companystructprovider "hr-tools-backend/lib/dicts/company-struct"
+	companystore "hr-tools-backend/lib/dicts/company/store"
 	departmentprovider "hr-tools-backend/lib/dicts/department"
 	jobtitleprovider "hr-tools-backend/lib/dicts/job-title"
 	vacancyhandler "hr-tools-backend/lib/vacancy"
@@ -18,6 +16,10 @@ import (
 	"hr-tools-backend/models"
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
+
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 type Provider interface {
@@ -150,6 +152,13 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyReques
 	err = db.DB.Transaction(func(tx *gorm.DB) error {
 		store := vacancyreqstore.NewInstance(tx)
 		aprovalStagesHandler := aprovalstageshandler.NewHandlerWithTx(tx)
+		if rec.CompanyID == nil && data.CompanyName != "" {
+			companyID, err := createCompany(tx, spaceID, data.CompanyName)
+			if err != nil {
+				return errors.Wrap(err, "ошибка создания компании")
+			}
+			rec.CompanyID = &companyID
+		}
 		id, err = store.Create(rec)
 		if err != nil {
 			return err
@@ -177,6 +186,13 @@ func (i impl) Update(spaceID, id string, data vacancyapimodels.VacancyRequestEdi
 	logger := log.WithField("space_id", spaceID).
 		WithField("rec_id", id)
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
+		if data.CompanyID == "" && data.CompanyName != "" {
+			companyID, err := createCompany(tx, spaceID, data.CompanyName)
+			if err != nil {
+				return errors.Wrap(err, "ошибка создания компании")
+			}
+			data.CompanyID = companyID
+		}
 		store := vacancyreqstore.NewInstance(tx)
 		aprovalStagesHandler := aprovalstageshandler.NewHandlerWithTx(tx)
 		err := i.updateVr(store, spaceID, id, data.VacancyRequestData)
@@ -455,4 +471,9 @@ func (i impl) ToFavorite(id, userID string, isSet bool) error {
 		return i.store.SetFavorite(id, userID)
 	}
 	return i.store.RemoveFavorite(id, userID)
+}
+
+func createCompany(tx *gorm.DB, spaceID, name string) (string, error) {
+	companyStore := companystore.NewInstance(tx)
+	return companyStore.FindOrCreate(spaceID, name)
 }
