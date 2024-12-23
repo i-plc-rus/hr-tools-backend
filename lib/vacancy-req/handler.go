@@ -28,9 +28,9 @@ type Provider interface {
 	Update(spaceID, id string, data vacancyapimodels.VacancyRequestEditData) error
 	Delete(spaceID, id string) error
 	List(spaceID, userID string, filter vacancyapimodels.VrFilter) (list []vacancyapimodels.VacancyRequestView, rowCount int64, err error)
-	ChangeStatus(spaceID, id, userID string, status models.VRStatus) error
-	Approve(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) error
-	Reject(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) error
+	ChangeStatus(spaceID, id, userID string, status models.VRStatus) (hMsh string, err error)
+	Approve(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) (hMsh string, err error)
+	Reject(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) (hMsh string, err error)
 	CreateVacancy(spaceID, id, userID string) error
 	ToPin(id, userID string, isSet bool) error
 	ToFavorite(id, userID string, isSet bool) error
@@ -161,10 +161,6 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyReques
 		}
 		id, err = store.Create(rec)
 		if err != nil {
-			logger.
-				WithField("request", fmt.Sprintf("%+v", data)).
-				WithError(err).
-				Error("Ошибка создания заявки")
 			return err
 		}
 		return aprovalStagesHandler.Save(spaceID, id, data.ApprovalStages.ApprovalStages)
@@ -227,7 +223,6 @@ func (i impl) Delete(spaceID, id string) error {
 }
 
 func (i impl) List(spaceID, userID string, filter vacancyapimodels.VrFilter) (list []vacancyapimodels.VacancyRequestView, rowCount int64, err error) {
-	logger := log.WithField("space_id", spaceID)
 	rowCount, err = i.store.ListCount(spaceID, userID, filter)
 	if err != nil {
 		return nil, 0, err
@@ -241,9 +236,6 @@ func (i impl) List(spaceID, userID string, filter vacancyapimodels.VrFilter) (li
 
 	recList, err := i.store.List(spaceID, userID, filter)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения списка заявок")
 		return nil, 0, err
 	}
 	result := make([]vacancyapimodels.VacancyRequestView, 0, len(list))
@@ -253,30 +245,27 @@ func (i impl) List(spaceID, userID string, filter vacancyapimodels.VrFilter) (li
 	return result, rowCount, nil
 }
 
-func (i impl) ChangeStatus(spaceID, id, userID string, status models.VRStatus) error {
+func (i impl) ChangeStatus(spaceID, id, userID string, status models.VRStatus) (hMsh string, err error) {
 	logger := log.
 		WithField("space_id", spaceID).
 		WithField("rec_id", id).
 		WithField("new_status", status)
 	rec, err := i.GetByID(spaceID, id)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if !rec.Status.IsAllowChange(status) {
-		return errors.Errorf("изменение статуса на %v недопустимо", status)
+		return fmt.Sprintf("изменение статуса на %v недопустимо", status), nil
 	}
 	updMap := map[string]interface{}{
 		"status": status,
 	}
 	err = i.store.Update(spaceID, id, updMap)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка обновления статуса")
-		return err
+		return "", err
 	}
 	logger.Info("статус заявки обновлен")
-	return nil
+	return "", nil
 }
 
 func (i impl) checkVacancyExist(spaceID, id, userID string) (bool, error) {
@@ -290,82 +279,67 @@ func (i impl) checkVacancyExist(spaceID, id, userID string) (bool, error) {
 	return rowCount > 0, nil
 }
 
-func (i impl) Approve(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) error {
-	logger := log.
-		WithField("space_id", spaceID).
-		WithField("rec_id", id).
-		WithField("user_id", userID)
+func (i impl) Approve(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) (hMsh string, err error) {
 	rec, err := i.getRec(spaceID, id)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if !rec.Status.AllowAccept() {
-		return errors.Errorf("невозможно согласовать заявку в текущем статусе: %v", rec.Status)
+		return fmt.Sprintf("невозможно согласовать заявку в текущем статусе: %v", rec.Status), nil
 	}
 	if rec.Status == models.VRStatusAccepted {
-		return errors.New("заявка уже согласована")
+		return "заявка уже согласована", nil
 	}
 
 	isLastStage, stage := rec.GetCurrentApprovalStage()
 	if stage != nil {
 		if userID != stage.SpaceUserID {
-			return errors.New("за текущий этап отвечает другой сотрудник")
+			return "за текущий этап отвечает другой сотрудник", nil
 		}
 		err = i.updateVr(i.store, spaceID, id, data)
 		if err != nil {
-			logger.WithError(err).Error("ошибка обновления данных заявки при согласовании")
-			return err
+			return "", errors.Wrap(err, "ошибка обновления данных заявки при согласовании")
 		}
 		updMap := map[string]interface{}{
 			"ApprovalStatus": models.AStatusApproved,
 		}
 		err = i.approvalStageStore.Update(spaceID, stage.ID, updMap)
 		if err != nil {
-			logger.WithError(err).Error("ошибка обновления статуса согласования")
-			return err
+			return "", errors.Wrap(err, "ошибка обновления статуса согласования")
 		}
 	}
 	if isLastStage {
-		err = i.ChangeStatus(spaceID, id, userID, models.VRStatusAccepted)
-		if err != nil {
-			return err
-		}
+		return i.ChangeStatus(spaceID, id, userID, models.VRStatusAccepted)
 	}
-	return nil
+	return "", nil
 }
 
-func (i impl) Reject(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) error {
-	logger := log.
-		WithField("space_id", spaceID).
-		WithField("rec_id", id).
-		WithField("user_id", userID)
+func (i impl) Reject(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) (hMsh string, err error) {
 	rec, err := i.getRec(spaceID, id)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if !rec.Status.AllowReject() {
-		return errors.Errorf("невозможно согласовать заявку в текущем статусе: %v", rec.Status)
+		return fmt.Sprintf("невозможно согласовать заявку в текущем статусе: %v", rec.Status), nil
 	}
 	_, stage := rec.GetCurrentApprovalStage()
 	if stage != nil {
 		if userID != stage.SpaceUserID {
-			return errors.New("за текущий этап отвечает другой сотрудник")
+			return "за текущий этап отвечает другой сотрудник", nil
 		}
 		err = i.updateVr(i.store, spaceID, id, data)
 		if err != nil {
-			logger.WithError(err).Error("ошибка обновления данных заявки при согласовании")
-			return err
+			return "", errors.Wrap(err, "ошибка обновления данных заявки при согласовании")
 		}
 		updMap := map[string]interface{}{
 			"ApprovalStatus": models.AStatusRejected,
 		}
 		err = i.approvalStageStore.Update(spaceID, stage.ID, updMap)
 		if err != nil {
-			logger.WithError(err).Error("ошибка обновления статуса согласования")
-			return err
+			return "", errors.Wrap(err, "ошибка обновления статуса согласования")
 		}
 	}
-	return nil
+	return "", nil
 }
 
 func (i impl) getRec(spaceID, id string) (item *dbmodels.VacancyRequest, err error) {

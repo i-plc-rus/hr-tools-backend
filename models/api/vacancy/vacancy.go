@@ -73,14 +73,18 @@ func (v VacancyData) Validate(isFromRequest bool) error {
 }
 
 type VacancyInfo struct {
-	DepartmentName    string               `json:"department_name"`
-	JobTitleName      string               `json:"job_title_name"`
-	City              string               `json:"city"`
-	CompanyStructName string               `json:"company_struct_name"`
-	Status            models.VacancyStatus `json:"status"`
-	Pinned            bool                 `json:"pinned"`
-	Favorite          bool                 `json:"favorite"`
-	HH                ExternalLink         `json:"hh"`
+	DepartmentName      string               `json:"department_name"`
+	JobTitleName        string               `json:"job_title_name"`
+	City                string               `json:"city"`
+	CompanyStructName   string               `json:"company_struct_name"`
+	Status              models.VacancyStatus `json:"status"`
+	Pinned              bool                 `json:"pinned"`
+	Favorite            bool                 `json:"favorite"`
+	HH                  ExternalLink         `json:"hh"`
+	AuthorID            string               `json:"author_id"`                       // Идентификатор автора вакансии
+	AuthorFullName      string               `json:"author_full_name"`                // ФИО автора вакансии
+	ResponsibleID       string               `json:"responsible_id,omitempty"`        // Идентификатор ответственного
+	ResponsibleFullName string               `json:"responsible_full_name,omitempty"` // ФИО ответственного
 }
 
 type VacancyView struct {
@@ -145,7 +149,15 @@ func VacancyConvert(rec dbmodels.VacancyExt) VacancyView {
 			Pinned:            rec.Pinned,
 			Favorite:          rec.Favorite,
 			Status:            rec.Status,
+			AuthorID:          rec.AuthorID,
+			ResponsibleID:     rec.ResponsibleID,
 		},
+	}
+	if rec.Author != nil {
+		result.AuthorFullName = rec.Author.GetFullName()
+	}
+	if rec.ResponsibleUser != nil {
+		result.ResponsibleFullName = rec.ResponsibleUser.GetFullName()
 	}
 	if rec.CompanyID != nil {
 		result.CompanyID = *rec.CompanyID
@@ -198,19 +210,21 @@ type VacancySort struct {
 
 type VacancyFilter struct {
 	apimodels.Pagination
-	VacancyRequestID string                 `json:"request_id"`        // Идентификатор запроса на вакансию
-	Favorite         bool                   `json:"favorite"`          // Отображать избранные
-	Search           string                 `json:"search"`            // Поиск
-	Statuses         []models.VacancyStatus `json:"statuses"`          // Фильтр по статусам
-	CityID           string                 `json:"city_id"`           // Фильтр по идентификатору города
-	DepartmentID     string                 `json:"department_id"`     // Фильтр по идентификатору подразделения
-	SelectionType    models.VRSelectionType `json:"selection_type"`    // Фильтр по виду подбора
-	RequestType      models.VRType          `json:"request_type"`      // Фильтр по тип вакансии
-	Urgency          models.VRUrgency       `json:"urgency"`           // Фильтр по срочности
-	AuthorID         string                 `json:"author_id"`         // Фильтр по автору вакансии
-	RequestAuthorID  string                 `json:"request_author_id"` // Фильтр по автору запроса на вкансию
-	Sort             VacancySort            `json:"sort"`              // Сортировка
-	Tab              VacancyTab             `json:"tab"`               // Фильтр по вкладке: 0 - Все, 1 - Мои, 2 - Другие, 3 - Архив
+	VacancyRequestID  string                 `json:"request_id"`         // Идентификатор запроса на вакансию
+	Favorite          bool                   `json:"favorite"`           // Отображать избранные
+	Search            string                 `json:"search"`             // Поиск
+	Statuses          []models.VacancyStatus `json:"statuses"`           // Фильтр по статусам
+	CityID            string                 `json:"city_id"`            // Фильтр по идентификатору города
+	DepartmentID      string                 `json:"department_id"`      // Фильтр по идентификатору подразделения
+	SelectionType     models.VRSelectionType `json:"selection_type"`     // Фильтр по виду подбора
+	RequestType       models.VRType          `json:"request_type"`       // Фильтр по тип вакансии
+	Urgency           models.VRUrgency       `json:"urgency"`            // Фильтр по срочности
+	AuthorID          string                 `json:"author_id"`          // Фильтр по автору вакансии
+	RequestAuthorID   string                 `json:"request_author_id"`  // Фильтр по автору запроса на вкансию
+	Sort              VacancySort            `json:"sort"`               // Сортировка
+	Tab               VacancyTab             `json:"tab"`                // Фильтр по вкладке: 0 - Все, 1 - Мои, 2 - Другие, 3 - Архив
+	AuthorSearch      string                 `json:"author_search"`      // Поиск по ФИО автора
+	ResponsibleSearch string                 `json:"responsible_search"` // Поиск по ФИО ответственного
 }
 
 type VacancyTab int

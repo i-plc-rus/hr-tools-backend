@@ -32,6 +32,15 @@ func InitVacancyApiRouters(app *fiber.App) {
 				stageRoute.Delete("", controller.stageDelete)
 				stageRoute.Put("change_order", controller.stageChangeOrder)
 			})
+			idRoute.Route("team", func(teamRoute fiber.Router) {
+				teamRoute.Post("list", controller.teamList)
+				teamRoute.Post("users_list", controller.usersList)
+				teamRoute.Route(":user_id", func(userIDRoute fiber.Router) {
+					userIDRoute.Put("invite", controller.inviteToTeam)
+					userIDRoute.Put("set_as_responsible", controller.setAsResponsible)
+					userIDRoute.Put("exclude", controller.excludeFromTeam)
+				})
+			})
 		})
 	})
 }
@@ -59,7 +68,7 @@ func (c *vacancyApiController) create(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 	id, err := vacancyhandler.Instance.Create(spaceID, userID, payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка создания вакансии")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(id))
 }
@@ -93,7 +102,7 @@ func (c *vacancyApiController) update(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	err = vacancyhandler.Instance.Update(spaceID, id, payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка изменения вакансии")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -117,7 +126,7 @@ func (c *vacancyApiController) get(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	resp, err := vacancyhandler.Instance.GetByID(spaceID, id)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения вакансии")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(resp))
 }
@@ -141,7 +150,7 @@ func (c *vacancyApiController) delete(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	err = vacancyhandler.Instance.Delete(spaceID, id)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка удаления вакансии")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -165,7 +174,7 @@ func (c *vacancyApiController) list(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 	list, rowCount, err := vacancyhandler.Instance.List(spaceID, userID, payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения списка вакансий")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewScrollerResponse(list, rowCount))
 }
@@ -192,7 +201,7 @@ func (c *vacancyApiController) pin(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 	err = vacancyhandler.Instance.ToPin(id, userID, isSet)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка закрепления вакансии")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -218,7 +227,7 @@ func (c *vacancyApiController) favorite(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 	err = vacancyhandler.Instance.ToFavorite(id, userID, isSet)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка добавления вакансии в избранное")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -252,7 +261,7 @@ func (c *vacancyApiController) changeStatus(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 	err = vacancyhandler.Instance.StatusChange(spaceID, id, userID, payload.Status)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка изменения статуса вакансии")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -274,7 +283,7 @@ func (c *vacancyApiController) stageList(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	list, err := vacancyhandler.Instance.StageList(spaceID, id)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения этапов подбора")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(list))
 }
@@ -309,7 +318,7 @@ func (c *vacancyApiController) stageChangeOrder(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	err = vacancyhandler.Instance.StageChangeOrder(spaceID, id, stageID, newOrder)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка изменения порядка этапов подбора")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -343,7 +352,7 @@ func (c *vacancyApiController) stageCreate(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	err = vacancyhandler.Instance.StageCreate(spaceID, id, payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка добавления этапа подбора")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -370,9 +379,159 @@ func (c *vacancyApiController) stageDelete(ctx *fiber.Ctx) error {
 	if stageID == "" {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("не указан этап подбора вакансии"))
 	}
-	err = vacancyhandler.Instance.StageDelete(spaceID, id, stageID)
+	hMsg, err := vacancyhandler.Instance.StageDelete(spaceID, id, stageID)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка удаления этапа подбора")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Команда
+// @Tags Вакансия
+// @Description Команда
+// @Param   Authorization       header      string  true    "Authorization token"
+// @Param   id                  path    	string  true    "vacancy ID"
+// @Success 200 {object} apimodels.Response{data=[]vacancyapimodels.TeamPerson}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/vacancy/{id}/team/list [post]
+func (c *vacancyApiController) teamList(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	resp, err := vacancyhandler.Instance.GetTeam(spaceID, id)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения данных по команде")
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(resp))
+}
+
+// @Summary Команда. Список пользователей в системе
+// @Tags Вакансия
+// @Description Команда. Список пользователей в системе
+// @Param   Authorization       header      string  						true    "Authorization token"
+// @Param	body 				body	 	vacancyapimodels.PersonFilter	true	"request filter body"
+// @Param   id                  path    	string                          true     "vacancy ID"
+// @Success 200 {object} apimodels.Response{data=[]vacancyapimodels.TeamPerson}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/vacancy/{id}/team/users_list [post]
+func (c *vacancyApiController) usersList(ctx *fiber.Ctx) error {
+	var payload vacancyapimodels.PersonFilter
+	if err := c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	resp, err := vacancyhandler.Instance.UsersList(spaceID, id, payload)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения список пользователей в спейсе")
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(resp))
+}
+
+// @Summary Команда. Пригласить участника
+// @Tags Вакансия
+// @Description Команда. Пригласить участника
+// @Param   Authorization       header      string  true    "Authorization token"
+// @Param   id                  path    string                          true         "vacancy ID"
+// @Param   user_id             path    string                          true         "user ID"
+// @Success 200 {object} apimodels.Response{data=[]vacancyapimodels.TeamPerson}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/vacancy/{id}/team/{user_id}/invite [put]
+func (c *vacancyApiController) inviteToTeam(ctx *fiber.Ctx) error {
+	vacancyID, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	userID, err := c.GetIDByKey(ctx, "user_id")
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	resp, err := vacancyhandler.Instance.InviteToTeam(nil, spaceID, vacancyID, userID, false)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка приглашения участника в команду")
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(resp))
+}
+
+// @Summary Команда. Исключить участника
+// @Tags Вакансия
+// @Description Команда. Исключить участника
+// @Param   Authorization       header      string  true    	"Authorization token"
+// @Param   id                  path    	string  true         "vacancy ID"
+// @Param   user_id             path    	string  true         "user ID"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/vacancy/{id}/team/{user_id}/exclude [put]
+func (c *vacancyApiController) excludeFromTeam(ctx *fiber.Ctx) error {
+	vacancyID, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	userID, err := c.GetIDByKey(ctx, "user_id")
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	hMsg, err := vacancyhandler.Instance.ExecuteFromTeam(spaceID, vacancyID, userID)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка исключения участника из команды")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Команда. Сделать ответственным
+// @Tags Вакансия
+// @Description Команда. Сделать ответственным
+// @Param   Authorization       header      string  true    "Authorization token"
+// @Param   id                  path    	string  true    "vacancy ID"
+// @Param   user_id             path   		string  true    "user ID"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/vacancy/{id}/team/{user_id}/set_as_responsible [put]
+func (c *vacancyApiController) setAsResponsible(ctx *fiber.Ctx) error {
+	vacancyID, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	userID, err := c.GetIDByKey(ctx, "user_id")
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	err = vacancyhandler.Instance.SetAsResponsible(spaceID, vacancyID, userID)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка назначения участника ответственным по вакансии")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }

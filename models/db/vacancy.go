@@ -73,6 +73,8 @@ type Salary struct {
 
 type VacancyExt struct {
 	Vacancy
-	Favorite bool
-	Pinned   bool
+	Favorite        bool
+	Pinned          bool
+	ResponsibleID   string
+	ResponsibleUser *SpaceUser `gorm:"foreignKey:ResponsibleID"`
 }

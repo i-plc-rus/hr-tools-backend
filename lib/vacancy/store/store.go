@@ -106,7 +106,8 @@ func (i impl) ListCount(spaceID, userID string, filter vacancyapimodels.VacancyF
 		Model(dbmodels.Vacancy{}).
 		Joins("left join favorites as f on vacancies.id = f.vacancy_id and f.space_user_id = ?", userID).
 		Joins("left join pinneds as p on vacancies.id = p.vacancy_id and p.space_user_id = ?", userID).
-		Where("space_id = ?", spaceID)
+		Joins("left join vacancy_teams as vt on vacancies.id = vt.vacancy_id and vt.responsible = true").
+		Where("vacancies.space_id = ?", spaceID)
 	i.addFilter(tx, filter, userID)
 	err = tx.Count(&rowCount).Error
 	if err != nil {
@@ -120,10 +121,11 @@ func (i impl) List(spaceID, userID string, filter vacancyapimodels.VacancyFilter
 	list = []dbmodels.VacancyExt{}
 	tx := i.db.
 		Model(dbmodels.Vacancy{}).
-		Select("vacancies.*, f.selected as favorite, p.selected as pinned").
+		Select("vacancies.*, f.selected as favorite, p.selected as pinned, vt.id as responsible_id").
 		Joins("left join favorites as f on vacancies.id = f.vacancy_id and f.space_user_id = ?", userID).
 		Joins("left join pinneds as p on vacancies.id = p.vacancy_id and p.space_user_id = ?", userID).
-		Where("space_id = ?", spaceID)
+		Joins("left join vacancy_teams as vt on vacancies.id = vt.vacancy_id and vt.responsible = true").
+		Where("vacancies.space_id = ?", spaceID)
 	i.addFilter(tx, filter, userID)
 	page, limit := filter.GetPage()
 	i.setPage(tx, page, limit)
@@ -285,6 +287,12 @@ func (i impl) addFilter(tx *gorm.DB, filter vacancyapimodels.VacancyFilter, user
 	if filter.RequestAuthorID != "" {
 		subQuery := i.db.Select("id").Where("author_id = ?", filter.RequestAuthorID).Table("vacancy_requests")
 		tx.Where("vacancy_request_id in (?)", subQuery)
+	}
+	if filter.AuthorSearch != "" {
+		tx.Where("vacancies.author_id in (select id from space_users where LOWER(first_name|| ' ' || last_name) like ?)", "%"+strings.ToLower(filter.AuthorSearch)+"%")
+	}
+	if filter.ResponsibleSearch != "" {
+		tx.Where("vt.id in (select id from space_users where LOWER(first_name|| ' ' || last_name) like ?)", "%"+strings.ToLower(filter.ResponsibleSearch)+"%")
 	}
 	i.addSort(tx, filter.Sort)
 }
