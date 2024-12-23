@@ -1,9 +1,11 @@
 package spaceusersstore
 
 import (
+	dbmodels "hr-tools-backend/models/db"
+
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
-	dbmodels "hr-tools-backend/models/db"
+	"gorm.io/gorm/clause"
 )
 
 type Provider interface {
@@ -32,6 +34,7 @@ func (i impl) GetList(spaceID string, page, limit int) (userList []dbmodels.Spac
 	i.setPage(tx, page, limit)
 	err = tx.
 		Where("space_id = ?", spaceID).
+		Preload(clause.Associations).
 		Find(&userList).
 		Error
 	if err != nil {
@@ -65,6 +68,7 @@ func (i impl) Update(userID string, updMap map[string]interface{}) error {
 func (i impl) GetByID(userID string) (rec *dbmodels.SpaceUser, err error) {
 	err = i.db.Model(dbmodels.SpaceUser{}).
 		Where("id = ?", userID).
+		Preload(clause.Associations).
 		First(&rec).
 		Error
 	if err != nil {
@@ -82,7 +86,7 @@ func (i impl) FindByEmail(email string, checkNew bool) (rec *dbmodels.SpaceUser,
 	if checkNew {
 		tx.Or("new_email = ?", email)
 	}
-	err = tx.First(&rec).
+	err = tx.Preload(clause.Associations).First(&rec).
 		Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -116,6 +120,7 @@ func (i impl) ExistByEmail(email string) (bool, error) {
 func (i impl) GetByResetCode(code string) (rec *dbmodels.SpaceUser, err error) {
 	err = i.db.Model(dbmodels.SpaceUser{}).
 		Where("reset_code = ?", code).
+		Preload(clause.Associations).
 		First(&rec).
 		Error
 	if err != nil {
