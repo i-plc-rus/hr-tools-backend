@@ -35,7 +35,7 @@ func InitSpaceUserRouters(app *fiber.App) {
 		userRootRoute.Use(middleware.AuthorizationRequired())
 		userRootRoute.Get("", controller.getProfile)
 		userRootRoute.Put("", controller.updateProfile)
-		userRootRoute.Put("change_password", controller.changePassword) //TODO
+		userRootRoute.Put("change_password", controller.changePassword)
 		userRootRoute.Post("photo", controller.uploadPhoto)       // загрузить фото
 		userRootRoute.Get("photo", controller.getPhoto)                  // скачать фото
 	})
