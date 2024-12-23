@@ -1,7 +1,9 @@
 package spaceusersstore
 
 import (
+	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
+	"strings"
 
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
@@ -17,6 +19,7 @@ type Provider interface {
 	FindByEmail(email string, checkNew bool) (rec *dbmodels.SpaceUser, err error)
 	GetByID(userID string) (rec *dbmodels.SpaceUser, err error)
 	GetByResetCode(code string) (rec *dbmodels.SpaceUser, err error)
+	GetListForVacancy(spaceID, vacancyID string, filter vacancyapimodels.PersonFilter) (userList []dbmodels.SpaceUser, err error)
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -130,6 +133,21 @@ func (i impl) GetByResetCode(code string) (rec *dbmodels.SpaceUser, err error) {
 		return nil, err
 	}
 	return rec, nil
+}
+
+func (i impl) GetListForVacancy(spaceID, vacancyID string, filter vacancyapimodels.PersonFilter) (userList []dbmodels.SpaceUser, err error) {
+	tx := i.db.Model(dbmodels.SpaceUser{})
+	tx = tx.
+		Where("space_id = ?", spaceID).
+		Where("id not in (select id from vacancy_teams where vacancy_id = ?)", vacancyID)
+	if filter.Search != "" {
+		tx = tx.Where("LOWER(first_name|| ' ' || last_name) like ?", "%"+strings.ToLower(filter.Search)+"%")
+	}
+	err = tx.Find(&userList).Error
+	if err != nil {
+		return nil, err
+	}
+	return userList, nil
 }
 
 func (i impl) setPage(tx *gorm.DB, pageValue, limitValue int) {

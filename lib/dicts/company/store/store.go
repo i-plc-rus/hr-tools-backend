@@ -13,6 +13,7 @@ type Provider interface {
 	FindByName(spaceID, name string) (list []dbmodels.Company, err error)
 	Update(spaceID, id string, updMap map[string]interface{}) error
 	Delete(spaceID, id string) error
+	FindOrCreate(spaceID, name string) (id string, err error)
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -116,6 +117,24 @@ func (i impl) Delete(spaceID, id string) error {
 		return err
 	}
 	return nil
+}
+
+func (i impl) FindOrCreate(spaceID, name string) (id string, err error) {
+	rec := dbmodels.Company{}
+	tx := i.db.Where("space_id = ?", spaceID)
+
+	tx = tx.Where("LOWER(name) = ?", strings.ToLower(name))
+	err = tx.First(&rec).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			rec.SpaceID = spaceID
+			rec.Name = name
+			return i.Create(rec)
+		}
+		return "", err
+	}
+
+	return rec.ID, nil
 }
 
 func (i impl) isUnique(spaceID string, selfID, name string) error {
