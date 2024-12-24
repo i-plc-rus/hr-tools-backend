@@ -1,7 +1,6 @@
 package companyprovider
 
 import (
-	"fmt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
@@ -40,10 +39,6 @@ func (i impl) Create(spaceID string, request dictapimodels.CompanyData) (id stri
 	}
 	id, err = i.store.Create(rec)
 	if err != nil {
-		logger.
-			WithField("request", fmt.Sprintf("%+v", request)).
-			WithError(err).
-			Error("ошибка создания компании")
 		return "", err
 	}
 	logger.
@@ -61,10 +56,6 @@ func (i impl) Update(spaceID, id string, request dictapimodels.CompanyData) erro
 	}
 	err := i.store.Update(spaceID, id, updMap)
 	if err != nil {
-		logger.
-			WithField("request", fmt.Sprintf("%+v", request)).
-			WithError(err).
-			Error("ошибка обновления компании")
 		return err
 	}
 	logger.Info("обновлена компания")
@@ -72,13 +63,8 @@ func (i impl) Update(spaceID, id string, request dictapimodels.CompanyData) erro
 }
 
 func (i impl) Get(spaceID, id string) (item dictapimodels.CompanyView, err error) {
-	logger := log.WithField("space_id", spaceID).
-		WithField("rec_id", id)
 	rec, err := i.store.GetByID(spaceID, id)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения компании")
 		return dictapimodels.CompanyView{}, err
 	}
 	if rec == nil {
@@ -88,12 +74,8 @@ func (i impl) Get(spaceID, id string) (item dictapimodels.CompanyView, err error
 }
 
 func (i impl) FindByName(spaceID string, request dictapimodels.CompanyData) (list []dictapimodels.CompanyView, err error) {
-	logger := log.WithField("space_id", spaceID)
 	recList, err := i.store.FindByName(spaceID, request.Name)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения списка компаний")
 		return nil, err
 	}
 	result := make([]dictapimodels.CompanyView, 0, len(list))
@@ -108,9 +90,6 @@ func (i impl) Delete(spaceID, id string) error {
 		WithField("rec_id", id)
 	err := i.store.Delete(spaceID, id)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка удаления компании")
 		return err
 	}
 	logger.Info("удалена компания")

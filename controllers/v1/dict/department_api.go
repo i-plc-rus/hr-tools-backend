@@ -47,7 +47,7 @@ func (c *departmentDictApiController) departmentCreate(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	id, err := departmentprovider.Instance.Create(spaceID, payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка создания записи в справочнике подразделений")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(id))
 }
@@ -81,7 +81,7 @@ func (c *departmentDictApiController) departmentUpdate(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	err = departmentprovider.Instance.Update(spaceID, id, payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка обновления данных в справочнике подразделений")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -105,7 +105,7 @@ func (c *departmentDictApiController) departmentGet(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	resp, err := departmentprovider.Instance.Get(spaceID, id)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения записи из справочника подразделений")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(resp))
 }
@@ -129,7 +129,7 @@ func (c *departmentDictApiController) departmentDelete(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	err = departmentprovider.Instance.Delete(spaceID, id)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка удаления данных из справочника подразделений")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -153,7 +153,7 @@ func (c *departmentDictApiController) departmentFindByName(ctx *fiber.Ctx) error
 	spaceID := middleware.GetUserSpace(ctx)
 	list, err := departmentprovider.Instance.FindByName(spaceID, payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения списка из справочника подразделений")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(list))
 }
