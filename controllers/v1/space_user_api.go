@@ -31,7 +31,7 @@ func InitSpaceUserRouters(app *fiber.App) {
 		})
 
 	})
-	app.Route("user", func(userRootRoute fiber.Router) {
+	app.Route("user_profile", func(userRootRoute fiber.Router) {
 		userRootRoute.Use(middleware.AuthorizationRequired())
 		userRootRoute.Get("", controller.getProfile)
 		userRootRoute.Put("", controller.updateProfile)
@@ -178,7 +178,7 @@ func (c *spaceUserController) GetUserByID(ctx *fiber.Ctx) error {
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/v1/user [get]
+// @router /api/v1/user_profile [get]
 func (c *spaceUserController) getProfile(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 	user, err := spaceusershander.Instance.GetProfileByID(userID)
@@ -198,7 +198,7 @@ func (c *spaceUserController) getProfile(ctx *fiber.Ctx) error {
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/v1/user [put]
+// @router /api/v1/user_profile [put]
 func (c *spaceUserController) updateProfile(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 	var payload spaceapimodels.SpaceUserProfileData
@@ -224,7 +224,7 @@ func (c *spaceUserController) updateProfile(ctx *fiber.Ctx) error {
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/v1/user/change_password [put]
+// @router /api/v1/user_profile/change_password [put]
 func (c *spaceUserController) changePassword(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 	var payload spaceapimodels.PasswordChange
@@ -254,7 +254,7 @@ func (c *spaceUserController) changePassword(ctx *fiber.Ctx) error {
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/v1/user/photo [post]
+// @router /api/v1/user_profile/photo [post]
 func (c *spaceUserController) uploadPhoto(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 
@@ -288,7 +288,7 @@ func (c *spaceUserController) uploadPhoto(ctx *fiber.Ctx) error {
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/v1/user/photo [get]
+// @router /api/v1/user_profile/photo [get]
 func (c *spaceUserController) getPhoto(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 
