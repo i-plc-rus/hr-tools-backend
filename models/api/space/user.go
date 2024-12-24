@@ -17,6 +17,7 @@ type SpaceUser struct {
 	SpaceUserCommonData
 	IsEmailVerified bool   `json:"is_email_verified"` // Email подтвержден
 	NewEmail        string `json:"new_email"`         // Новый email, который станет основным после подтверждения
+	JobTitleName    string `json:"job_title_name"`    // Навание должности
 }
 
 type SpaceUserCommonData struct {
@@ -27,13 +28,58 @@ type SpaceUserCommonData struct {
 	PhoneNumber string `json:"phone_number"`
 	IsAdmin     bool   `json:"is_admin"`
 	Role        string `json:"role"`
-	TextSign    string `json:"text_sign"` // Текст подписи
+	TextSign    string `json:"text_sign"`    // Текст подписи
+	JobTitleID  string `json:"job_title_id"` // Идентификатор должности
 }
 
 func (r SpaceUserCommonData) Validate() error {
 	//TODO: add data validators
 	if r.Email == "" {
 		return errors.New("не указан емайл")
+	}
+	return nil
+}
+
+type SpaceUserProfileData struct {
+	Email               string `json:"email"`                 // Email пользователя
+	FirstName           string `json:"first_name"`            // Имя
+	LastName            string `json:"last_name"`             // Фамилия
+	PhoneNumber         string `json:"phone_number"`          // Телефон
+	InternalPhoneNumber string `json:"internal_phone_number"` // Внутренний номер
+	UsePersonalSign     bool   `json:"use_personal_sign"`     // Персональная подпись
+	TextSign            string `json:"text_sign"`             // Текст подписи
+}
+
+func (r SpaceUserProfileData) Validate() error {
+	if r.Email == "" {
+		return errors.New("не указан емайл")
+	}
+	if r.FirstName == "" {
+		return errors.New("не указано имя")
+	}
+	return nil
+}
+
+type SpaceUserProfileView struct {
+	SpaceUserProfileData
+	ID              string `json:"id"`                // Идентфикатор пользователя
+	Role            string `json:"role"`              // Роль
+	IsEmailVerified bool   `json:"is_email_verified"` // Email подтвержден
+	NewEmail        string `json:"new_email"`         // Новый email, который станет основным после подтверждения
+	JobTitleName    string `json:"job_title_name"`    // Должность
+}
+
+type PasswordChange struct {
+	CurrentPassword string `json:"current_password"` // Текущий пароль
+	NewPassword     string `json:"new_password"`     // Новый пароль
+}
+
+func (r PasswordChange) Validate() error {
+	if r.CurrentPassword == "" {
+		return errors.New("Не указан текущий пароль")
+	}
+	if r.NewPassword == "" {
+		return errors.New("Не указан новый пароль")
 	}
 	return nil
 }

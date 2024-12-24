@@ -61,7 +61,7 @@ func (i impl) GetFileByType(ctx context.Context, spaceID, applicantID string, fi
 		"space_id":     spaceID,
 		"applicant_id": applicantID,
 	})
-	fileID, err := i.filesDBStorage.GetFileIDByType(applicantID, dbmodels.ApplicantResume)
+	fileID, err := i.filesDBStorage.GetFileIDByType(applicantID, fileType)
 	if err != nil {
 		logger.
 			WithError(err).
@@ -72,6 +72,9 @@ func (i impl) GetFileByType(ctx context.Context, spaceID, applicantID string, fi
 }
 
 func (i impl) GetFile(ctx context.Context, spaceID string, fileID string) ([]byte, error) {
+	if fileID == "" {
+		return nil, nil
+	}
 	logger := log.WithFields(log.Fields{
 		"space_id": spaceID,
 		"file_id":  fileID,

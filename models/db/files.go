@@ -21,7 +21,8 @@ func (f FileStorage) ToModel() filesapimodels.FileView {
 type FileType string
 
 const (
-	ApplicantResume FileType = "applicant_resume"
-	ApplicantDoc    FileType = "applicant_doc"
-	ApplicantPhoto  FileType = "applicant_photo"
+	ApplicantResume  FileType = "applicant_resume"
+	ApplicantDoc     FileType = "applicant_doc"
+	ApplicantPhoto   FileType = "applicant_photo"
+	UserProfilePhoto FileType = "user_profile_photo"
 )

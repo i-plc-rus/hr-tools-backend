@@ -145,7 +145,7 @@ func (i impl) MultiSendEmail(spaceID, userID string, data applicantapimodels.Mul
 		return nil, errors.New("ошибка получения профиля отправителя")
 	}
 	textSign := ""
-	if user != nil {
+	if user != nil && user.UsePersonalSign {
 		textSign = user.TextSign
 	}
 	msg := buildMsg(msgTemplate.Message, textSign)
