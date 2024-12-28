@@ -101,7 +101,7 @@ func (i impl) createAdmin(tx *gorm.DB, spaceID string, adminData spaceapimodels.
 		PhoneNumber: adminData.PhoneNumber,
 		SpaceID:     spaceID,
 	}
-	err := spaceusersstore.NewInstance(tx).Create(admin)
+	_, err := spaceusersstore.NewInstance(tx).Create(admin)
 	if err != nil {
 		return errors.Wrap(err, "Ошибка создания администратора в space")
 	}

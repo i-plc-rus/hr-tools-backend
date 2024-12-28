@@ -11,6 +11,8 @@ type ApplicantHistoryFilter struct {
 }
 
 type ApplicantHistoryView struct {
+	Date        string                    `json:"date"`         // дата записи dd.mm.yyyy
+	Time        string                    `json:"time"`         // время записи HH:mm
 	VacancyID   string                    `json:"vacancy_id"`   // Идентификатор вакансии
 	VacancyName string                    `json:"vacancy_name"` // Название вакансии
 	UserID      string                    `json:"user_id"`      // Идентификатор сотрудника
@@ -21,6 +23,8 @@ type ApplicantHistoryView struct {
 
 func Convert(rec dbmodels.ApplicantHistory) ApplicantHistoryView {
 	result := ApplicantHistoryView{
+		Date:        rec.CreatedAt.Format("02.01.2006"),
+		Time:        rec.CreatedAt.Format("15:04"),
 		VacancyID:   rec.VacancyID,
 		VacancyName: "",
 		UserID:      "",
