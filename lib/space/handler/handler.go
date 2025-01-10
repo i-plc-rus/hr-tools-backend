@@ -3,19 +3,21 @@ package spacehandler
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 	"hr-tools-backend/db"
 	companystructload "hr-tools-backend/lib/company-struct-load"
 	filestorage "hr-tools-backend/lib/file-storage"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
 	spacestore "hr-tools-backend/lib/space/store"
+	spaceusershander "hr-tools-backend/lib/space/users/hander"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	authutils "hr-tools-backend/lib/utils/auth-utils"
 	"hr-tools-backend/models"
 	spaceapimodels "hr-tools-backend/models/api/space"
 	dbmodels "hr-tools-backend/models/db"
+
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 type Provider interface {
@@ -101,9 +103,13 @@ func (i impl) createAdmin(tx *gorm.DB, spaceID string, adminData spaceapimodels.
 		PhoneNumber: adminData.PhoneNumber,
 		SpaceID:     spaceID,
 	}
-	err := spaceusersstore.NewInstance(tx).Create(admin)
+	id, err := spaceusersstore.NewInstance(tx).Create(admin)
 	if err != nil {
 		return errors.Wrap(err, "Ошибка создания администратора в space")
+	}
+	err = spaceusershander.Instance.CreatePushSettings(tx, admin.SpaceID, id)
+	if err != nil {
+		return errors.Wrap(err, "ошибка создания списка настроек пушей для пользователя")
 	}
 	return nil
 }

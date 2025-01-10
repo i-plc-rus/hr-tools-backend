@@ -11,7 +11,7 @@ import (
 )
 
 type Provider interface {
-	Create(rec dbmodels.SpaceUser) error
+	Create(rec dbmodels.SpaceUser) (string, error)
 	Update(userID string, updMap map[string]interface{}) error
 	Delete(userID string) error
 	GetList(spaceID string, page, limit int) (userList []dbmodels.SpaceUser, err error)
@@ -100,10 +100,14 @@ func (i impl) FindByEmail(email string, checkNew bool) (rec *dbmodels.SpaceUser,
 	return rec, nil
 }
 
-func (i impl) Create(rec dbmodels.SpaceUser) error {
-	return i.db.
+func (i impl) Create(rec dbmodels.SpaceUser) (string, error) {
+	err := i.db.
 		Save(&rec).
 		Error
+	if err != nil {
+		return "", err
+	}
+	return rec.ID, nil
 }
 
 func (i impl) ExistByEmail(email string) (bool, error) {

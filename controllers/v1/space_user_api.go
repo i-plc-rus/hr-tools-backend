@@ -36,8 +36,13 @@ func InitSpaceUserRouters(app *fiber.App) {
 		userRootRoute.Get("", controller.getProfile)
 		userRootRoute.Put("", controller.updateProfile)
 		userRootRoute.Put("change_password", controller.changePassword)
-		userRootRoute.Post("photo", controller.uploadPhoto)       // загрузить фото
-		userRootRoute.Get("photo", controller.getPhoto)                  // скачать фото
+		userRootRoute.Post("photo", controller.uploadPhoto) // загрузить фото
+		userRootRoute.Get("photo", controller.getPhoto)     // скачать фото
+		userRootRoute.Route("push_settings", func(pushRoute fiber.Router) {
+			pushRoute.Get("", controller.pushSettingslist)
+			pushRoute.Put("", controller.pushSettinsUgpdate)
+			pushRoute.Put("enable", controller.pushSettinsEnable)
+		})
 	})
 }
 
@@ -46,7 +51,7 @@ func InitSpaceUserRouters(app *fiber.App) {
 // @Description Создать нового пользователя
 // @Param   Authorization		header		string	true	"Authorization token"
 // @Param	body				body		spaceapimodels.CreateUser	true	"request body"
-// @Success 200
+// @Success 201
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
@@ -118,7 +123,7 @@ func (c *spaceUserController) UpdateUser(ctx *fiber.Ctx) error {
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
-	return ctx.Status(fiber.StatusCreated).JSON(apimodels.NewResponse(nil))
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
 
 // @Summary Получить список пользователей space
@@ -145,7 +150,7 @@ func (c *spaceUserController) ListUsers(ctx *fiber.Ctx) error {
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
-	return ctx.Status(fiber.StatusCreated).JSON(apimodels.NewResponse(users))
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(users))
 }
 
 // @Summary Получить пользователя space по ID
@@ -167,7 +172,7 @@ func (c *spaceUserController) GetUserByID(ctx *fiber.Ctx) error {
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
 	}
-	return ctx.Status(fiber.StatusCreated).JSON(apimodels.NewResponse(user))
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(user))
 }
 
 // @Summary Получить профиль пользователя
@@ -185,7 +190,7 @@ func (c *spaceUserController) getProfile(ctx *fiber.Ctx) error {
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения данных профиля")
 	}
-	return ctx.Status(fiber.StatusCreated).JSON(apimodels.NewResponse(user))
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(user))
 }
 
 // @Summary Обновить профиль пользователя
@@ -213,7 +218,7 @@ func (c *spaceUserController) updateProfile(ctx *fiber.Ctx) error {
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка обновления профиля")
 	}
-	return ctx.Status(fiber.StatusCreated).JSON(apimodels.NewResponse(nil))
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
 
 // @Summary Изменить пароль
@@ -299,4 +304,67 @@ func (c *spaceUserController) getPhoto(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.Send(body)
+}
+
+// @Summary Push уведомления - список событий
+// @Tags Профиль пользователя space
+// @Description Push уведомления - список событий
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Success 200 {object} apimodels.Response{data=spaceapimodels.PushSettings}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/user_profile/push_settings [get]
+func (c *spaceUserController) pushSettingslist(ctx *fiber.Ctx) error {
+	userID := middleware.GetUserID(ctx)
+	spaceID := middleware.GetUserSpace(ctx)
+	data, err := spaceusershander.Instance.GetPushSettings(spaceID, userID)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения списка настроек пушей")
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(data))
+}
+
+// @Summary Push уведомления - настройка уведомлений по событию
+// @Tags Профиль пользователя space
+// @Description Push уведомления - настройка уведомлений по событию
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param	body	body		spaceapimodels.PushSettingData	true	"request body"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/user_profile/push_settings [put]
+func (c *spaceUserController) pushSettinsUgpdate(ctx *fiber.Ctx) error {
+	var payload spaceapimodels.PushSettingData
+	if err := c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	userID := middleware.GetUserID(ctx)
+	spaceID := middleware.GetUserSpace(ctx)
+	err := spaceusershander.Instance.UpdatePushSettings(spaceID, userID, payload)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка обновления настройки для события пушей")
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Push уведомления - настройка отправки
+// @Tags Профиль пользователя space
+// @Description Push уведомления - настройка отправки
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param	set					query 	bool							false		 "выбрано/не выбрано"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/user_profile/push_settings/enable [put]
+func (c *spaceUserController) pushSettinsEnable(ctx *fiber.Ctx) error {
+	isSet := ctx.QueryBool("set", false)
+	userID := middleware.GetUserID(ctx)
+	err := spaceusershander.Instance.UpdatePushEnable(userID, isSet)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка обновления настройки для отправки пушей")
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }

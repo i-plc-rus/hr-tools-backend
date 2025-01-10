@@ -1,17 +1,18 @@
 package spaceusershander
 
 import (
-	"errors"
 	"fmt"
 	"hr-tools-backend/db"
 	"hr-tools-backend/lib/smtp"
 	spaceauthhandler "hr-tools-backend/lib/space/auth"
+	pushsettingsstore "hr-tools-backend/lib/space/push/settings-store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	authutils "hr-tools-backend/lib/utils/auth-utils"
 	"hr-tools-backend/models"
 	spaceapimodels "hr-tools-backend/models/api/space"
 	dbmodels "hr-tools-backend/models/db"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
@@ -25,18 +26,24 @@ type Provider interface {
 	UpdateUserProfile(userID string, request spaceapimodels.SpaceUserProfileData) error
 	GetProfileByID(userID string) (user spaceapimodels.SpaceUserProfileView, err error)
 	СhangePassword(userID string, payload spaceapimodels.PasswordChange) (nMsg string, err error)
+	GetPushSettings(spaceID, userID string) (spaceapimodels.PushSettings, error)
+	UpdatePushSettings(spaceID, userID string, payload spaceapimodels.PushSettingData) error
+	UpdatePushEnable(userID string, enabled bool) error
+	CreatePushSettings(tx *gorm.DB, spaceID, userID string) error
 }
 
 var Instance Provider
 
 func NewHandler() {
 	Instance = impl{
-		spaceUserStore: spaceusersstore.NewInstance(db.DB),
+		spaceUserStore:    spaceusersstore.NewInstance(db.DB),
+		pushSettingsStore: pushsettingsstore.NewInstance(db.DB),
 	}
 }
 
 type impl struct {
-	spaceUserStore spaceusersstore.Provider
+	spaceUserStore    spaceusersstore.Provider
+	pushSettingsStore pushsettingsstore.Provider
 }
 
 func (i impl) GetByID(userID string) (user spaceapimodels.SpaceUser, err error) {
@@ -85,14 +92,18 @@ func (i impl) CreateUser(request spaceapimodels.CreateUser) error {
 	} else {
 		rec.Role = models.SpaceUserRole
 	}
-	err = i.spaceUserStore.Create(rec)
-	if err != nil {
-		log.
-			WithField("request", fmt.Sprintf("%+v", request)).
-			WithError(err).
-			Error("ошибка создания пользователя space")
-		return err
-	}
+	err = db.DB.Transaction(func(tx *gorm.DB) error {
+		spaceUserStore := spaceusersstore.NewInstance(db.DB)
+		id, err := spaceUserStore.Create(rec)
+		if err != nil {
+			return errors.Wrap(err, "ошибка создания пользователя")
+		}
+		err = i.CreatePushSettings(tx, rec.SpaceID, id)
+		if err != nil {
+			return errors.Wrap(err, "ошибка создания списка настроек пушей для пользователя")
+		}
+		return nil
+	})
 	return nil
 }
 
@@ -244,4 +255,68 @@ func (i impl) СhangePassword(userID string, payload spaceapimodels.PasswordChan
 	}
 
 	return "", nil
+}
+
+func (i impl) GetPushSettings(spaceID, userID string) (data spaceapimodels.PushSettings, err error) {
+	userDB, err := i.spaceUserStore.GetByID(userID)
+	if err != nil {
+		return spaceapimodels.PushSettings{}, err
+	}
+	if userDB == nil {
+		return spaceapimodels.PushSettings{}, errors.New("пользователь не найден")
+	}
+	list, err := i.pushSettingsStore.List(spaceID, userID)
+	if err != nil {
+		return spaceapimodels.PushSettings{}, err
+	}
+	settingsList := make([]spaceapimodels.PushSettingView, 0, len(list))
+	for _, rec := range list {
+		settingsList = append(settingsList, rec.ToModelView())
+	}
+
+	data = spaceapimodels.PushSettings{
+		IsActive: userDB.PushEnabled,
+		Settings: settingsList,
+	}
+
+	return data, nil
+}
+
+func (i impl) UpdatePushSettings(spaceID, userID string, payload spaceapimodels.PushSettingData) error {
+	updMap := map[string]interface{}{
+		"system_value": payload.Value.System,
+		"email_value":  payload.Value.Email,
+		"tg_value":     payload.Value.Tg,
+	}
+	return i.pushSettingsStore.Update(spaceID, userID, payload.Code, updMap)
+}
+
+func (i impl) UpdatePushEnable(userID string, enabled bool) error {
+	updMap := map[string]interface{}{
+		"push_enabled": enabled,
+	}
+	return i.spaceUserStore.Update(userID, updMap)
+}
+
+func (i impl) CreatePushSettings(tx *gorm.DB, spaceID, userID string) error {
+	store := pushsettingsstore.NewInstance(tx)
+	value := false
+	rec := dbmodels.SpacePushSetting{
+		BaseSpaceModel: dbmodels.BaseSpaceModel{
+			SpaceID: spaceID,
+		},
+		SpaceUserID: userID,
+		SystemValue: &value,
+		EmailValue:  &value,
+		TgValue:     &value,
+	}
+
+	for key, _ := range models.PushCodeMap {
+		rec.Code = key
+		err := store.Create(rec)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
