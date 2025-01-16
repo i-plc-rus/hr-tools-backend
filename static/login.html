@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+    <script src="//code.jquery.com/jquery-2.2.4.min.js"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <h1>HR авторизация</h1>
+        <form action="/oauth2/login" method="POST">
+            <div class="form-group">
+                <input type="text" class="form-control" name="username" required placeholder="Введите адрес электронной почты">
+            </div>
+            <div class="form-group">
+                <input type="password" class="form-control" name="password" placeholder="Введите пароль">
+            </div>
+            <button type="submit" class="btn btn-success">Войти</button>
+        </form>
+    </div>
+</body>
+
+</html>

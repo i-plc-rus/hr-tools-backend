@@ -14,6 +14,7 @@ import (
 	"hr-tools-backend/controllers/v1/external"
 	"hr-tools-backend/fiberlog"
 	"hr-tools-backend/initializers"
+	"hr-tools-backend/lib/oauth2"
 	"hr-tools-backend/middleware"
 	"os"
 	"os/signal"
@@ -83,6 +84,11 @@ func main() {
 	apiV1.Mount("/admin_panel", adminPanel)
 	//admin.Use(middleware.SuperAdminRoleRequired())
 	apiv1.InitAdminApiRouters(adminPanel)
+
+	//oauth2
+	oauthApp := fiber.New()
+	app.Mount("/oauth2", oauthApp)
+	oauth2.InitOauthRouters(oauthApp)
 
 	app.Hooks().OnShutdown()
 

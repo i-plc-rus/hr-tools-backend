@@ -11,26 +11,34 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/gotify/configor v1.0.2
+	github.com/lib/pq v1.10.9
 	github.com/minio/minio-go/v7 v7.0.80
 	github.com/onrik/gorm-logrus v0.5.0
 	github.com/pkg/errors v0.9.1
 	github.com/sheeiavellie/go-yandexgpt v0.1.0
 	github.com/sirupsen/logrus v1.9.0
 	github.com/swaggo/swag v1.16.3
+	github.com/vgarvardt/go-oauth2-pg/v4 v4.4.4
 	github.com/xuri/excelize/v2 v2.9.0
 	gorm.io/driver/postgres v1.5.9
 	gorm.io/gorm v1.25.12
-    github.com/lib/pq v1.10.9
+)
+
+require (
+	github.com/bytedance/gopkg v0.0.0-20221122125632-68358b8ecec6 // indirect
+	github.com/golang-jwt/jwt v3.2.1+incompatible // indirect
+	github.com/vgarvardt/go-pg-adapter v1.0.0 // indirect
 )
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/MicahParks/keyfunc/v2 v2.1.0 // indirect
-	github.com/andybalholm/brotli v1.0.5 // indirect
+	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
+	github.com/go-oauth2/oauth2/v4 v4.5.2
 	github.com/go-openapi/analysis v0.21.4 // indirect
 	github.com/go-openapi/errors v0.20.4 // indirect
 	github.com/go-openapi/jsonpointer v0.20.0 // indirect
@@ -41,6 +49,7 @@ require (
 	github.com/go-openapi/strfmt v0.21.8 // indirect
 	github.com/go-openapi/swag v0.22.4 // indirect
 	github.com/go-openapi/validate v0.22.3 // indirect
+	github.com/go-session/session/v3 v3.2.1
 	github.com/go-yaml/yaml v2.1.0+incompatible // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -66,7 +75,7 @@ require (
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	github.com/valyala/fasthttp v1.51.0 // indirect
+	github.com/valyala/fasthttp v1.52.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/xuri/efp v0.0.0-20240408161823-9ad904a10d6d // indirect
 	github.com/xuri/nfp v0.0.0-20240318013403-ab9948c2c4a7 // indirect
