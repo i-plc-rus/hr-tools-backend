@@ -9,11 +9,11 @@ type PushEvent struct {
 
 var PushCodeMap = map[SpacePushSettingCode]PushEvent{
 	//TODO тут спискок ивентов
-	// PushLogin:     {Name: "Успешная авторизация", Msg: "Вы успешно вошли в систему"},
+	Check:     {Name: "Проверка", Msg: "Сообщение для проверки"},
 	// PushLoginFail: {Name: "Ошибка (напр., неверный логин/пароль)", Msg: "Неверные учетные данные"},
 }
 
 const (
-	// PushLogin     SpacePushSettingCode = "PushLogin"
+	Check     SpacePushSettingCode = "Check"
 	// PushLoginFail SpacePushSettingCode = "PushLoginFail"
 )

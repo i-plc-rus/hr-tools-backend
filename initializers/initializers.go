@@ -31,6 +31,7 @@ import (
 	spaceusershander "hr-tools-backend/lib/space/users/hander"
 	vacancyhandler "hr-tools-backend/lib/vacancy"
 	vacancyreqhandler "hr-tools-backend/lib/vacancy-req"
+	connectionhub "hr-tools-backend/lib/ws/hub/connection-hub"
 )
 
 var LoggerConfig *fiberlog.Config
@@ -41,6 +42,7 @@ func InitAllServices(ctx context.Context) {
 	InitDBConnection()
 	InitS3()
 	InitSmtp()
+	connectionhub.Init()
 	filestorage.NewHandler()
 	cityprovider.NewHandler()
 	pushhandler.NewHandler()
