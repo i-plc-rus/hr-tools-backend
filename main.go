@@ -69,6 +69,7 @@ func main() {
 	apiv1.InitVacancyRequestApiRouters(space)
 	apiv1.InitVacancyApiRouters(space)
 	apiv1.InitSpaceSettingRouters(space)
+	apiv1.InitSpaceProfileRouters(space)
 	apiv1.InitMsgTemplateApiRouters(space)
 	apiv1.InitNegotiationApiRouters(space)
 	apiv1.InitApplicantApiRouters(space)

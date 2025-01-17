@@ -20,15 +20,20 @@ import (
 
 type Provider interface {
 	CreateOrganizationSpace(request spaceapimodels.CreateOrganization) error
+	GetProfile(spaceID string) (spaceapimodels.ProfileData, error)
+	UpdateProfile(spaceID string, data spaceapimodels.ProfileData) error
 }
 
 var Instance Provider
 
 func NewHandler() {
-	Instance = impl{}
+	Instance = impl{
+		spaceStore: spacestore.NewInstance(db.DB),
+	}
 }
 
 type impl struct {
+	spaceStore spacestore.Provider
 }
 
 func (i impl) CreateOrganizationSpace(request spaceapimodels.CreateOrganization) error {
@@ -70,6 +75,35 @@ func (i impl) CreateOrganizationSpace(request spaceapimodels.CreateOrganization)
 	}
 
 	return nil
+}
+
+func (i impl) GetProfile(spaceID string) (spaceapimodels.ProfileData, error) {
+	rec, err := i.spaceStore.GetByID(spaceID)
+	if err != nil {
+		return spaceapimodels.ProfileData{}, err
+	}
+	if rec == nil {
+		return spaceapimodels.ProfileData{}, errors.New("Профиль организации не найден")
+	}
+
+	return rec.ToModel(), nil
+}
+
+func (i impl) UpdateProfile(spaceID string, data spaceapimodels.ProfileData) error {
+	updMap := map[string]interface{}{
+		"organization_name": data.OrganizationName,
+		"web":               data.Web,
+		"time_zone":         data.TimeZone,
+		"description":       data.Description,
+		"director_name":     data.DirectorName,
+	}
+
+	err := i.spaceStore.UpdateSpace(spaceID, updMap)
+	if err != nil {
+		return err
+	}
+	return nil
+
 }
 
 func (i impl) createSpace(tx *gorm.DB, request spaceapimodels.CreateOrganization) (spaceID string, err error) {
