@@ -48,7 +48,7 @@ func (c *negotiationApiController) list(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	list, err := applicant.Instance.ListOfNegotiation(spaceID, payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения списка откликов")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(list))
 }
@@ -78,7 +78,7 @@ func (c *negotiationApiController) statusChange(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 	err = applicant.Instance.UpdateStatus(spaceID, id, userID, payload.Status)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка изменения статуса отклика")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -102,7 +102,7 @@ func (c *negotiationApiController) get(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	resp, err := applicant.Instance.GetByID(spaceID, id)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения данных по отклику")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(resp))
 }
@@ -132,7 +132,7 @@ func (c *negotiationApiController) updateComment(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 	err = applicant.Instance.UpdateComment(spaceID, id, userID, payload.Comment)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка добавления комментария по отклику")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }

@@ -79,7 +79,7 @@ func (c *orgApiController) createOrg(ctx *fiber.Ctx) error {
 	}
 	err := spacehandler.Instance.CreateOrganizationSpace(payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка создания организации")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }

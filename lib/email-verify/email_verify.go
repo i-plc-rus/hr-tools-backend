@@ -108,16 +108,12 @@ func applyCode(code string, verifyStore emailverifystore.Provider) (email string
 }
 
 func updateUser(email string, userStore spaceusersstore.Provider) error {
-	logger := log.WithField("email", email)
-
 	user, err := userStore.FindByEmail(email, true)
 	if err != nil {
-		logger.WithError(err).Error("емайл не подтвержден, ошибка получения данных пользователя")
-		return errors.New("ошибка получения данных пользователя")
+		return errors.Wrap(err, "ошибка получения данных пользователя")
 	}
 	if user == nil {
-		logger.WithError(err).Error("емайл не подтвержден, пользователь не найден")
-		return errors.New("пользователь не найден")
+		return errors.Wrap(err,"пользователь не найден")
 	}
 	updMap := map[string]interface{}{
 		"is_email_verified": true,
@@ -129,10 +125,7 @@ func updateUser(email string, userStore spaceusersstore.Provider) error {
 	}
 	err = userStore.Update(user.ID, updMap)
 	if err != nil {
-		log.
-			WithError(err).
-			Error("ошибка обновления емайла пользователя space")
-		return err
+		return errors.Wrap(err,"ошибка обновления емайла пользователя space")
 	}
 	return nil
 }

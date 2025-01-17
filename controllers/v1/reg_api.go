@@ -41,7 +41,7 @@ func (c *regController) SendEmailConfirm(ctx *fiber.Ctx) error {
 	}
 	err := spaceauthhandler.Instance.SendEmailConfirmation(payload.Email)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка отправки письма с подтверждением на почту")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -62,7 +62,7 @@ func (c *regController) VerifyEmail(ctx *fiber.Ctx) error {
 	}
 	err := spaceauthhandler.Instance.VerifyEmail(verifyCode)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка подтверждения почты")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -87,7 +87,7 @@ func (c *regController) CheckEmail(ctx *fiber.Ctx) error {
 	}
 	passed, err := spaceauthhandler.Instance.CheckEmail(payload.Email)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка проверки уникальности почтового адреса")
 	}
 	if !passed {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("данная почта уже существует в системе"))

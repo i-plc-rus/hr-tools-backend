@@ -2,9 +2,7 @@ package spacehandler
 
 import (
 	"context"
-	"fmt"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"hr-tools-backend/db"
 	companystructload "hr-tools-backend/lib/company-struct-load"
@@ -67,10 +65,6 @@ func (i impl) CreateOrganizationSpace(request spaceapimodels.CreateOrganization)
 	})
 
 	if err != nil {
-		log.
-			WithField("request", fmt.Sprintf("%+v", request)).
-			WithError(err).
-			Error("Ошибка создания организации в space")
 		return err
 	}
 
