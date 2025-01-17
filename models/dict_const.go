@@ -215,6 +215,9 @@ const (
 	ApplicantSourceManual ApplicantSource = "Ручной ввод"
 	ApplicantSourceAvito  ApplicantSource = "Avito"
 	ApplicantSourceHh     ApplicantSource = "HeadHunter"
+	ApplicantSourceEmail  ApplicantSource = "Электронная почта"
+	ApplicantSourceSoc    ApplicantSource = "Социальные сети"
+	ApplicantSite         ApplicantSource = "Карьерный сайт"
 )
 
 type RelocationType string

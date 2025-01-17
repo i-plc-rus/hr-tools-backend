@@ -68,6 +68,9 @@ func (a ApplicantData) Validate() error {
 	if a.VacancyID == "" {
 		return errors.New("не указана вакансия")
 	}
+	if a.Source == "" {
+		return errors.New("не указан источник кандидата")
+	}
 	_, err := a.GetBirthDate()
 	if err != nil {
 		return errors.New("некоректный формат даты рождения")
@@ -137,6 +140,7 @@ func ApplicantConvert(rec dbmodels.Applicant) ApplicantView {
 	if rec.Vacancy != nil {
 		result.VacancyName = rec.Vacancy.VacancyName
 	}
+	result.FIO = rec.GetFIO()
 	result.FIO = rec.GetFIO()
 	return result
 }
@@ -269,4 +273,21 @@ func (r MultiEmailRequest) Validate() error {
 type XlsExportRequest struct {
 	IDs    []string         `json:"ids"`    // список идентификатов кандидатов
 	Filter *ApplicantFilter `json:"filter"` // Фильтр скроллера, в случае если не указан список идентификатов
+}
+
+type ApplicantSourceData struct {
+	NegotiationSource SourceData `json:"negotiation_source"` // Добавлены
+	AddingSource      SourceData `json:"adding_source"`      // Откликнулись
+	TotalSource       SourceData `json:"total_source"`       // Общая статистика
+}
+
+type SourceData struct {
+	Total int          `json:"total"`
+	Data  []SourceItem `json:"data"`
+}
+
+type SourceItem struct {
+	Name    string `json:"name"`
+	Count   int    `json:"count"`
+	Percent int    `json:"percent"`
 }

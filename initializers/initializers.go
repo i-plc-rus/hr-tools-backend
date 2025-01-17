@@ -6,6 +6,7 @@ import (
 	"hr-tools-backend/fiberlog"
 	adminpanelhandler "hr-tools-backend/lib/admin-panel"
 	adminpanelauthhandler "hr-tools-backend/lib/admin-panel/auth"
+	"hr-tools-backend/lib/analytics"
 	"hr-tools-backend/lib/applicant"
 	applicanthistoryhandler "hr-tools-backend/lib/applicant-history"
 	aprovalstageshandler "hr-tools-backend/lib/aproval-stages"
@@ -66,4 +67,5 @@ func InitAllServices(ctx context.Context) {
 	negotiationworker.StartWorker(ctx)
 	messagetemplate.NewHandler()
 	xlsexport.NewHandler()
+	analytics.NewHandler()
 }
