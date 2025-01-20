@@ -36,8 +36,8 @@ func InitSpaceUserRouters(app *fiber.App) {
 		userRootRoute.Get("", controller.getProfile)
 		userRootRoute.Put("", controller.updateProfile)
 		userRootRoute.Put("change_password", controller.changePassword)
-		userRootRoute.Post("photo", controller.uploadPhoto)       // загрузить фото
-		userRootRoute.Get("photo", controller.getPhoto)                  // скачать фото
+		userRootRoute.Post("photo", controller.uploadPhoto) // загрузить фото
+		userRootRoute.Get("photo", controller.getPhoto)     // скачать фото
 	})
 }
 
@@ -46,7 +46,7 @@ func InitSpaceUserRouters(app *fiber.App) {
 // @Description Создать нового пользователя
 // @Param   Authorization		header		string	true	"Authorization token"
 // @Param	body				body		spaceapimodels.CreateUser	true	"request body"
-// @Success 200
+// @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
@@ -60,9 +60,12 @@ func (c *spaceUserController) CreateUser(ctx *fiber.Ctx) error {
 	if err := payload.Validate(); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
-	err := spaceusershander.Instance.CreateUser(payload)
+	hMsg, err := spaceusershander.Instance.CreateUser(payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка создания нового пользователя")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusCreated).JSON(apimodels.NewResponse(nil))
 }
@@ -73,7 +76,7 @@ func (c *spaceUserController) CreateUser(ctx *fiber.Ctx) error {
 // @Param   Authorization		header		string	true	"Authorization token"
 // @Param 	id 				path 		string  true 	"space user ID"
 // @Param	body				body		spaceapimodels.CreateUser	true	"request body"
-// @Success 200
+// @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
@@ -85,7 +88,7 @@ func (c *spaceUserController) DeleteUser(ctx *fiber.Ctx) error {
 	}
 	err = spaceusershander.Instance.DeleteUser(userID)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка удаления пользователя")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -96,7 +99,7 @@ func (c *spaceUserController) DeleteUser(ctx *fiber.Ctx) error {
 // @Param   Authorization		header		string	true	"Authorization token"
 // @Param 	id 				path 		string  true 	"space user ID"
 // @Param	body				body		spaceapimodels.UpdateUser	true	"request body"
-// @Success 200
+// @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
@@ -116,7 +119,7 @@ func (c *spaceUserController) UpdateUser(ctx *fiber.Ctx) error {
 	}
 	err = spaceusershander.Instance.UpdateUser(userID, payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка обновления данных пользователя")
 	}
 	return ctx.Status(fiber.StatusCreated).JSON(apimodels.NewResponse(nil))
 }
@@ -126,7 +129,7 @@ func (c *spaceUserController) UpdateUser(ctx *fiber.Ctx) error {
 // @Description Получить список пользователей space
 // @Param   Authorization		header		string	true	"Authorization token"
 // @Param	body				body		apimodels.Pagination	true	"request body"
-// @Success 200
+// @Success 200 {object} apimodels.Response{data=[]spaceapimodels.SpaceUser}
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
@@ -143,7 +146,7 @@ func (c *spaceUserController) ListUsers(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	users, err := spaceusershander.Instance.GetListUsers(spaceID, payload.Page, payload.Limit)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения списка пользователей")
 	}
 	return ctx.Status(fiber.StatusCreated).JSON(apimodels.NewResponse(users))
 }
@@ -153,7 +156,7 @@ func (c *spaceUserController) ListUsers(ctx *fiber.Ctx) error {
 // @Description Получить пользователя space по ID
 // @Param   Authorization		header		string	true	"Authorization token"
 // @Param 	id 				path 		string  true 	"space user ID"
-// @Success 200
+// @Success 200 {object} apimodels.Response{data=spaceapimodels.SpaceUser}
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
@@ -165,7 +168,7 @@ func (c *spaceUserController) GetUserByID(ctx *fiber.Ctx) error {
 	}
 	user, err := spaceusershander.Instance.GetByID(userID)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения данных пользователя")
 	}
 	return ctx.Status(fiber.StatusCreated).JSON(apimodels.NewResponse(user))
 }

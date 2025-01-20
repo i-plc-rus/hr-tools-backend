@@ -32,7 +32,7 @@ func InitSpaceSettingRouters(app *fiber.App) {
 // @Param   Authorization		header		string	true	"Authorization token"
 // @Param 	code 				path 		string  true 	"space setting code"
 // @Param	body				body		spaceapimodels.UpdateSpaceSettingValue	true	"request body"
-// @Success 200
+// @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
@@ -53,7 +53,7 @@ func (c *spaceSettingsApiController) UpdateSetting(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	err = spacesettingshandler.Instance.UpdateSettingValue(spaceID, settingCode, payload.Value)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка обновления настройки")
 	}
 	return ctx.Status(fiber.StatusCreated).JSON(apimodels.NewResponse(nil))
 }
@@ -71,7 +71,7 @@ func (c *spaceSettingsApiController) ListSettings(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	list, err := spacesettingshandler.Instance.GetList(spaceID)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения списка настроек")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(list))
 }

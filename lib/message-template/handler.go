@@ -18,9 +18,9 @@ import (
 )
 
 type Provider interface {
-	SendEmailMessage(spaceID, templateID, applicantID, userID string) error
+	SendEmailMessage(spaceID, templateID, applicantID, userID string) (hMsg string, err error)
 	GetListTemplates(spaceID string) (list []msgtemplateapimodels.MsgTemplateView, err error)
-	MultiSendEmail(spaceID, userID string, data applicantapimodels.MultiEmailRequest) (failMails []string, err error)
+	MultiSendEmail(spaceID, userID string, data applicantapimodels.MultiEmailRequest) (failMails []string, hMsg string, err error)
 }
 
 var Instance Provider
@@ -41,7 +41,7 @@ type impl struct {
 	spaceUsersStore    spaceusersstore.Provider
 }
 
-func (i impl) SendEmailMessage(spaceID, templateID, applicantID, userID string) error {
+func (i impl) SendEmailMessage(spaceID, templateID, applicantID, userID string) (hMsg string, err error) {
 	logger := log.WithFields(log.Fields{
 		"space_id":     spaceID,
 		"template_id":  templateID,
@@ -50,38 +50,34 @@ func (i impl) SendEmailMessage(spaceID, templateID, applicantID, userID string) 
 
 	email, err := i.getSenderEmail(spaceID, logger)
 	if err != nil {
-		return err
+		return "", err
+	}
+	if email == "" {
+		return "в настройках пространства не указана почта для отправки", nil
 	}
 
 	msgTemplate, err := i.getMsgTemplate(spaceID, templateID, logger)
 	if err != nil {
-		return err
+		return "", err
+	}
+	if msgTemplate == nil {
+		return "шаблон сообщения не найден", nil
 	}
 
 	applicant, err := i.applicantStore.GetByID(spaceID, applicantID)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка поиска кандидата по ID")
-		return err
+		return "", err
 	}
 	if applicant == nil {
-		logger.
-			Error("не найден кандидат по указанномму ID")
-		return errors.New("не найден кандидат по указанномму ID")
+		return "", errors.New("не найден кандидат по указанномму ID")
 	}
 
 	if applicant.Email == "" {
-		logger.
-			Error("у кандидата не указана почта")
-		return errors.New("у кандидата не указана почта")
+		return "у кандидата не указана почта", nil
 	}
 	user, err := i.spaceUsersStore.GetByID(userID)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения профиля отправителя")
-		return errors.New("ошибка получения профиля отправителя")
+		return "", errors.New("ошибка получения профиля отправителя")
 	}
 	textSign := ""
 	if user != nil {
@@ -91,21 +87,14 @@ func (i impl) SendEmailMessage(spaceID, templateID, applicantID, userID string) 
 
 	err = smtp.Instance.SendEMail(email, applicant.Email, msg, msgTemplate.Title)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка отправки почты кандидату")
-		return err
+		return "", errors.Wrap(err, "ошибка отправки почты кандидату")
 	}
-	return nil
+	return "", nil
 }
 
 func (i impl) GetListTemplates(spaceID string) (list []msgtemplateapimodels.MsgTemplateView, err error) {
-	logger := log.WithField("space_id", spaceID)
 	recList, err := i.msgTemplateStore.List(spaceID)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения списка шаблонов сообщения")
 		return nil, err
 	}
 	for _, template := range recList {
@@ -114,35 +103,35 @@ func (i impl) GetListTemplates(spaceID string) (list []msgtemplateapimodels.MsgT
 	return list, nil
 }
 
-func (i impl) MultiSendEmail(spaceID, userID string, data applicantapimodels.MultiEmailRequest) (failMails []string, err error) {
+func (i impl) MultiSendEmail(spaceID, userID string, data applicantapimodels.MultiEmailRequest) (failMails []string, hMsg string, err error) {
 	logger := log.WithFields(log.Fields{
 		"space_id":    spaceID,
 		"template_id": data.MsgTemplateID,
 		"user_id":     userID,
 	})
 	if !smtp.Instance.IsConfigured() {
-		logger.
-			WithError(err).
-			Error("smtp клиент не настроен")
-		return nil, errors.New("smtp клиент не настроен")
+		return nil, "", errors.New("smtp клиент не настроен")
 	}
 
 	email, err := i.getSenderEmail(spaceID, logger)
 	if err != nil {
-		return nil, err
+		return nil, "", err
+	}
+	if email == "" {
+		return nil, "в настройках пространства не указана почта для отправки", nil
 	}
 
 	msgTemplate, err := i.getMsgTemplate(spaceID, data.MsgTemplateID, logger)
 	if err != nil {
-		return nil, err
+		return nil, "", err
+	}
+	if msgTemplate == nil {
+		return nil, "шаблон сообщения не найден", nil
 	}
 
 	user, err := i.spaceUsersStore.GetByID(userID)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения профиля отправителя")
-		return nil, errors.New("ошибка получения профиля отправителя")
+		return nil, "", errors.Wrap(err, "ошибка получения профиля отправителя")
 	}
 	textSign := ""
 	if user != nil && user.UsePersonalSign {
@@ -152,10 +141,7 @@ func (i impl) MultiSendEmail(spaceID, userID string, data applicantapimodels.Mul
 
 	applicantList, err := i.applicantStore.ListOfApplicantByIDs(spaceID, data.IDs, nil)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения списка кандидатов")
-		return nil, err
+		return nil, "", errors.Wrap(err, "ошибка получения списка кандидатов")
 	}
 	failMails = []string{}
 	for _, applicant := range applicantList {
@@ -177,7 +163,7 @@ func (i impl) MultiSendEmail(spaceID, userID string, data applicantapimodels.Mul
 		}
 	}
 
-	return failMails, nil
+	return failMails, "", nil
 }
 
 func buildMsg(tmpl string, emailTextSign string) string {
@@ -193,15 +179,7 @@ func buildMsg(tmpl string, emailTextSign string) string {
 func (i impl) getSenderEmail(spaceID string, logger *log.Entry) (string, error) {
 	email, err := i.spaceSettingsStore.GetValueByCode(spaceID, models.SpaceSenderEmail)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения почты для отправки из настроек пространства")
-		return "", errors.New("ошибка получения почты для отправки из настроек пространства")
-	}
-	if email == "" {
-		logger.
-			Error("в настройках пространства не указана почта для отправки")
-		return "", errors.New("в настройках пространства не указана почта для отправки")
+		return "", errors.Wrap(err, "ошибка получения почты для отправки из настроек пространства")
 	}
 	return email, nil
 }
@@ -209,15 +187,7 @@ func (i impl) getSenderEmail(spaceID string, logger *log.Entry) (string, error) 
 func (i impl) getMsgTemplate(spaceID, templateID string, logger *log.Entry) (*dbmodels.MessageTemplate, error) {
 	msgTemplate, err := i.msgTemplateStore.GetByID(spaceID, templateID)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения шаблона сообщения")
-		return nil, errors.New("ошибка получения шаблона сообщения")
-	}
-	if msgTemplate == nil {
-		logger.
-			Error("шаблон сообщения не найден")
-		return nil, errors.New("шаблон сообщения не найден")
+		return nil, errors.Wrap(err, "ошибка получения шаблона сообщения")
 	}
 	return msgTemplate, nil
 }
