@@ -681,24 +681,28 @@ func (i *impl) getLogger(spaceID, vacancyID, userID string) *log.Entry {
 func (i impl) cancelJobSite(rec dbmodels.Vacancy, logger log.Entry) error {
 	errorList := []string{}
 	if rec.AvitoID != 0 && (rec.AvitoStatus == models.VacancyPubStatusModeration || rec.AvitoStatus != models.VacancyPubStatusPublished) {
-		err := avitohandler.Instance.VacancyClose(context.TODO(), rec.SpaceID, rec.ID)
-		if err != nil {
+		hMsg, err := avitohandler.Instance.VacancyClose(context.TODO(), rec.SpaceID, rec.ID)
+		if err != nil || hMsg != "" {
 			logger.
 				WithError(err).
+				WithField("reason", hMsg).
 				Error("не удалось снять вакансию с публикации на Avito")
 			errorList = append(errorList, "не удалось снять вакансию с публикации на Avito")
+		} else {
+			logger.Info("вакансия снята с публикации на Avito")
 		}
-		logger.Info("вакансия снята с публикации на Avito")
 	}
 	if rec.HhID != "" && (rec.HhStatus == models.VacancyPubStatusModeration || rec.HhStatus != models.VacancyPubStatusPublished) {
-		err := hhhandler.Instance.VacancyClose(context.TODO(), rec.SpaceID, rec.ID)
-		if err != nil {
+		hMsg, err := hhhandler.Instance.VacancyClose(context.TODO(), rec.SpaceID, rec.ID)
+		if err != nil || hMsg != "" {
 			logger.
 				WithError(err).
+				WithField("reason", hMsg).
 				Error("не удалось снять вакансию с публикации на HeadHunter")
 			errorList = append(errorList, "не удалось снять вакансию с публикации на HeadHunter")
+		} else {
+			logger.Info("вакансия снята с публикации на HeadHunter")
 		}
-		logger.Info("вакансия снята с публикации на HeadHunter")
 	}
 	if len(errorList) != 0 {
 		return errors.Errorf("%v", errorList)

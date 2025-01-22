@@ -136,38 +136,36 @@ func (i *impl) CheckConnected(spaceID string) bool {
 	return true
 }
 
-func (i *impl) VacancyPublish(ctx context.Context, spaceID, vacancyID string) error {
-	logger := i.getLogger(spaceID, vacancyID)
-
-	accessToken, err := i.getToken(ctx, spaceID)
-	if err != nil {
-		return err
+func (i *impl) VacancyPublish(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error) {
+	accessToken, hMsg, err := i.getToken(ctx, spaceID)
+	if err != nil || hMsg != "" {
+		return hMsg, err
 	}
 
 	rec, err := i.vacancyStore.GetByID(spaceID, vacancyID)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if rec == nil {
-		return errors.New("вакансия не найдена")
+		return "вакансия не найдена", nil
 	}
 
 	if models.VacancyStatusOpened != rec.Status {
-		return errors.Errorf("неподходящей статус вакансии %v, для публикации в НН", rec.Status)
+		return fmt.Sprintf("неподходящей статус вакансии %v, для публикации", rec.Status), nil
 	}
 
 	if rec.HhID != "" && rec.HhStatus != models.VacancyPubStatusNone && rec.HhStatus != models.VacancyPubStatusClosed {
-		return errors.New("вакансия уже размещена")
+		return "вакансия уже размещена", nil
 	}
 
-	request, err := i.fillVacancyData(ctx, rec)
-	if err != nil {
-		return err
+	request, hMsg := i.fillVacancyData(ctx, rec)
+	if hMsg != "" {
+		return hMsg, nil
 	}
 
 	id, err := i.client.VacancyPublish(ctx, accessToken, *request)
 	if err != nil {
-		return err
+		return "", err
 	}
 	vacancyUrl := fmt.Sprintf(VacancyUriTpl, id)
 	updMap := map[string]interface{}{
@@ -177,34 +175,31 @@ func (i *impl) VacancyPublish(ctx context.Context, spaceID, vacancyID string) er
 	}
 	err = i.vacancyStore.Update(spaceID, vacancyID, updMap)
 	if err != nil {
-		err = errors.Errorf("не удалось сохранить идентификатор опубликованной вакансии (%v)", id)
-		logger.Error(err)
-		return err
+		return "", errors.Errorf("не удалось сохранить идентификатор опубликованной вакансии (%v)", id)
 	}
-	return nil
+	return "", nil
 }
 
-func (i *impl) VacancyUpdate(ctx context.Context, spaceID, vacancyID string) error {
-	logger := i.getLogger(spaceID, vacancyID)
-	accessToken, err := i.getToken(ctx, spaceID)
-	if err != nil {
-		return err
+func (i *impl) VacancyUpdate(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error) {
+	accessToken, hMsg, err := i.getToken(ctx, spaceID)
+	if err != nil || hMsg != "" {
+		return hMsg, err
 	}
 
 	rec, err := i.vacancyStore.GetByID(spaceID, vacancyID)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if rec == nil {
-		return errors.New("вакансия не найдена")
+		return "вакансия не найдена", nil
 	}
 	if rec.HhID == "" {
-		return errors.New("вакансия еще не опубликованна")
+		return "вакансия еще не опубликованна", nil
 	}
 
-	request, err := i.fillVacancyData(ctx, rec)
-	if err != nil {
-		return err
+	request, hMsg := i.fillVacancyData(ctx, rec)
+	if hMsg != "" {
+		return hMsg, nil
 	}
 
 	err = i.client.VacancyUpdate(ctx, accessToken, rec.HhID, *request)
@@ -213,81 +208,76 @@ func (i *impl) VacancyUpdate(ctx context.Context, spaceID, vacancyID string) err
 	}
 	err = i.vacancyStore.Update(spaceID, vacancyID, updMap)
 	if err != nil {
-		errMsg := errors.New("не удалось обновить статус публикации")
-		logger.WithError(err).Error(errMsg)
-		return errMsg
+		return "", errors.New("не удалось обновить статус публикации")
 	}
-	return nil
+	return "", nil
 }
 
-func (i *impl) VacancyClose(ctx context.Context, spaceID, vacancyID string) error {
-	accessToken, err := i.getToken(ctx, spaceID)
-	if err != nil {
-		return err
+func (i *impl) VacancyClose(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error) {
+	accessToken, hMsg, err := i.getToken(ctx, spaceID)
+	if err != nil || hMsg != "" {
+		return hMsg, err
 	}
 	meResp, err := i.client.Me(ctx, accessToken)
 	if err != nil {
-		return errors.Wrap(err, "ошибка получения информации о токене HH")
+		return "", errors.Wrap(err, "ошибка получения информации о токене HH")
 	}
 	rec, err := i.vacancyStore.GetByID(spaceID, vacancyID)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if rec == nil {
-		return errors.New("вакансия не найдена")
+		return "вакансия не найдена", nil
 	}
 	if rec.HhID == "" {
-		return errors.New("вакансия еще не опубликованна")
+		return "вакансия еще не опубликованна", nil
 	}
-	return i.client.VacancyClose(ctx, accessToken, meResp.Employer.ID, rec.HhID)
+	return "", i.client.VacancyClose(ctx, accessToken, meResp.Employer.ID, rec.HhID)
 }
 
-func (i *impl) VacancyAttach(ctx context.Context, spaceID, vacancyID, hhID string) error {
+func (i *impl) VacancyAttach(ctx context.Context, spaceID, vacancyID, hhID string) (hMsg string, err error) {
 	rec, err := i.vacancyStore.GetByID(spaceID, vacancyID)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if rec == nil {
-		return errors.New("вакансия не найдена")
+		return "вакансия не найдена", nil
 	}
 	if rec.HhID != "" {
-		return errors.New("ссылка на вакансию уже добавлена")
+		return "ссылка на вакансию уже добавлена", nil
 	}
 	if models.VacancyStatusOpened != rec.Status {
-		return errors.Errorf("неподходящей статус вакансии: %v", rec.Status)
+		return fmt.Sprintf("неподходящей статус вакансии: %v", rec.Status), nil
 	}
-	accessToken, err := i.getToken(ctx, spaceID)
-	if err != nil {
-		return err
+	accessToken, hMsg, err := i.getToken(ctx, spaceID)
+	if err != nil || hMsg != "" {
+		return hMsg, err
 	}
 
 	self, err := i.client.Me(ctx, accessToken)
 	if err != nil {
-		return err
+		return "", err
 	}
 	info, err := i.client.GetVacancy(ctx, accessToken, hhID)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if info == nil {
-		return errors.New("вакансия не найдена на сайте НН")
+		return "вакансия не найдена на сайте HeadHunter", nil
 	}
 	if info.Employer.ID != self.Employer.ID {
-		return errors.New("вакансия принадлежит другой компании")
+		return "вакансия принадлежит другой компании", nil
 	}
 	updMap := map[string]interface{}{
 		"hh_id":     hhID,
 		"hh_uri":    info.AlternateUrl,
 		"hh_status": models.VacancyPubStatusPublished,
 	}
-	logger := i.getLogger(spaceID, vacancyID)
 	err = i.vacancyStore.Update(spaceID, vacancyID, updMap)
 	if err != nil {
-		errMsg := errors.Errorf("не удалось обновить данные опубликованной вакансии (%v)", hhID)
-		logger.WithError(err).Error(errMsg)
-		return errMsg
+		return "", errors.Errorf("не удалось обновить данные опубликованной вакансии (%v)", hhID)
 	}
-	return nil
+	return "", nil
 }
 
 func (i *impl) GetVacancyInfo(ctx context.Context, spaceID, vacancyID string) (*vacancyapimodels.ExtVacancyInfo, error) {
@@ -310,9 +300,12 @@ func (i *impl) GetVacancyInfo(ctx context.Context, spaceID, vacancyID string) (*
 }
 
 func (i *impl) HandleNegotiations(ctx context.Context, data dbmodels.Vacancy) error {
-	accessToken, err := i.getToken(ctx, data.SpaceID)
+	accessToken, hMsg, err := i.getToken(ctx, data.SpaceID)
 	if err != nil {
 		return err
+	}
+	if hMsg != "" {
+		return errors.New(hMsg)
 	}
 	resp, err := i.client.Negotiations(ctx, accessToken, data.HhID, 0, 20)
 	if err != nil {
@@ -504,7 +497,7 @@ func (i *impl) getArea(ctx context.Context, city *dbmodels.City) (hhapimodels.Di
 			}, nil
 		}
 	}
-	return hhapimodels.DictItem{}, errors.New("город публикации не найден в справочнике HH")
+	return hhapimodels.DictItem{}, errors.New("город публикации не найден в справочнике")
 }
 
 func (i *impl) storeToken(spaceID string, token hhapimodels.ResponseToken, inDb bool) error {
@@ -523,13 +516,13 @@ func (i *impl) storeToken(spaceID string, token hhapimodels.ResponseToken, inDb 
 	return nil
 }
 
-func (i *impl) getToken(ctx context.Context, spaceID string) (string, error) {
+func (i *impl) getToken(ctx context.Context, spaceID string) (token, hMsg string, err error) {
 	if !i.CheckConnected(spaceID) {
-		return "", errors.New("HeadHunter не подключен")
+		return "", "HeadHunter не подключен", nil
 	}
 	value, ok := i.tokenMap.Load(spaceID)
 	if !ok {
-		return "", errors.New("HeadHunter не подключен")
+		return "", "HeadHunter не подключен", nil
 	}
 	tokenData := value.(hhapimodels.TokenData)
 	if time.Now().After(tokenData.ExpiresAt) {
@@ -538,30 +531,30 @@ func (i *impl) getToken(ctx context.Context, spaceID string) (string, error) {
 		}
 		tokenResp, err := i.client.RefreshToken(ctx, req)
 		if err != nil {
-			return "", errors.New("ошибка получения токена для HeadHunter")
+			return "", "", errors.Wrap(err, "ошибка получения токена для HeadHunter")
 		}
 		err = i.storeToken(spaceID, *tokenResp, true)
 		if err != nil {
-			return "", errors.New("ошибка сохранения токена для HeadHunter")
+			return "", "", errors.Wrap(err, "ошибка сохранения токена для HeadHunter")
 		}
 	}
-	return tokenData.AccessToken, nil
+	return tokenData.AccessToken, "", nil
 }
 
-func (i *impl) fillVacancyData(ctx context.Context, rec *dbmodels.Vacancy) (*hhapimodels.VacancyPubRequest, error) {
+func (i *impl) fillVacancyData(ctx context.Context, rec *dbmodels.Vacancy) (req *hhapimodels.VacancyPubRequest, hMsg string) {
 	if rec.City == nil {
-		return nil, errors.New("не указан город публикации")
+		return nil, "не указан город публикации"
 	}
 	area, err := i.getArea(ctx, rec.City)
 	if err != nil {
-		return nil, err
+		return nil, err.Error()
 	}
 
 	if rec.JobTitle == nil {
-		return nil, errors.New("для публикации на HeadHunter, необходимо указать должность")
+		return nil, "для публикации на HeadHunter, необходимо указать должность"
 	}
 	if len(rec.Requirements) < 200 {
-		return nil, errors.New("для публикации на HeadHunter, необходимо указать описание не менее 200 символов")
+		return nil, "для публикации на HeadHunter, необходимо указать описание не менее 200 символов"
 	}
 	request := hhapimodels.VacancyPubRequest{
 		Description:       rec.Requirements,
@@ -592,7 +585,7 @@ func (i *impl) fillVacancyData(ctx context.Context, rec *dbmodels.Vacancy) (*hha
 	if rec.Schedule != "" {
 		request.Schedule = &hhapimodels.DictItem{ID: string(rec.Schedule)}
 	}
-	return &request, nil
+	return &request, ""
 }
 
 func (i *impl) GetCheckList(ctx context.Context, spaceID string, status models.VacancyPubStatus) ([]dbmodels.Vacancy, error) {
@@ -609,9 +602,12 @@ func (i *impl) CheckIsActivePublications(ctx context.Context, spaceID string, li
 
 func (i *impl) checkPublications(ctx context.Context, spaceID string, list []dbmodels.Vacancy) error {
 	logger := i.getLogger(spaceID, "")
-	accessToken, err := i.getToken(ctx, spaceID)
+	accessToken, hMsg, err := i.getToken(ctx, spaceID)
 	if err != nil {
 		return err
+	}
+	if hMsg != "" {
+		return errors.New(hMsg)
 	}
 	for _, rec := range list {
 		if helpers.IsContextDone(ctx) {
@@ -649,9 +645,12 @@ func (i *impl) checkPublications(ctx context.Context, spaceID string, list []dbm
 }
 
 func (i *impl) downloadResumePdf(ctx context.Context, spaceID, applicantID, resumeUrl string) error {
-	accessToken, err := i.getToken(ctx, spaceID)
+	accessToken, hMsg, err := i.getToken(ctx, spaceID)
 	if err != nil {
 		return err
+	}
+	if hMsg != "" {
+		return errors.New(hMsg)
 	}
 	body, err := i.client.DownloadResume(ctx, accessToken, resumeUrl)
 	if err != nil {

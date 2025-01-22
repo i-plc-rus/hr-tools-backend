@@ -1,7 +1,6 @@
 package departmentprovider
 
 import (
-	"fmt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
@@ -50,10 +49,6 @@ func (i impl) Create(spaceID string, request dictapimodels.DepartmentData) (id s
 	}
 	id, err = i.store.Create(rec)
 	if err != nil {
-		logger.
-			WithField("request", fmt.Sprintf("%+v", request)).
-			WithError(err).
-			Error("ошибка создания подразделения")
 		return "", err
 	}
 	logger.
@@ -71,10 +66,6 @@ func (i impl) Update(spaceID, id string, request dictapimodels.DepartmentData) e
 	}
 	err := i.store.Update(spaceID, id, updMap)
 	if err != nil {
-		logger.
-			WithField("request", fmt.Sprintf("%+v", request)).
-			WithError(err).
-			Error("ошибка обновления подразделения")
 		return err
 	}
 	logger.Info("обновлено подразделение")
@@ -82,13 +73,8 @@ func (i impl) Update(spaceID, id string, request dictapimodels.DepartmentData) e
 }
 
 func (i impl) Get(spaceID, id string) (item dictapimodels.DepartmentView, err error) {
-	logger := log.WithField("space_id", spaceID).
-		WithField("rec_id", id)
 	rec, err := i.store.GetByID(spaceID, id)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения подразделения")
 		return dictapimodels.DepartmentView{}, err
 	}
 	if rec == nil {
@@ -98,12 +84,8 @@ func (i impl) Get(spaceID, id string) (item dictapimodels.DepartmentView, err er
 }
 
 func (i impl) FindByName(spaceID string, request dictapimodels.DepartmentFind) (list []dictapimodels.DepartmentTreeItem, err error) {
-	logger := log.WithField("space_id", spaceID)
 	recList, err := i.store.FindByCompanyStruct(spaceID, request.CompanyStructID)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения списка подразделений")
 		return nil, err
 	}
 
@@ -139,9 +121,6 @@ func (i impl) Delete(spaceID, id string) error {
 		WithField("rec_id", id)
 	err := i.store.Delete(spaceID, id)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка удаления подразделения")
 		return err
 	}
 	logger.Info("удалено подразделение")

@@ -176,3 +176,9 @@ func (a Applicant) GetFIO() string {
 	fio := strings.TrimSpace(fmt.Sprintf("%v %v", a.LastName, a.FirstName))
 	return strings.TrimSpace(fmt.Sprintf("%v %v", fio, a.MiddleName))
 }
+
+type ApplicantSource struct {
+	Source        models.ApplicantSource
+	Total         int
+	IsNegotiation bool
+}
