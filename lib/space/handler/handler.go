@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
-	"fmt"
 	"hr-tools-backend/db"
 	companystructload "hr-tools-backend/lib/company-struct-load"
 	filestorage "hr-tools-backend/lib/file-storage"
@@ -16,10 +15,6 @@ import (
 	"hr-tools-backend/models"
 	spaceapimodels "hr-tools-backend/models/api/space"
 	dbmodels "hr-tools-backend/models/db"
-
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 )
 
 type Provider interface {
