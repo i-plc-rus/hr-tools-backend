@@ -10,6 +10,7 @@ import (
 	externalservices "hr-tools-backend/lib/external-services"
 	avitoclient "hr-tools-backend/lib/external-services/avito/client"
 	extservicestore "hr-tools-backend/lib/external-services/store"
+	pushhandler "hr-tools-backend/lib/space/push/handler"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	"hr-tools-backend/lib/utils/helpers"
@@ -433,6 +434,9 @@ func (i *impl) storeApplicant(resume *avitoapimodels.Resume, apply avitoapimodel
 	}
 	changes := applicanthistoryhandler.GetCreateChanges("Кандидат добавлен с работного сайта на вакансию", applicantData)
 	i.applicantHistory.Save(applicantData.SpaceID, applicantID, applicantData.VacancyID, "", dbmodels.HistoryTypeNegotiation, changes)
+
+	notification := models.GetPushApplicantNegotiation(data.VacancyName, applicantData.GetFIO())
+	go i.sendNotification(data, notification)
 }
 
 func (i *impl) getValue(spaceID string, code models.SpaceSettingCode) (string, error) {
@@ -614,6 +618,10 @@ func (i *impl) CheckIsModerationDone(ctx context.Context, spaceID string, list [
 				WithError(err).
 				Error("ошибка обновления статуса публикации")
 		}
+		if newStatus == models.VacancyPubStatusPublished {
+			notification := models.GetPushVacancyPublished(rec.VacancyName, "Avito")
+			go i.sendNotification(rec, notification)
+		}
 	}
 	return nil
 }
@@ -649,4 +657,16 @@ func (i *impl) CheckIsActivePublications(ctx context.Context, spaceID string, li
 		}
 	}
 	return nil
+}
+
+func (i *impl) sendNotification(rec dbmodels.Vacancy, data models.NotificationData) {
+	//отправляем автору
+	pushhandler.Instance.SendNotification(rec.AuthorID, data)
+	for _, teamMember := range rec.VacancyTeam {
+		//отправляем команде
+		if rec.AuthorID == teamMember.ID {
+			continue
+		}
+		pushhandler.Instance.SendNotification(teamMember.ID, data)
+	}
 }

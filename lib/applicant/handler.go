@@ -7,9 +7,11 @@ import (
 	applicanthistoryhandler "hr-tools-backend/lib/applicant-history"
 	applicantstore "hr-tools-backend/lib/applicant/store"
 	xlsexport "hr-tools-backend/lib/export/xls"
+	pushhandler "hr-tools-backend/lib/space/push/handler"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	vacancyhandler "hr-tools-backend/lib/vacancy"
 	selectionstagestore "hr-tools-backend/lib/vacancy/selection-stage-store"
+	vacancystore "hr-tools-backend/lib/vacancy/store"
 	"hr-tools-backend/models"
 	applicantapimodels "hr-tools-backend/models/api/applicant"
 	negotiationapimodels "hr-tools-backend/models/api/negotiation"
@@ -51,6 +53,7 @@ func NewHandler() {
 		vacancyProvider:     vacancyhandler.Instance,
 		applicantHistory:    applicanthistoryhandler.Instance,
 		userStore:           spaceusersstore.NewInstance(db.DB),
+		vacancyStore:        vacancystore.NewInstance(db.DB),
 	}
 }
 
@@ -60,6 +63,7 @@ type impl struct {
 	vacancyProvider     vacancyhandler.Provider
 	applicantHistory    applicanthistoryhandler.Provider
 	userStore           spaceusersstore.Provider
+	vacancyStore        vacancystore.Provider
 }
 
 func (i *impl) getLogger(spaceID, applicantID, userID string) *log.Entry {
@@ -105,6 +109,22 @@ func (i impl) UpdateComment(spaceID, id, userID string, comment string) error {
 	}
 	changes := applicanthistoryhandler.GetUpdateChanges("Изменен профиль", rec.Applicant, updMap)
 	i.applicantHistory.Save(rec.SpaceID, rec.ID, rec.VacancyID, userID, dbmodels.HistoryTypeUpdate, changes)
+
+	go func(rec dbmodels.Applicant, userID string) {
+		logger := i.getLogger(rec.SpaceID, rec.ID, userID).
+			WithField("event_code", models.PushApplicantNote)
+		userRec := i.getUser(userID, logger)
+		if userRec == nil {
+			return
+		}
+		vacancyRec := i.getVacancy(rec.SpaceID, rec.VacancyID, logger)
+		if vacancyRec == nil {
+			return
+		}
+		notification := models.GetPushApplicantNote(vacancyRec.VacancyName, rec.GetFIO(), userRec.GetFullName())
+		i.sendNotification(*vacancyRec, notification)
+
+	}(rec.Applicant, userID)
 	return nil
 }
 
@@ -800,5 +820,54 @@ func (i impl) сhangeStage(tx *gorm.DB, spaceID, userID, userName string, applic
 	}
 	changes := applicanthistoryhandler.GetStageChange(stageRec.Name)
 	applicantHistory.SaveWithUser(spaceID, applicantID, applicantRec.VacancyID, userID, userName, dbmodels.HistoryTypeStageChange, changes)
+
+	go func(rec dbmodels.Applicant, userName string) {
+		logger := i.getLogger(rec.SpaceID, rec.ID, userID).
+			WithField("event_code", models.PushApplicantNewStage)
+		vacancyRec := i.getVacancy(rec.SpaceID, rec.VacancyID, logger)
+		if vacancyRec == nil {
+			return
+		}
+		notification := models.GetPushApplicantNewStage(vacancyRec.VacancyName, userName, stageRec.Name)
+		i.sendNotification(*vacancyRec, notification)
+	}(applicantRec.Applicant, userName)
 	return nil
+}
+
+func (i *impl) sendNotification(rec dbmodels.Vacancy, data models.NotificationData) {
+	//отправляем автору
+	pushhandler.Instance.SendNotification(rec.AuthorID, data)
+	for _, teamMember := range rec.VacancyTeam {
+		//отправляем команде
+		if rec.AuthorID == teamMember.ID {
+			continue
+		}
+		pushhandler.Instance.SendNotification(teamMember.ID, data)
+	}
+}
+
+func (i *impl) getVacancy(spaceID, vacancyID string, logger *log.Entry) *dbmodels.Vacancy {
+	vacancyRec, err := i.vacancyStore.GetByID(spaceID, vacancyID)
+	if err != nil {
+		logger.WithError(err).Error("ошибка получения вакансии")
+		return nil
+	}
+	if vacancyRec == nil {
+		logger.Error("вакансия не найдена")
+		return nil
+	}
+	return vacancyRec
+}
+
+func (i *impl) getUser(userID string, logger *log.Entry) *dbmodels.SpaceUser {
+	userRec, err := i.userStore.GetByID(userID)
+	if err != nil {
+		logger.WithError(err).Error("ошибка получения пользователя")
+		return nil
+	}
+	if userRec == nil {
+		logger.Error("пользователь не найден")
+		return nil
+	}
+	return userRec
 }

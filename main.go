@@ -15,6 +15,7 @@ import (
 	"hr-tools-backend/fiberlog"
 	"hr-tools-backend/initializers"
 	"hr-tools-backend/middleware"
+	"hr-tools-backend/lib/ws"
 	"os"
 	"os/signal"
 	"sync"
@@ -36,6 +37,15 @@ func main() {
 		FilePath: "./docs/swagger.json",
 	}
 	app.Use(swagger.New(swaggerCfg))
+
+	wsApp := fiber.New(fiber.Config{
+		BodyLimit: 10 * 1024 * 1024, // limit of 10MB
+	})
+	wsApp.Use(fiberlog.New(*initializers.LoggerConfig))
+	wsApp.Use(middleware.AuthorizationRequired())
+	app.Mount("/ws", wsApp)
+	ws.InitWs(wsApp)
+
 
 	//api
 	apiV1 := fiber.New()

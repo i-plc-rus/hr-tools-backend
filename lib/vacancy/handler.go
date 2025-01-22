@@ -14,6 +14,7 @@ import (
 	jobtitleprovider "hr-tools-backend/lib/dicts/job-title"
 	avitohandler "hr-tools-backend/lib/external-services/avito"
 	hhhandler "hr-tools-backend/lib/external-services/hh"
+	pushhandler "hr-tools-backend/lib/space/push/handler"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	selectionstagestore "hr-tools-backend/lib/vacancy/selection-stage-store"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
@@ -530,6 +531,11 @@ func (i impl) StatusChange(spaceID, vacancyID, userID string, status models.Vaca
 	}
 
 	logger.Info("обновлен статус вакансии")
+	rec.Status = status
+	go func(rec dbmodels.Vacancy) {
+		notification := models.GetPushVacancyNewStatus(rec.VacancyName, string(status))
+		i.sendNotification(rec, notification)
+	}(*rec)
 	return nil
 }
 
@@ -564,11 +570,9 @@ func (i impl) InviteToTeam(tx *gorm.DB, spaceID, vacancyID, userID string, respo
 	}
 	rec := dbmodels.VacancyTeam{
 		BaseSpaceModel: dbmodels.BaseSpaceModel{
-			BaseModel: dbmodels.BaseModel{
-				ID: userID,
-			},
 			SpaceID: spaceID,
 		},
+		UserID:      userID,
 		VacancyID:   vacancyID,
 		Responsible: responsible,
 	}
@@ -617,7 +621,29 @@ func (i impl) SetAsResponsible(spaceID, vacancyID, userID string) error {
 	if vt == nil {
 		return errors.New("пользователь не в команде")
 	}
-	return i.teamStore.SetAsResponsible(spaceID, vacancyID, userID)
+	err = i.teamStore.SetAsResponsible(spaceID, vacancyID, userID)
+	if err != nil {
+		return err
+	}
+	go func() {
+		logger := log.
+			WithField("space_id", spaceID).
+			WithField("user_id", userID).
+			WithField("event_code", models.PushVacancyResponsible).
+			WithField("vacancy_id", vacancyID)
+		rec, err := i.store.GetByID(spaceID, vacancyID)
+		if err != nil {
+			logger.WithError(err).Error("ошибка получения вакансии")
+			return
+		}
+		if rec == nil {
+			logger.Error("вакансия не найдена")
+			return
+		}
+		notification := models.GetPushVacancyResponsible(rec.VacancyName, vt.SpaceUser.GetFullName())
+		i.sendNotification(*rec, notification)
+	}()
+	return nil
 }
 
 func (i impl) initSelectionStages(tx *gorm.DB, spaceID, vacancyID string) error {
@@ -683,4 +709,15 @@ func (i impl) cancelJobSite(rec dbmodels.Vacancy, logger log.Entry) error {
 func createCompany(tx *gorm.DB, spaceID, name string) (string, error) {
 	companyStore := companystore.NewInstance(tx)
 	return companyStore.FindOrCreate(spaceID, name)
+}
+
+func (i impl) sendNotification(rec dbmodels.Vacancy, data models.NotificationData) {
+	pushhandler.Instance.SendNotification(rec.AuthorID, data)
+	for _, teamMember := range rec.VacancyTeam {
+		//отправляем команде
+		if rec.AuthorID == teamMember.ID {
+			continue
+		}
+		pushhandler.Instance.SendNotification(teamMember.ID, data)
+	}
 }

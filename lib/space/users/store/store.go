@@ -143,7 +143,7 @@ func (i impl) GetListForVacancy(spaceID, vacancyID string, filter vacancyapimode
 	tx := i.db.Model(dbmodels.SpaceUser{})
 	tx = tx.
 		Where("space_id = ?", spaceID).
-		Where("id not in (select id from vacancy_teams where vacancy_id = ?)", vacancyID)
+		Where("id not in (select user_id from vacancy_teams where vacancy_id = ?)", vacancyID)
 	if filter.Search != "" {
 		tx = tx.Where("LOWER(first_name|| ' ' || last_name) like ?", "%"+strings.ToLower(filter.Search)+"%")
 	}

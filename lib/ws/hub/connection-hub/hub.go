@@ -88,6 +88,7 @@ func (i *impl) sendDelayedMessages(userID string) {
 				Time:     item.CreatedAt.Format("02.01.2006 15:04:05"),
 				Code:     string(item.Code),
 				Msg:      item.Msg,
+				Title:    item.Title,
 			}
 			i.SendMessage(msg)
 			sendedIDs = append(sendedIDs, item.ID)

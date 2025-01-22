@@ -48,6 +48,7 @@ type Vacancy struct {
 	Experience      models.Experience `gorm:"type:varchar(255)"` // Опыт работы
 	Schedule        models.Schedule   `gorm:"type:varchar(255)"` // Режим работы
 	SelectionStages []SelectionStage
+	VacancyTeam     []VacancyTeam
 }
 
 type HhData struct {
