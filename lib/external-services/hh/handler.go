@@ -18,6 +18,7 @@ import (
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	"hr-tools-backend/models"
 	hhapimodels "hr-tools-backend/models/api/hh"
+	negotiationapimodels "hr-tools-backend/models/api/negotiation"
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
 	"strings"
@@ -458,6 +459,83 @@ func (i *impl) HandleNegotiations(ctx context.Context, data dbmodels.Vacancy) er
 	return nil
 }
 
+func (i *impl) SendMessage(ctx context.Context, data dbmodels.Applicant, msg string) error {
+	accessToken, hMsg, err := i.getToken(ctx, data.SpaceID)
+	if err != nil {
+		return err
+	}
+	if hMsg != "" {
+		return errors.New(hMsg)
+	}
+	return i.client.SendNewMessage(ctx, accessToken, data.VacancyID, data.NegotiationID, msg)
+}
+
+func (i *impl) GetMessages(ctx context.Context, user dbmodels.SpaceUser, data dbmodels.Applicant) ([]negotiationapimodels.MessageItem, error) {
+	accessToken, hMsg, err := i.getToken(ctx, data.SpaceID)
+	if err != nil {
+		return nil, err
+	}
+	if hMsg != "" {
+		return nil, errors.New(hMsg)
+	}
+	resp, err := i.client.GetMessages(ctx, accessToken, data.VacancyID, data.NegotiationID)
+	if resp.Found == 0 {
+		return []negotiationapimodels.MessageItem{}, nil
+	}
+	result := make([]negotiationapimodels.MessageItem, 0, len(resp.Items))
+	for _, item := range resp.Items {
+		msg := negotiationapimodels.MessageItem{
+			ID:          item.ID,
+			SelfMessage: item.Author.ParticipantType == hhapimodels.ParticipantEmployer,
+			Text:        item.Text,
+		}
+		if msg.SelfMessage {
+			msg.AuthorFullName = user.GetFullName()
+		} else {
+			msg.AuthorFullName = data.GetFIO()
+		}
+		createdAt, err := helpers.ParseHhTime(item.CreatedAt)
+		if err != nil {
+			log.WithError(err).Warn("ошибка преобразования даты сообщения HeadHunter")
+		} else {
+			msg.MessageDateTime = createdAt
+		}
+		result = append(result, msg)
+	}
+	return result, nil
+}
+
+func (i *impl) GetLastInMessage(ctx context.Context, data dbmodels.Applicant) (*negotiationapimodels.MessageItem, error) {
+	accessToken, hMsg, err := i.getToken(ctx, data.SpaceID)
+	if err != nil {
+		return nil, err
+	}
+	if hMsg != "" {
+		return nil, errors.New(hMsg)
+	}
+	resp, err := i.client.GetMessages(ctx, accessToken, data.VacancyID, data.NegotiationID)
+	if resp.Found == 0 || len(resp.Items) == 0 {
+		return nil, nil
+	}
+	item := resp.Items[len(resp.Items)-1]
+	msg := negotiationapimodels.MessageItem{
+		ID:          item.ID,
+		SelfMessage: item.Author.ParticipantType == hhapimodels.ParticipantEmployer,
+		Text:        item.Text,
+	}
+	if !msg.SelfMessage {
+		msg.AuthorFullName = data.GetFIO()
+	}
+	createdAt, err := helpers.ParseHhTime(item.CreatedAt)
+	if err != nil {
+		log.WithError(err).Warn("ошибка преобразования даты сообщения HeadHunter")
+	} else {
+		msg.MessageDateTime = createdAt
+	}
+
+	return &msg, nil
+}
+
 func (i *impl) getValue(spaceID string, code models.SpaceSettingCode) (string, error) {
 	return i.spaceSettingsStore.GetValueByCode(spaceID, code)
 }
@@ -557,6 +635,7 @@ func (i *impl) fillVacancyData(ctx context.Context, rec *dbmodels.Vacancy) (req 
 		return nil, "для публикации на HeadHunter, необходимо указать описание не менее 200 символов"
 	}
 	request := hhapimodels.VacancyPubRequest{
+		AllowMessages:     true,
 		Description:       rec.Requirements,
 		Name:              rec.VacancyName,
 		Area:              area,

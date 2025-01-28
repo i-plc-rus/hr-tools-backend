@@ -19,6 +19,7 @@ type Provider interface {
 	GetLoginUri(clientID, spaceID string) (string, error)
 	RequestToken(ctx context.Context, req avitoapimodels.RequestToken) (*avitoapimodels.ResponseToken, error)
 	RefreshToken(ctx context.Context, req avitoapimodels.RefreshToken) (*avitoapimodels.ResponseToken, error)
+	Self(ctx context.Context, accessToken string) (*avitoapimodels.SelfData, error)
 
 	//https://developers.avito.ru/api-catalog/job/documentation#operation/vacancyCreateV2
 	VacancyPublish(ctx context.Context, accessToken string, request avitoapimodels.VacancyPubRequest) (publishID string, err error)
@@ -43,6 +44,18 @@ type Provider interface {
 
 	//https://developers.avito.ru/api-catalog/job/documentation#operation/resumeGetItem
 	GetResume(ctx context.Context, accessToken string, vacancyID, resumeID int) (resp *avitoapimodels.Resume, err error)
+
+	//https://developers.avito.ru/api-catalog/messenger/documentation#operation/postSendMessage
+	SendNewMessage(ctx context.Context, accessToken string, userID int64, chatID, msg string) error
+
+	//https://developers.avito.ru/api-catalog/messenger/documentation#operation/chatRead
+	MarkReadMessage(ctx context.Context, accessToken string, userID int64, chatID string) error
+
+	// https://developers.avito.ru/api-catalog/messenger/documentation#operation/getMessagesV3
+	GetMessages(ctx context.Context, accessToken string, userID int64, chatID string) (avitoapimodels.MessageResponse, error)
+
+	// https://developers.avito.ru/api-catalog/messenger/documentation#operation/getChatByIdV2
+	GetChatInfo(ctx context.Context, accessToken string, userID int64, chatID string) (avitoapimodels.ChatInfo, error)
 }
 
 var Instance Provider
@@ -62,6 +75,7 @@ const (
 	tokenPath            string = "%s/token"
 	oAuthPattern         string = "https://avito.ru/oauth?response_type=code&client_id=%v&scope=job:cv,job:applications,job:vacancy,job:write&state=%v"
 	vPublishPath         string = "%s/job/v2/vacancies"
+	selfPath             string = "%s/core/v1/accounts/self"
 	vPublishStatusPath   string = "%s/job/v2/vacancies/statuses"
 	vUpdatePath          string = "%s/job/v2/vacancies/%v"
 	vArchivePath         string = "%s/job/v1/vacancies/archived/%v"
@@ -70,6 +84,10 @@ const (
 	vGetApplicationIDs   string = "%s/job/v1/applications/get_ids?updatedAtFrom=%v&vacancyIds=%v"
 	vGetApplicationByIDs string = "%s/job/v1/applications/get_by_ids"
 	vGetResume           string = "%s/job/v2/resumes/%v"
+	messagesNew          string = "%s/messenger/v1/accounts/%v/chats/%v/messages"
+	messagesRead         string = "%s/messenger/v1/accounts/%v/chats/%v/read"
+	messagesList         string = "%s/messenger/v3/accounts/%v/chats/%v/messages"
+	chatInfo             string = "%s/messenger/v2/accounts/%v/chats/%v"
 )
 
 func (i impl) GetLoginUri(clientID, spaceID string) (string, error) {
@@ -121,6 +139,22 @@ func (i impl) RefreshToken(ctx context.Context, req avitoapimodels.RefreshToken)
 		return nil, err
 	}
 	return &resp, nil
+}
+
+func (i impl) Self(ctx context.Context, accessToken string) (*avitoapimodels.SelfData, error) {
+	uri := fmt.Sprintf(selfPath, i.host)
+	logger := log.
+		WithField("external_request", uri)
+
+	r, _ := http.NewRequestWithContext(ctx, "GET", uri, nil)
+	r.Header.Add("Content-Type", "application/json")
+	resp := new(avitoapimodels.SelfData)
+
+	err := i.sendRequest(logger, r, resp, accessToken)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (i impl) VacancyPublish(ctx context.Context, accessToken string, request avitoapimodels.VacancyPubRequest) (publishID string, err error) {
@@ -278,6 +312,67 @@ func (i impl) GetResume(ctx context.Context, accessToken string, vacancyID, resu
 	err = i.sendRequest(logger, r, resp, accessToken)
 	if err != nil {
 		return nil, err
+	}
+	return resp, nil
+}
+
+func (i impl) SendNewMessage(ctx context.Context, accessToken string, userID int64, chatID, msg string) error {
+	uri := fmt.Sprintf(messagesNew, i.host, userID, chatID)
+	logger := log.
+		WithField("external_request", uri)
+	request := avitoapimodels.NewMessageRequest{}
+	body, err := json.Marshal(request)
+	if err != nil {
+		return errors.Wrap(err, "ошибка десериализации запроса")
+	}
+
+	r, _ := http.NewRequestWithContext(ctx, "POST", uri, bytes.NewBuffer(body))
+	r.Header.Add("Content-Type", "application/json")
+
+	logger = logger.
+		WithField("request_body", string(body))
+
+	return i.sendRequest(logger, r, nil, accessToken)
+}
+
+func (i impl) MarkReadMessage(ctx context.Context, accessToken string, userID int64, chatID string) error {
+	uri := fmt.Sprintf(messagesRead, i.host, userID, chatID)
+	logger := log.
+		WithField("external_request", uri)
+
+	r, _ := http.NewRequestWithContext(ctx, "POST", uri, nil)
+	r.Header.Add("Content-Type", "application/json")
+	return i.sendRequest(logger, r, nil, accessToken)
+}
+
+func (i impl) GetMessages(ctx context.Context, accessToken string, userID int64, chatID string) (avitoapimodels.MessageResponse, error) {
+	uri := fmt.Sprintf(messagesList, i.host, userID, chatID)
+	logger := log.
+		WithField("external_request", uri)
+
+	resp := avitoapimodels.MessageResponse{}
+	r, _ := http.NewRequestWithContext(ctx, "GET", uri, nil)
+	r.Header.Add("Content-Type", "application/json")
+
+	err := i.sendRequest(logger, r, &resp, accessToken)
+	if err != nil {
+		return avitoapimodels.MessageResponse{}, err
+	}
+	return resp, nil
+}
+
+func (i impl) GetChatInfo(ctx context.Context, accessToken string, userID int64, chatID string) (avitoapimodels.ChatInfo, error) {
+	uri := fmt.Sprintf(chatInfo, i.host, userID, chatID)
+	logger := log.
+		WithField("external_request", uri)
+
+	resp := avitoapimodels.ChatInfo{}
+	r, _ := http.NewRequestWithContext(ctx, "GET", uri, nil)
+	r.Header.Add("Content-Type", "application/json")
+
+	err := i.sendRequest(logger, r, &resp, accessToken)
+	if err != nil {
+		return avitoapimodels.ChatInfo{}, err
 	}
 	return resp, nil
 }

@@ -20,6 +20,8 @@ import (
 	avitoclient "hr-tools-backend/lib/external-services/avito/client"
 	hhhandler "hr-tools-backend/lib/external-services/hh"
 	"hr-tools-backend/lib/external-services/hh/hhclient"
+	negotiationchathandler "hr-tools-backend/lib/external-services/negotiation-chat"
+	newmsgworker "hr-tools-backend/lib/external-services/negotiation-chat/new-msg-worker"
 	negotiationworker "hr-tools-backend/lib/external-services/negotiation-worker"
 	externalserviceworker "hr-tools-backend/lib/external-services/worker"
 	filestorage "hr-tools-backend/lib/file-storage"
@@ -72,4 +74,6 @@ func InitAllServices(ctx context.Context) {
 	messagetemplate.NewHandler()
 	xlsexport.NewHandler()
 	analytics.NewHandler()
+	negotiationchathandler.NewHandler()
+	newmsgworker.StartWorker(ctx)
 }

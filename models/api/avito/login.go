@@ -25,3 +25,9 @@ type TokenData struct {
 	ResponseToken
 	ExpiresAt time.Time
 }
+
+type SelfData struct {
+	Email string `json:"email"`
+	ID    int64  `json:"id"`
+	Name  string `json:"name"`
+}

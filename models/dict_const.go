@@ -416,3 +416,11 @@ const (
 	HeadReject      RejectInitiator = "Руководитель"
 	ApplicantReject RejectInitiator = "Кандидат"
 )
+
+type MessengerType string
+
+const (
+	MessengerTypeJob     MessengerType = "job"
+	MessengerTypeSMS     MessengerType = "sms"
+	MessengerTypeWhatsUp MessengerType = "whatsup"
+)

@@ -16,6 +16,7 @@ type Applicant struct {
 	VacancyID             string                   `gorm:"type:varchar(36)" comment:"Идентификатор вакансии"`
 	Vacancy               *Vacancy                 `gorm:"foreignKey:VacancyID"`
 	NegotiationID         string                   `gorm:"type:varchar(255);index:idx_negotiation" comment:"Идентификатор отклика во внешней системе"` // ид отклика во внешней системе
+	ChatID                string                   `gorm:"type:varchar(255)" comment:"Идентификатор чата во внешней системе"`                          // ид чата во внешней системе
 	ResumeID              string                   `gorm:"index;type:varchar(255)" comment:"Идентификатор резюме во внешней системе"`                  // ид резюме во внешней системе
 	ResumeTitle           string                   `comment:"Заголовок резюме"`
 	Source                models.ApplicantSource   `gorm:"index:idx_negotiation" comment:"Источник"`
