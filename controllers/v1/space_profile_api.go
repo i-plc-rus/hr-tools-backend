@@ -4,6 +4,7 @@ import (
 	"hr-tools-backend/controllers"
 	filestorage "hr-tools-backend/lib/file-storage"
 	spacehandler "hr-tools-backend/lib/space/handler"
+	"hr-tools-backend/lib/utils/helpers"
 	"hr-tools-backend/middleware"
 	apimodels "hr-tools-backend/models/api"
 	spaceapimodels "hr-tools-backend/models/api/space"
@@ -25,7 +26,7 @@ func InitSpaceProfileRouters(app *fiber.App) {
 		route.Get("", controller.getProfile)
 		route.Put("", controller.updateProfile)
 		route.Post("photo", controller.uploadPhoto)
-		route.Get("photo", controller.getPhoto) 
+		route.Get("photo", controller.getPhoto)
 	})
 }
 
@@ -100,7 +101,8 @@ func (c *spaceProfileApiController) uploadPhoto(ctx *fiber.Ctx) error {
 	}
 
 	spaceID := middleware.GetUserSpace(ctx)
-	err = filestorage.Instance.Upload(ctx.UserContext(), spaceID, userID, fileBody, file.Filename, dbmodels.CompanyProfilePhoto)
+	contentType := helpers.GetFileContentType(file)
+	err = filestorage.Instance.Upload(ctx.UserContext(), spaceID, userID, fileBody, file.Filename, dbmodels.CompanyProfilePhoto, contentType)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка сохранения фото профиля")
 	}
@@ -120,10 +122,13 @@ func (c *spaceProfileApiController) getPhoto(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 
 	spaceID := middleware.GetUserSpace(ctx)
-	body, err := filestorage.Instance.GetFileByType(ctx.UserContext(), spaceID, userID, dbmodels.CompanyProfilePhoto)
+	body, file, err := filestorage.Instance.GetFileByType(ctx.UserContext(), spaceID, userID, dbmodels.CompanyProfilePhoto)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения данных фото профиля")
 	}
-
+	if file != nil && file.ContentType != "" {
+		ctx.Set(fiber.HeaderContentType, file.ContentType)
+		ctx.Set(fiber.HeaderContentDisposition, `inline; filename="`+file.Name+`"`)
+	}
 	return ctx.Send(body)
 }

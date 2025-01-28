@@ -648,5 +648,5 @@ func (i *impl) downloadResumePdf(ctx context.Context, spaceID, applicantID, resu
 	if err != nil {
 		return err
 	}
-	return i.filesStorage.Upload(ctx, spaceID, applicantID, body, "resume.pdf", dbmodels.ApplicantResume)
+	return i.filesStorage.Upload(ctx, spaceID, applicantID, body, "resume.pdf", dbmodels.ApplicantResume, "application/pdf")
 }

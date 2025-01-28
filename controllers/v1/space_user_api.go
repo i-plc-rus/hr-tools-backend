@@ -4,6 +4,7 @@ import (
 	"hr-tools-backend/controllers"
 	filestorage "hr-tools-backend/lib/file-storage"
 	spaceusershander "hr-tools-backend/lib/space/users/hander"
+	"hr-tools-backend/lib/utils/helpers"
 	"hr-tools-backend/middleware"
 	apimodels "hr-tools-backend/models/api"
 	spaceapimodels "hr-tools-backend/models/api/space"
@@ -36,8 +37,8 @@ func InitSpaceUserRouters(app *fiber.App) {
 		userRootRoute.Get("", controller.getProfile)
 		userRootRoute.Put("", controller.updateProfile)
 		userRootRoute.Put("change_password", controller.changePassword)
-		userRootRoute.Post("photo", controller.uploadPhoto)       // загрузить фото
-		userRootRoute.Get("photo", controller.getPhoto)                  // скачать фото
+		userRootRoute.Post("photo", controller.uploadPhoto) // загрузить фото
+		userRootRoute.Get("photo", controller.getPhoto)     // скачать фото
 	})
 }
 
@@ -273,7 +274,8 @@ func (c *spaceUserController) uploadPhoto(ctx *fiber.Ctx) error {
 	}
 
 	spaceID := middleware.GetUserSpace(ctx)
-	err = filestorage.Instance.Upload(ctx.UserContext(), spaceID, userID, fileBody, file.Filename, dbmodels.UserProfilePhoto)
+	contentType := helpers.GetFileContentType(file)
+	err = filestorage.Instance.Upload(ctx.UserContext(), spaceID, userID, fileBody, file.Filename, dbmodels.UserProfilePhoto, contentType)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка сохранения фото профиля")
 	}
@@ -293,10 +295,13 @@ func (c *spaceUserController) getPhoto(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 
 	spaceID := middleware.GetUserSpace(ctx)
-	body, err := filestorage.Instance.GetFileByType(ctx.UserContext(), spaceID, userID, dbmodels.UserProfilePhoto)
+	body, file, err := filestorage.Instance.GetFileByType(ctx.UserContext(), spaceID, userID, dbmodels.UserProfilePhoto)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения данных фото профиля")
 	}
-
+	if file != nil && file.ContentType != "" {
+		ctx.Set(fiber.HeaderContentType, file.ContentType)
+		ctx.Set(fiber.HeaderContentDisposition, `inline; filename="`+file.Name+`"`)
+	}
 	return ctx.Send(body)
 }
