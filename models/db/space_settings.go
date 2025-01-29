@@ -18,7 +18,51 @@ func (r SpaceSetting) ToModelView() spaceapimodels.SpaceSettingView {
 		ID:      r.ID,
 		SpaceID: r.SpaceID,
 		Name:    r.Name,
-		Code:    r.Name,
+		Code:    r.Code,
 		Value:   r.Value,
 	}
+}
+
+
+var DefaultHhClientIDSetting = SpaceSetting{
+	SpaceID: "",
+	Name:    "client_id для HeadHunter",
+	Code:    models.HhClientIDSetting,
+	Value:   "",
+}
+
+var DefaultHhClientSecretSetting = SpaceSetting{
+	SpaceID: "",
+	Name:    "client_secret для HeadHunter",
+	Code:    models.HhClientSecretSetting,
+	Value:   "",
+}
+
+var DefaultAvitoClientIDSetting = SpaceSetting{
+	SpaceID: "",
+	Name:    "client_id для Avito",
+	Code:    models.AvitoClientIDSetting,
+	Value:   "",
+}
+
+var DefaultAvitoClientSecretSetting = SpaceSetting{
+	SpaceID: "",
+	Name:    "client_secret для Avito",
+	Code:    models.AvitoClientSecretSetting,
+	Value:   "",
+}
+
+var DefaultSpaceSenderEmail = SpaceSetting{
+	SpaceID: "",
+	Name:    "почта, с которой отправляются письма кандидатам",
+	Code:    models.SpaceSenderEmail,
+	Value:   "",
+}
+
+var DefaultSettinsMap = map[models.SpaceSettingCode]SpaceSetting{
+	models.HhClientIDSetting:        DefaultHhClientIDSetting,
+	models.HhClientSecretSetting:    DefaultHhClientIDSetting,
+	models.AvitoClientIDSetting:     DefaultAvitoClientIDSetting,
+	models.AvitoClientSecretSetting: DefaultAvitoClientSecretSetting,
+	models.SpaceSenderEmail:         DefaultSpaceSenderEmail,
 }

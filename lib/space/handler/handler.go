@@ -137,15 +137,24 @@ func (i impl) createAdmin(tx *gorm.DB, spaceID string, adminData spaceapimodels.
 }
 
 func (i impl) createDefaultSpaceSettings(tx *gorm.DB, spaceID string) error {
-	yaGPTSetting := dbmodels.SpaceSetting{
+	store := spacesettingsstore.NewInstance(tx)
+	setting := dbmodels.SpaceSetting{
 		SpaceID: spaceID,
 		Name:    "Инструкции для YandexGPT",
 		Code:    models.YandexGPTPromtSetting,
 		Value:   "",
 	}
-	err := spacesettingsstore.NewInstance(tx).Create(yaGPTSetting)
+	err := store.Create(setting)
 	if err != nil {
 		return errors.Wrap(err, "ошибка добавления настройки YandexGPT")
+	}
+
+	for code, spaceSettingData := range dbmodels.DefaultSettinsMap {
+		spaceSettingData.SpaceID = spaceID
+		err = store.Create(spaceSettingData)
+		if err != nil {
+			return errors.Wrapf(err, "ошибка добавления настройки %v", code)
+		}
 	}
 	return nil
 }
