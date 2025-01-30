@@ -3,6 +3,16 @@ package oauth2
 import (
 	"context"
 	"encoding/json"
+	"hr-tools-backend/db"
+	pgadapter "hr-tools-backend/lib/oauth2/pg-adapter"
+	spaceusersstore "hr-tools-backend/lib/space/users/store"
+	authutils "hr-tools-backend/lib/utils/auth-utils"
+	"hr-tools-backend/models"
+	"net/http"
+	"net/url"
+	"os"
+	"time"
+
 	"github.com/go-oauth2/oauth2/v4/errors"
 	"github.com/go-oauth2/oauth2/v4/generates"
 	"github.com/go-oauth2/oauth2/v4/manage"
@@ -12,14 +22,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	log "github.com/sirupsen/logrus"
 	pg "github.com/vgarvardt/go-oauth2-pg/v4"
-	"hr-tools-backend/db"
-	pgadapter "hr-tools-backend/lib/oauth2/pg-adapter"
-	spaceusersstore "hr-tools-backend/lib/space/users/store"
-	authutils "hr-tools-backend/lib/utils/auth-utils"
-	"net/http"
-	"net/url"
-	"os"
-	"time"
 )
 
 type oauth2Controller struct {
@@ -69,6 +71,7 @@ func InitOauthRouters(app *fiber.App) {
 	app.All("/authorize", adaptor.HTTPHandlerFunc(controller.hAuthorize))
 	app.All("/oauth/token", adaptor.HTTPHandlerFunc(controller.hTokenRequest))
 	app.All("/test", adaptor.HTTPHandlerFunc(controller.hTest))
+	app.All("/userinfo", adaptor.HTTPHandlerFunc(controller.userInfo))
 }
 
 // @Summary Эндпоинт формы логина
@@ -195,6 +198,42 @@ func (c *oauth2Controller) hTest(w http.ResponseWriter, r *http.Request) {
 		"expires_in": int64(token.GetAccessCreateAt().Add(token.GetAccessExpiresIn()).Sub(time.Now()).Seconds()),
 		"client_id":  token.GetClientID(),
 		"user_id":    token.GetUserID(),
+	}
+	e := json.NewEncoder(w)
+	e.SetIndent("", "  ")
+	e.Encode(data)
+}
+
+// @Summary Информация о пользователе
+// @Tags OAuth2
+// @Description Информация о пользователе
+// @Param   Authorization		header	string	true	"Authorization oauth2 token"  example(Bearer MWI3Y2RHNZYTNMNHYS0ZNGRHLTHINJGTZWM2OTNLOTRKNJEW)
+// @Success 200
+// @Failure 400
+// @router /oauth2/userinfo [get]
+// @router /oauth2/userinfo [post]
+func (c *oauth2Controller) userInfo(w http.ResponseWriter, r *http.Request) {
+	token, err := c.srv.ValidationBearerToken(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	userID := token.GetUserID()
+	user, err := c.userStore.GetByID(userID)
+	if err != nil || user == nil {
+		http.Error(w, "Пользователь не найден", http.StatusUnauthorized)
+		return
+	}
+
+	w.Header().Add(fiber.HeaderContentType, fiber.MIMEApplicationJSONCharsetUTF8)
+	data := map[string]interface{}{
+		"username":   user.Email,
+		"name":       user.GetFullName(),
+		"email":      user.Email,
+		"first_name": user.FirstName,
+		"last_name":  user.LastName,
+		"roles":      []models.UserRole{user.Role},
 	}
 	e := json.NewEncoder(w)
 	e.SetIndent("", "  ")
