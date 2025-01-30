@@ -216,10 +216,9 @@ func (r RejectRequest) Validate() error {
 	if r.Initiator == "" {
 		return errors.New("не указан инициатор отказа")
 	}
-	if r.Initiator != models.HrReject &&
-		r.Initiator != models.HeadReject &&
-		r.Initiator != models.ApplicantReject {
-		return errors.New("некорректно указан инициатор отказа")
+	err := r.Initiator.IsValid()
+	if err != nil {
+		return err
 	}
 	return nil
 }

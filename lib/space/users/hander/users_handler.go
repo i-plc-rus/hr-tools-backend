@@ -15,10 +15,10 @@ import (
 )
 
 type Provider interface {
-	CreateUser(request spaceapimodels.CreateUser) (hMsh string, err error)
+	CreateUser(request spaceapimodels.CreateUser) (id, hMsg string, err error)
 	UpdateUser(userID string, request spaceapimodels.UpdateUser) error
 	DeleteUser(userID string) error
-	GetListUsers(spaceID string, page, limit int) (usersList []spaceapimodels.SpaceUser, err error)
+	GetListUsers(spaceID string, filter spaceapimodels.SpaceUserFilter) (usersList []spaceapimodels.SpaceUser, rowCount int64, err error)
 	GetByID(userID string) (user spaceapimodels.SpaceUser, err error)
 	UpdateUserProfile(userID string, request spaceapimodels.SpaceUserProfileData) error
 	GetProfileByID(userID string) (user spaceapimodels.SpaceUserProfileView, err error)
@@ -48,13 +48,13 @@ func (i impl) GetByID(userID string) (user spaceapimodels.SpaceUser, err error) 
 	return userDB.ToModel(), nil
 }
 
-func (i impl) CreateUser(request spaceapimodels.CreateUser) (hMsh string, err error) {
+func (i impl) CreateUser(request spaceapimodels.CreateUser) (id, hMsg string, err error) {
 	userExist, err := i.spaceUserStore.ExistByEmail(request.Email)
 	if err != nil {
-		return "", errors.Wrap(err, "ошибка проверки уже существующего пользователя space")
+		return "", "", err
 	}
 	if userExist {
-		return "пользователь с такой почтой уже существует", nil
+		return "", "пользователь с такой почтой уже существует", nil
 	}
 	rec := dbmodels.SpaceUser{
 		Password:        authutils.GetMD5Hash(request.Password),
@@ -75,11 +75,11 @@ func (i impl) CreateUser(request spaceapimodels.CreateUser) (hMsh string, err er
 	} else {
 		rec.Role = models.SpaceUserRole
 	}
-	err = i.spaceUserStore.Create(rec)
+	id, err = i.spaceUserStore.Create(rec)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return "", nil
+	return id, "", nil
 }
 
 func (i impl) UpdateUser(userID string, request spaceapimodels.UpdateUser) error {
@@ -136,15 +136,26 @@ func (i impl) DeleteUser(userID string) error {
 	return nil
 }
 
-func (i impl) GetListUsers(spaceID string, page, limit int) (usersList []spaceapimodels.SpaceUser, err error) {
-	list, err := i.spaceUserStore.GetList(spaceID, page, limit)
+func (i impl) GetListUsers(spaceID string, filter spaceapimodels.SpaceUserFilter) (usersList []spaceapimodels.SpaceUser, rowCount int64, err error) {
+	rowCount, err = i.spaceUserStore.GetCountList(spaceID, filter)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+
+	page, limit := filter.GetPage()
+	offset := (page - 1) * limit
+	if int64(offset) > rowCount {
+		return []spaceapimodels.SpaceUser{}, rowCount, nil
+	}
+
+	list, err := i.spaceUserStore.GetList(spaceID, filter)
+	if err != nil {
+		return nil, 0, err
 	}
 	for _, user := range list {
 		usersList = append(usersList, user.ToModel())
 	}
-	return usersList, nil
+	return usersList, rowCount, nil
 }
 
 func (i impl) UpdateUserProfile(userID string, request spaceapimodels.SpaceUserProfileData) error {
