@@ -61,7 +61,7 @@ var DefaultSpaceSenderEmail = SpaceSetting{
 
 var DefaultSettinsMap = map[models.SpaceSettingCode]SpaceSetting{
 	models.HhClientIDSetting:        DefaultHhClientIDSetting,
-	models.HhClientSecretSetting:    DefaultHhClientIDSetting,
+	models.HhClientSecretSetting:    DefaultHhClientSecretSetting,
 	models.AvitoClientIDSetting:     DefaultAvitoClientIDSetting,
 	models.AvitoClientSecretSetting: DefaultAvitoClientSecretSetting,
 	models.SpaceSenderEmail:         DefaultSpaceSenderEmail,

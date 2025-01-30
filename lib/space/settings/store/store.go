@@ -12,6 +12,7 @@ type Provider interface {
 	Update(spaceID, code, value string) error
 	List(spaceID string) (settingsList []dbmodels.SpaceSetting, err error)
 	GetValueByCode(spaceID string, code models.SpaceSettingCode) (value string, err error)
+	Delete(spaceID, code string) error
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -66,4 +67,17 @@ func (i impl) Update(spaceID, code, value string) error {
 		Where("space_id = ? AND code = ?", spaceID, code).
 		Updates(updMap).
 		Error
+}
+
+func (i impl) Delete(spaceID, code string) error {
+	rec := dbmodels.SpaceSetting{}
+	err := i.db.
+		Where("space_id = ? AND code = ?", spaceID, code).
+		Delete(&rec).
+		Error
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
