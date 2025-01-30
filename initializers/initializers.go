@@ -6,6 +6,7 @@ import (
 	"hr-tools-backend/fiberlog"
 	adminpanelhandler "hr-tools-backend/lib/admin-panel"
 	adminpanelauthhandler "hr-tools-backend/lib/admin-panel/auth"
+	"hr-tools-backend/lib/analytics"
 	"hr-tools-backend/lib/applicant"
 	applicanthistoryhandler "hr-tools-backend/lib/applicant-history"
 	aprovalstageshandler "hr-tools-backend/lib/aproval-stages"
@@ -14,6 +15,7 @@ import (
 	companystructprovider "hr-tools-backend/lib/dicts/company-struct"
 	departmentprovider "hr-tools-backend/lib/dicts/department"
 	jobtitleprovider "hr-tools-backend/lib/dicts/job-title"
+	rejectreasonprovider "hr-tools-backend/lib/dicts/reject-reason"
 	xlsexport "hr-tools-backend/lib/export/xls"
 	avitohandler "hr-tools-backend/lib/external-services/avito"
 	avitoclient "hr-tools-backend/lib/external-services/avito/client"
@@ -53,6 +55,7 @@ func InitAllServices(ctx context.Context) {
 	companyprovider.NewHandler()
 	departmentprovider.NewHandler()
 	jobtitleprovider.NewHandler()
+	rejectreasonprovider.NewHandler()
 	companystructprovider.NewHandler()
 	aprovalstageshandler.NewHandler()
 	vacancyhandler.NewHandler()
@@ -66,4 +69,5 @@ func InitAllServices(ctx context.Context) {
 	negotiationworker.StartWorker(ctx)
 	messagetemplate.NewHandler()
 	xlsexport.NewHandler()
+	analytics.NewHandler()
 }

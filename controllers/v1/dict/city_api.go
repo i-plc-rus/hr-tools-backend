@@ -38,7 +38,7 @@ func (c *cityDictApiController) cityGet(ctx *fiber.Ctx) error {
 
 	resp, err := cityprovider.Instance.Get(id)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения данных по городу")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(resp))
 }
@@ -61,7 +61,7 @@ func (c *cityDictApiController) cityFindByName(ctx *fiber.Ctx) error {
 
 	list, err := cityprovider.Instance.FindByName(payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения списка городов")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(list))
 }

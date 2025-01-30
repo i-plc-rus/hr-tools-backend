@@ -83,7 +83,7 @@ func (a *adminApiController) userCreate(ctx *fiber.Ctx) error {
 	}
 	err := handler.Instance.CreateUser(payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return a.SendError(ctx, a.GetLogger(ctx), err, "Ошибка создания пользователя админ панели")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -111,7 +111,7 @@ func (a *adminApiController) userUpdate(ctx *fiber.Ctx) error {
 
 	err := handler.Instance.UpdateUser(value, payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return a.SendError(ctx, a.GetLogger(ctx), err, "Ошибка изменения пользователя админ панели")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -133,7 +133,7 @@ func (a *adminApiController) userDelete(ctx *fiber.Ctx) error {
 	}
 	err := handler.Instance.DeleteUser(value)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return a.SendError(ctx, a.GetLogger(ctx), err, "Ошибка удаления пользователя админ панели")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -156,7 +156,7 @@ func (a *adminApiController) userGet(ctx *fiber.Ctx) error {
 
 	user, err := handler.Instance.GetUser(value)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return a.SendError(ctx, a.GetLogger(ctx), err, "Ошибка получения данных пользователя админ панели")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(user))
 }
@@ -173,7 +173,7 @@ func (a *adminApiController) userGet(ctx *fiber.Ctx) error {
 func (a *adminApiController) userList(ctx *fiber.Ctx) error {
 	users, err := handler.Instance.List()
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return a.SendError(ctx, a.GetLogger(ctx), err, "Ошибка получения списка пользователей админ панели")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(users))
 }

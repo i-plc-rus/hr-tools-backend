@@ -2,9 +2,7 @@ package spacehandler
 
 import (
 	"context"
-	"fmt"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"hr-tools-backend/db"
 	companystructload "hr-tools-backend/lib/company-struct-load"
@@ -20,15 +18,20 @@ import (
 
 type Provider interface {
 	CreateOrganizationSpace(request spaceapimodels.CreateOrganization) error
+	GetProfile(spaceID string) (spaceapimodels.ProfileData, error)
+	UpdateProfile(spaceID string, data spaceapimodels.ProfileData) error
 }
 
 var Instance Provider
 
 func NewHandler() {
-	Instance = impl{}
+	Instance = impl{
+		spaceStore: spacestore.NewInstance(db.DB),
+	}
 }
 
 type impl struct {
+	spaceStore spacestore.Provider
 }
 
 func (i impl) CreateOrganizationSpace(request spaceapimodels.CreateOrganization) error {
@@ -62,14 +65,39 @@ func (i impl) CreateOrganizationSpace(request spaceapimodels.CreateOrganization)
 	})
 
 	if err != nil {
-		log.
-			WithField("request", fmt.Sprintf("%+v", request)).
-			WithError(err).
-			Error("Ошибка создания организации в space")
 		return err
 	}
 
 	return nil
+}
+
+func (i impl) GetProfile(spaceID string) (spaceapimodels.ProfileData, error) {
+	rec, err := i.spaceStore.GetByID(spaceID)
+	if err != nil {
+		return spaceapimodels.ProfileData{}, err
+	}
+	if rec == nil {
+		return spaceapimodels.ProfileData{}, errors.New("Профиль организации не найден")
+	}
+
+	return rec.ToModel(), nil
+}
+
+func (i impl) UpdateProfile(spaceID string, data spaceapimodels.ProfileData) error {
+	updMap := map[string]interface{}{
+		"organization_name": data.OrganizationName,
+		"web":               data.Web,
+		"time_zone":         data.TimeZone,
+		"description":       data.Description,
+		"director_name":     data.DirectorName,
+	}
+
+	err := i.spaceStore.UpdateSpace(spaceID, updMap)
+	if err != nil {
+		return err
+	}
+	return nil
+
 }
 
 func (i impl) createSpace(tx *gorm.DB, request spaceapimodels.CreateOrganization) (spaceID string, err error) {
@@ -101,7 +129,7 @@ func (i impl) createAdmin(tx *gorm.DB, spaceID string, adminData spaceapimodels.
 		PhoneNumber: adminData.PhoneNumber,
 		SpaceID:     spaceID,
 	}
-	err := spaceusersstore.NewInstance(tx).Create(admin)
+	_, err := spaceusersstore.NewInstance(tx).Create(admin)
 	if err != nil {
 		return errors.Wrap(err, "Ошибка создания администратора в space")
 	}
@@ -109,15 +137,24 @@ func (i impl) createAdmin(tx *gorm.DB, spaceID string, adminData spaceapimodels.
 }
 
 func (i impl) createDefaultSpaceSettings(tx *gorm.DB, spaceID string) error {
-	yaGPTSetting := dbmodels.SpaceSetting{
+	store := spacesettingsstore.NewInstance(tx)
+	setting := dbmodels.SpaceSetting{
 		SpaceID: spaceID,
 		Name:    "Инструкции для YandexGPT",
 		Code:    models.YandexGPTPromtSetting,
 		Value:   "",
 	}
-	err := spacesettingsstore.NewInstance(tx).Create(yaGPTSetting)
+	err := store.Create(setting)
 	if err != nil {
 		return errors.Wrap(err, "ошибка добавления настройки YandexGPT")
+	}
+
+	for code, spaceSettingData := range dbmodels.DefaultSettinsMap {
+		spaceSettingData.SpaceID = spaceID
+		err = store.Create(spaceSettingData)
+		if err != nil {
+			return errors.Wrapf(err, "ошибка добавления настройки %v", code)
+		}
 	}
 	return nil
 }

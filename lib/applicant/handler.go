@@ -15,6 +15,7 @@ import (
 	negotiationapimodels "hr-tools-backend/models/api/negotiation"
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
+	"math"
 	"time"
 
 	"github.com/lib/pq"
@@ -40,6 +41,7 @@ type Provider interface {
 	ApplicantReject(spaceID string, id, userID string, data applicantapimodels.RejectRequest) error
 	ApplicantMultiReject(spaceID string, userID string, data applicantapimodels.MultiRejectRequest) error
 	ExportToXls(spaceID string, data applicantapimodels.XlsExportRequest) (*bytes.Buffer, error)
+	ListOfSource(spaceID string, filter applicantapimodels.ApplicantFilter) (data applicantapimodels.ApplicantSourceData, err error)
 }
 
 var Instance Provider
@@ -74,12 +76,9 @@ func (i *impl) getLogger(spaceID, applicantID, userID string) *log.Entry {
 }
 
 func (i impl) ListOfNegotiation(spaceID string, filter dbmodels.NegotiationFilter) ([]negotiationapimodels.NegotiationView, error) {
-	logger := i.getLogger(spaceID, "", "")
 	list, err := i.store.ListOfNegotiation(spaceID, filter)
 	if err != nil {
-		logger.WithField("filter", fmt.Sprintf("%+v", filter)).
-			WithError(err).Error("ошибка получения списка откликов")
-		return nil, errors.New("ошибка получения списка откликов")
+		return nil, errors.Wrap(err, "ошибка получения списка откликов")
 	}
 	result := make([]negotiationapimodels.NegotiationView, 0, len(list))
 	for _, rec := range list {
@@ -109,7 +108,6 @@ func (i impl) UpdateComment(spaceID, id, userID string, comment string) error {
 }
 
 func (i impl) UpdateStatus(spaceID, id, userID string, status models.NegotiationStatus) error {
-	logger := i.getLogger(spaceID, id, userID)
 	rec, err := i.store.GetByID(spaceID, id)
 	if err != nil {
 		return err
@@ -131,8 +129,7 @@ func (i impl) UpdateStatus(spaceID, id, userID string, status models.Negotiation
 		updMap["status"] = models.ApplicantStatusInProcess
 		selectionStages, err := i.selectionStageStore.List(rec.SpaceID, rec.VacancyID)
 		if err != nil {
-			logger.WithError(err).Error("ошибка получения списка этапов подбора")
-			return errors.New("ошибка получения списка этапов подбора")
+			return errors.Wrap(err, "ошибка получения списка этапов подбора")
 		}
 		for _, stage := range selectionStages {
 			if stage.Name == dbmodels.AddedStage {
@@ -148,8 +145,7 @@ func (i impl) UpdateStatus(spaceID, id, userID string, status models.Negotiation
 	}
 	err = i.store.Update(id, updMap)
 	if err != nil {
-		logger.WithError(err).Error("ошибка обновления кандидата")
-		return errors.New("ошибка обновления кандидата")
+		return errors.Wrap(err, "ошибка обновления кандидата")
 	}
 	changes := applicanthistoryhandler.GetUpdateChanges(changeMsg, rec.Applicant, updMap)
 	i.applicantHistory.Save(rec.SpaceID, id, rec.VacancyID, userID, dbmodels.HistoryTypeUpdate, changes)
@@ -157,11 +153,9 @@ func (i impl) UpdateStatus(spaceID, id, userID string, status models.Negotiation
 }
 
 func (i impl) GetByID(spaceID, id string) (negotiationapimodels.NegotiationView, error) {
-	logger := i.getLogger(spaceID, id, "")
 	rec, err := i.store.GetByID(spaceID, id)
 	if err != nil {
-		logger.WithError(err).Error("ошибка получения отклика")
-		return negotiationapimodels.NegotiationView{}, errors.New("ошибка получения отклика")
+		return negotiationapimodels.NegotiationView{}, errors.Wrap(err, "ошибка получения отклика")
 	}
 	if rec == nil {
 		return negotiationapimodels.NegotiationView{}, errors.New("отклик не найден")
@@ -183,7 +177,7 @@ func (i impl) CreateApplicant(spaceID, userID string, data applicantapimodels.Ap
 		NegotiationID:         "",
 		ResumeID:              "",
 		ResumeTitle:           "",
-		Source:                models.ApplicantSourceManual,
+		Source:                data.Source,
 		NegotiationDate:       time.Time{},
 		NegotiationAcceptDate: time.Now(),
 		Status:                models.ApplicantStatusInProcess,
@@ -203,8 +197,7 @@ func (i impl) CreateApplicant(spaceID, userID string, data applicantapimodels.Ap
 	}
 	birthDate, err := data.GetBirthDate()
 	if err != nil {
-		logger.WithError(err).Error("ошибка получения даты рождения кандидата")
-		return "", errors.New("ошибка получения даты рождения кандидата")
+		return "", errors.Wrap(err, "ошибка получения даты рождения кандидата")
 	}
 	rec.BirthDate = birthDate
 	for _, stage := range vacancy.SelectionStages {
@@ -215,11 +208,7 @@ func (i impl) CreateApplicant(spaceID, userID string, data applicantapimodels.Ap
 	}
 	recID, err := i.store.Create(rec)
 	if err != nil {
-		logger.
-			WithField("request", fmt.Sprintf("%+v", data)).
-			WithError(err).
-			Error("ошибка создания кандидата")
-		return "", errors.New("Ошибка создания кандидата")
+		return "", err
 	}
 	changes := applicanthistoryhandler.GetCreateChanges("Кандидат добавлен на вакансию", rec)
 	i.applicantHistory.Save(rec.SpaceID, recID, rec.VacancyID, userID, dbmodels.HistoryTypeAdded, changes)
@@ -253,7 +242,6 @@ func (i impl) GetApplicant(spaceID string, id string) (applicantapimodels.Applic
 }
 
 func (i impl) ListOfApplicant(spaceID string, filter applicantapimodels.ApplicantFilter) (list []applicantapimodels.ApplicantView, rowCount int64, err error) {
-	logger := i.getLogger(spaceID, "", "")
 	rowCount, err = i.store.ListCountOfApplicant(spaceID, filter)
 	if err != nil {
 		return nil, 0, err
@@ -267,10 +255,7 @@ func (i impl) ListOfApplicant(spaceID string, filter applicantapimodels.Applican
 
 	recList, err := i.store.ListOfApplicant(spaceID, filter)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения списка кандидатов")
-		return nil, 0, errors.New("ошибка получения списка кандидатов")
+		return nil, 0, err
 	}
 	result := make([]applicantapimodels.ApplicantView, 0, len(recList))
 	for _, rec := range recList {
@@ -288,13 +273,12 @@ func (i impl) UpdateApplicant(spaceID string, id, userID string, data applicanta
 
 	birthDate, err := data.GetBirthDate()
 	if err != nil {
-		logger.WithError(err).Error("некорректный формат даты рождения кандидата")
-		return errors.New("Некорректный формат даты рождения кандидата")
+		return errors.Wrap(err, "Некорректный формат даты рождения кандидата")
 	}
 	updMap := map[string]interface{}{
 		"SpaceID":         spaceID,
 		"VacancyID":       data.VacancyID,
-		"Source":          models.ApplicantSourceManual,
+		"Source":          data.Source,
 		"Status":          models.ApplicantStatusInProcess,
 		"FirstName":       data.FirstName,
 		"LastName":        data.LastName,
@@ -313,8 +297,7 @@ func (i impl) UpdateApplicant(spaceID string, id, userID string, data applicanta
 	}
 	rec, err := i.store.GetByID(spaceID, id)
 	if err != nil {
-		logger.WithError(err).Error("ошибка получения кандидата")
-		return errors.New("ошибка получения кандидата")
+		return errors.Wrap(err, "ошибка получения кандидата")
 	}
 	if rec == nil {
 		return errors.New("кандидат не найден")
@@ -343,11 +326,7 @@ func (i impl) UpdateApplicant(spaceID string, id, userID string, data applicanta
 
 	err = i.store.Update(id, updMap)
 	if err != nil {
-		logger.
-			WithField("request", fmt.Sprintf("%+v", data)).
-			WithError(err).
-			Error("ошибка обновления кандидата")
-		return errors.New("ошибка обновления кандидата")
+		return errors.Wrap(err, "ошибка обновления кандидата")
 	}
 	changes := applicanthistoryhandler.GetUpdateChanges("Изменен профиль", rec.Applicant, updMap)
 	if len(changes.Data) != 0 {
@@ -378,10 +357,7 @@ func (i impl) ApplicantAddTag(spaceID string, id, userID string, tag string) err
 	}
 	err = i.store.Update(id, updMap)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка добавления тега кандидата")
-		return errors.New("ошибка добавления тега кандидата")
+		return errors.Wrap(err, "ошибка добавления тега кандидата")
 	}
 	changes := applicanthistoryhandler.GetUpdateChanges("Добавлен тег", rec.Applicant, updMap)
 	i.applicantHistory.Save(rec.SpaceID, id, rec.VacancyID, userID, dbmodels.HistoryTypeUpdate, changes)
@@ -414,10 +390,7 @@ func (i impl) ApplicantRemoveTag(spaceID string, id, userID string, tag string) 
 	}
 	err = i.store.Update(id, updMap)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка удаления тега кандидата")
-		return errors.New("ошибка удаления тега кандидата")
+		return errors.Wrap(err, "ошибка удаления тега кандидата")
 	}
 	changes := applicanthistoryhandler.GetUpdateChanges("Удален тег", rec.Applicant, updMap)
 	i.applicantHistory.Save(rec.SpaceID, id, rec.VacancyID, userID, dbmodels.HistoryTypeUpdate, changes)
@@ -428,10 +401,7 @@ func (i impl) ApplicantRemoveTag(spaceID string, id, userID string, tag string) 
 func (i impl) ChangeStage(spaceID, userID string, applicantID, stageID string) error {
 	userName, err := i.getUserName(userID)
 	if err != nil {
-		i.getLogger(spaceID, applicantID, userID).
-			WithError(err).
-			Error("ошибка перевода кандидата на этап")
-		return errors.New("ошибка перевода кандидата на этап")
+		return errors.Wrap(err, "ошибка перевода кандидата на этап")
 	}
 	err = i.сhangeStage(nil, spaceID, userID, userName, applicantID, stageID)
 	if err != nil {
@@ -443,10 +413,7 @@ func (i impl) ChangeStage(spaceID, userID string, applicantID, stageID string) e
 func (i impl) MultiChangeStage(spaceID, userID string, data applicantapimodels.MultiChangeStageRequest) error {
 	userName, err := i.getUserName(userID)
 	if err != nil {
-		i.getLogger(spaceID, "", userID).
-			WithError(err).
-			Error("ошибка перевода кандидата на этап")
-		return errors.New("ошибка перевода кандидата на этап")
+		return errors.Wrap(err, "ошибка перевода кандидата на этап")
 	}
 	err = db.DB.Transaction(func(tx *gorm.DB) error {
 		for _, id := range data.IDs {
@@ -473,10 +440,7 @@ func (i impl) ResolveDuplicate(spaceID string, mainID, minorID, userID string, i
 func (i impl) ApplicantReject(spaceID string, id, userID string, data applicantapimodels.RejectRequest) error {
 	userName, err := i.getUserName(userID)
 	if err != nil {
-		i.getLogger(spaceID, id, userID).
-			WithError(err).
-			Error("ошибка перевода кандидата в отклоненные")
-		return errors.New("ошибка перевода кандидата в отклоненные")
+		return errors.Wrap(err, "ошибка перевода кандидата в отклоненные")
 	}
 	err = i.applicantReject(nil, spaceID, id, userID, userName, data)
 	if err != nil {
@@ -488,10 +452,7 @@ func (i impl) ApplicantReject(spaceID string, id, userID string, data applicanta
 func (i impl) ApplicantMultiReject(spaceID string, userID string, data applicantapimodels.MultiRejectRequest) error {
 	userName, err := i.getUserName(userID)
 	if err != nil {
-		i.getLogger(spaceID, "", userID).
-			WithError(err).
-			Error("ошибка перевода кандидатов в отклоненные")
-		return errors.New("ошибка перевода кандидатов в отклоненные")
+		return errors.Wrap(err, "ошибка перевода кандидатов в отклоненные")
 	}
 
 	err = db.DB.Transaction(func(tx *gorm.DB) error {
@@ -514,13 +475,54 @@ func (i impl) ExportToXls(spaceID string, data applicantapimodels.XlsExportReque
 	return xlsexport.Instance.ExportApplicantList(list)
 }
 
-func (i impl) markAsDifferentApplicants(spaceID string, mainID, minorID, userID string, logger *log.Entry) error {
-	mainRec, err := i.store.GetByID(spaceID, mainID)
+func (i impl) ListOfSource(spaceID string, filter applicantapimodels.ApplicantFilter) (data applicantapimodels.ApplicantSourceData, err error) {
+	logger := i.getLogger(spaceID, "", "")
+	recList, err := i.store.ListOfApplicantSource(spaceID, filter)
 	if err != nil {
 		logger.
 			WithError(err).
-			Error("ошибка получения данных кандидата")
-		return errors.New("ошибка получения данных кандидата")
+			Error("ошибка получения аналитики по источникам кандидатов")
+		return applicantapimodels.ApplicantSourceData{}, errors.New("ошибка получения аналитики по источникам кандидатов")
+	}
+
+	result := applicantapimodels.ApplicantSourceData{
+		NegotiationSource: applicantapimodels.SourceData{Data: []applicantapimodels.SourceItem{}},
+		AddingSource:      applicantapimodels.SourceData{Data: []applicantapimodels.SourceItem{}},
+	}
+	for _, rec := range recList {
+		if rec.IsNegotiation {
+			result.NegotiationSource.Total += rec.Total
+
+			result.NegotiationSource.Data = append(result.NegotiationSource.Data,
+				applicantapimodels.SourceItem{
+					Name:  string(rec.Source),
+					Count: rec.Total,
+				})
+		} else {
+			result.AddingSource.Total += rec.Total
+			result.AddingSource.Data = append(result.AddingSource.Data,
+				applicantapimodels.SourceItem{
+					Name:  string(rec.Source),
+					Count: rec.Total,
+				})
+		}
+	}
+	result.NegotiationSource.Data = calcPercent(result.NegotiationSource.Data, result.NegotiationSource.Total)
+	result.AddingSource.Data = calcPercent(result.AddingSource.Data, result.AddingSource.Total)
+	result.TotalSource = applicantapimodels.SourceData{
+		Total: result.NegotiationSource.Total + result.AddingSource.Total,
+		Data: []applicantapimodels.SourceItem{
+			{Name: "Откликнулись", Count: result.NegotiationSource.Total},
+			{Name: "Добавлены", Count: result.AddingSource.Total},
+		}}
+	result.TotalSource.Data = calcPercent(result.TotalSource.Data, result.TotalSource.Total)
+	return result, nil
+}
+
+func (i impl) markAsDifferentApplicants(spaceID string, mainID, minorID, userID string, logger *log.Entry) error {
+	mainRec, err := i.store.GetByID(spaceID, mainID)
+	if err != nil {
+		return errors.Wrap(err, "ошибка получения данных кандидата")
 	}
 	if mainRec == nil {
 		return errors.New("запись с кандидатом не найдена")
@@ -533,10 +535,7 @@ func (i impl) markAsDifferentApplicants(spaceID string, mainID, minorID, userID 
 	}
 	minorRec, err := i.store.GetByID(spaceID, minorID)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения данных кандидата дубликата")
-		return errors.New("ошибка получения данных кандидата дубликата")
+		return errors.Wrap(err, "ошибка получения данных кандидата дубликата")
 	}
 	if minorRec == nil {
 		return errors.New("запись с дубликатом кандидата не найдена")
@@ -548,10 +547,7 @@ func (i impl) markAsDifferentApplicants(spaceID string, mainID, minorID, userID 
 	}
 	err = i.store.Update(mainID, updMap)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка установки признака разных кандидатов")
-		return errors.New("ошибка установки признака разных кандидатов")
+		return errors.Wrap(err, "ошибка установки признака разных кандидатов")
 	}
 	descr := applicanthistoryhandler.GetNotDuplicateMark(minorRec.Applicant)
 	i.applicantHistory.Save(spaceID, mainID, mainRec.VacancyID, userID, dbmodels.HistoryTypeDuplicate, descr)
@@ -562,10 +558,7 @@ func (i impl) markAsDifferentApplicants(spaceID string, mainID, minorID, userID 
 func (i impl) joinApplicants(spaceID string, mainID, minorID, userID string, logger *log.Entry) error {
 	mainRec, err := i.store.GetByID(spaceID, mainID)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения данных основного кандидата")
-		return errors.New("ошибка получения данных основного кандидата")
+		return errors.Wrap(err, "ошибка получения данных основного кандидата")
 	}
 	if mainRec == nil {
 		return errors.New("запись с основным кандидатом не найдена")
@@ -575,10 +568,7 @@ func (i impl) joinApplicants(spaceID string, mainID, minorID, userID string, log
 	}
 	minorRec, err := i.store.GetByID(spaceID, minorID)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения данных кандидата дубликата")
-		return errors.New("ошибка получения данных кандидата дубликата")
+		return errors.Wrap(err, "ошибка получения данных кандидата дубликата")
 	}
 	if minorRec == nil {
 		return errors.New("запись с дубликатом кандидата не найдена")
@@ -594,10 +584,7 @@ func (i impl) joinApplicants(spaceID string, mainID, minorID, userID string, log
 		}
 		err = store.Update(minorID, updMap)
 		if err != nil {
-			logger.
-				WithError(err).
-				Error("ошибка перевода дубликата в архив")
-			return errors.New("ошибка перевода дубликата в архив")
+			return errors.Wrap(err, "ошибка перевода дубликата в архив")
 		}
 		return nil
 	})
@@ -801,4 +788,21 @@ func (i impl) сhangeStage(tx *gorm.DB, spaceID, userID, userName string, applic
 	changes := applicanthistoryhandler.GetStageChange(stageRec.Name)
 	applicantHistory.SaveWithUser(spaceID, applicantID, applicantRec.VacancyID, userID, userName, dbmodels.HistoryTypeStageChange, changes)
 	return nil
+}
+
+func calcPercent(sourceData []applicantapimodels.SourceItem, sourceTotal int) []applicantapimodels.SourceItem {
+	totalPercent := 0
+	lastIdx := len(sourceData) - 1
+	for idx, data := range sourceData {
+		if idx == lastIdx {
+			sourceData[idx].Percent = 100 - totalPercent
+		} else {
+			sourceData[idx].Percent = int(math.Round(float64(data.Count) / float64(sourceTotal) * 100))
+			totalPercent += sourceData[idx].Percent
+		}
+	}
+	return sourceData
+}
+func percent(count int, all int) int {
+	return int(math.Round(float64(count) / float64(all) * 100))
 }

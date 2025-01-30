@@ -1,7 +1,6 @@
 package jobtitleprovider
 
 import (
-	"fmt"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
@@ -41,10 +40,6 @@ func (i impl) Create(spaceID string, request dictapimodels.JobTitleData) (id str
 	}
 	id, err = i.store.Create(rec)
 	if err != nil {
-		logger.
-			WithField("request", fmt.Sprintf("%+v", request)).
-			WithError(err).
-			Error("ошибка создания штатной должности")
 		return "", err
 	}
 	logger.
@@ -62,10 +57,6 @@ func (i impl) Update(spaceID, id string, request dictapimodels.JobTitleData) err
 	}
 	err := i.store.Update(spaceID, id, updMap)
 	if err != nil {
-		logger.
-			WithField("request", fmt.Sprintf("%+v", request)).
-			WithError(err).
-			Error("ошибка обновления штатной должности")
 		return err
 	}
 	logger.Info("обновлена штатная должность")
@@ -73,13 +64,8 @@ func (i impl) Update(spaceID, id string, request dictapimodels.JobTitleData) err
 }
 
 func (i impl) Get(spaceID, id string) (item dictapimodels.JobTitleView, err error) {
-	logger := log.WithField("space_id", spaceID).
-		WithField("rec_id", id)
 	rec, err := i.store.GetByID(spaceID, id)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения штатной должности")
 		return dictapimodels.JobTitleView{}, err
 	}
 	if rec == nil {
@@ -89,12 +75,8 @@ func (i impl) Get(spaceID, id string) (item dictapimodels.JobTitleView, err erro
 }
 
 func (i impl) FindByName(spaceID string, request dictapimodels.JobTitleData) (list []dictapimodels.JobTitleView, err error) {
-	logger := log.WithField("space_id", spaceID)
 	recList, err := i.store.FindByName(spaceID, request.Name, request.DepartmentID)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения списка штатных должностей")
 		return nil, err
 	}
 	result := make([]dictapimodels.JobTitleView, 0, len(list))
@@ -109,9 +91,6 @@ func (i impl) Delete(spaceID, id string) error {
 		WithField("rec_id", id)
 	err := i.store.Delete(spaceID, id)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка удаления штатной должности")
 		return err
 	}
 	logger.Info("удалена штатная должность")

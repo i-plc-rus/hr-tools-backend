@@ -62,7 +62,7 @@ func (c *avitoApiController) connect(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	resp, err := c.handler.GetConnectUri(spaceID)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения ссылки для авторизации на Avito")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(resp))
 }
@@ -83,9 +83,12 @@ func (c *avitoApiController) publish(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
-	err = c.handler.VacancyPublish(ctx.UserContext(), spaceID, id)
+	hMsg, err := c.handler.VacancyPublish(ctx.UserContext(), spaceID, id)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка публикация вакансии на Avito")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -106,9 +109,12 @@ func (c *avitoApiController) update(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
-	err = c.handler.VacancyUpdate(ctx.UserContext(), spaceID, id)
+	hMsg, err := c.handler.VacancyUpdate(ctx.UserContext(), spaceID, id)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка обновления вакансии на Avito")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -129,9 +135,12 @@ func (c *avitoApiController) close(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
-	err = c.handler.VacancyClose(ctx.UserContext(), spaceID, id)
+	hMsg, err := c.handler.VacancyClose(ctx.UserContext(), spaceID, id)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка снятия вакансии с публикации на Avito")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -161,9 +170,12 @@ func (c *avitoApiController) attach(ctx *fiber.Ctx) error {
 	}
 
 	spaceID := middleware.GetUserSpace(ctx)
-	err = c.handler.VacancyAttach(ctx.UserContext(), spaceID, id, strconv.Itoa(payload.ID))
+	hMsg, err := c.handler.VacancyAttach(ctx.UserContext(), spaceID, id, strconv.Itoa(payload.ID))
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка привязки существующей вакансии на Avito")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -186,7 +198,7 @@ func (c *avitoApiController) status(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	info, err := c.handler.GetVacancyInfo(ctx.UserContext(), spaceID, id)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения статуса размещения объявления на Avito")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(info))
 }

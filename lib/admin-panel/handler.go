@@ -2,7 +2,6 @@ package adminpanelhandler
 
 import (
 	"errors"
-	"fmt"
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
 	adminpaneluserstore "hr-tools-backend/lib/admin-panel/store"
@@ -43,10 +42,6 @@ func (i impl) CreateUser(request adminpanelapimodels.User) error {
 	}
 	userID, err := i.store.Create(rec)
 	if err != nil {
-		log.
-			WithField("request", fmt.Sprintf("%+v", request)).
-			WithError(err).
-			Error("Ошибка создания пользователя админки")
 		return err
 	}
 	log.
@@ -82,10 +77,6 @@ func (i impl) UpdateUser(userID string, request adminpanelapimodels.UserUpdate) 
 	}
 	err := i.store.Update(userID, updMap)
 	if err != nil {
-		logger.
-			WithField("request", fmt.Sprintf("%+v", request)).
-			WithError(err).
-			Error("Ошибка обновления пользователя админки")
 		return err
 	}
 	logger.Info("Обновлен пользователь админки")
@@ -96,9 +87,6 @@ func (i impl) DeleteUser(userID string) error {
 	logger := log.WithField("user_id", userID)
 	err := i.store.Delete(userID)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("Ошибка удаления пользователя админки")
 		return err
 	}
 	logger.Info("Удален пользователь админки")
@@ -108,10 +96,6 @@ func (i impl) DeleteUser(userID string) error {
 func (i impl) GetUser(userID string) (adminpanelapimodels.UserView, error) {
 	rec, err := i.store.GetByID(userID)
 	if err != nil {
-		log.
-			WithField("userID", userID).
-			WithError(err).
-			Error("Ошибка получения пользователя админки")
 		return adminpanelapimodels.UserView{}, err
 	}
 	if rec == nil {
@@ -123,9 +107,6 @@ func (i impl) GetUser(userID string) (adminpanelapimodels.UserView, error) {
 func (i impl) List() ([]adminpanelapimodels.UserView, error) {
 	list, err := i.store.List()
 	if err != nil {
-		log.
-			WithError(err).
-			Error("Ошибка получения списка пользователей админки")
 		return nil, err
 	}
 	result := make([]adminpanelapimodels.UserView, 0, len(list))

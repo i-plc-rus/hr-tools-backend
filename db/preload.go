@@ -12,6 +12,7 @@ import (
 func InitPreload() {
 	addSuperAdmin()
 	fillCities()
+	fillSpaceSettings()
 }
 
 func addSuperAdmin() {

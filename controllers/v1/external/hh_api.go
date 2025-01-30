@@ -61,7 +61,7 @@ func (c *hhApiController) connect(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	resp, err := c.handler.GetConnectUri(spaceID)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения ссылки для авторизации на HeadHunter")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(resp))
 }
@@ -82,9 +82,12 @@ func (c *hhApiController) publish(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
-	err = c.handler.VacancyPublish(ctx.UserContext(), spaceID, id)
+	hMsg, err := c.handler.VacancyPublish(ctx.UserContext(), spaceID, id)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка публикация вакансии на HeadHunter")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -105,9 +108,12 @@ func (c *hhApiController) update(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
-	err = c.handler.VacancyUpdate(ctx.UserContext(), spaceID, id)
+	hMsg, err := c.handler.VacancyUpdate(ctx.UserContext(), spaceID, id)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка обновления вакансии на HeadHunter")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -128,9 +134,12 @@ func (c *hhApiController) close(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
-	err = c.handler.VacancyClose(ctx.UserContext(), spaceID, id)
+	hMsg, err := c.handler.VacancyClose(ctx.UserContext(), spaceID, id)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка снятия вакансии с публикации на HeadHunter")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -163,9 +172,12 @@ func (c *hhApiController) attach(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
-	err = c.handler.VacancyAttach(ctx.UserContext(), spaceID, id, hhID)
+	hMsg, err := c.handler.VacancyAttach(ctx.UserContext(), spaceID, id, hhID)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка привязки существующей вакансии на HeadHunter")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -188,7 +200,7 @@ func (c *hhApiController) status(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	info, err := c.handler.GetVacancyInfo(ctx.UserContext(), spaceID, id)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения статуса размещения объявления на HeadHunter")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(info))
 }

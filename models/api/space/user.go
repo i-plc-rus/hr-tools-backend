@@ -1,6 +1,9 @@
 package spaceapimodels
 
-import "errors"
+import (
+	"errors"
+	apimodels "hr-tools-backend/models/api"
+)
 
 type CreateUser struct {
 	Password string `json:"password"`
@@ -36,6 +39,9 @@ func (r SpaceUserCommonData) Validate() error {
 	//TODO: add data validators
 	if r.Email == "" {
 		return errors.New("не указан емайл")
+	}
+	if r.FirstName == "" && r.LastName == "" {
+		return errors.New("не указаны имя и фамилия")
 	}
 	return nil
 }
@@ -82,4 +88,16 @@ func (r PasswordChange) Validate() error {
 		return errors.New("Не указан новый пароль")
 	}
 	return nil
+}
+
+type SpaceUserFilter struct {
+	apimodels.Pagination
+	Search string        `json:"search"` // Поиск
+	Sort   SpaceUserSort `json:"sort"`   // Сортировка
+}
+
+type SpaceUserSort struct {
+	NameDesc  *bool `json:"fio_desc"`   // Имя, порядок сортировки false = ASC/ true = DESC / nil = нет
+	EmailDesc *bool `json:"email_desc"` // Email, порядок сортировки false = ASC/ true = DESC / nil = нет
+	RoleDesc  *bool `json:"role_desc"`  // Роль добавления, порядок сортировки false = ASC/ true = DESC / nil = нет
 }
