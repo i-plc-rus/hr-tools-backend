@@ -36,7 +36,6 @@ func fillSpaceSettings() {
 				continue
 			}
 		}
-		removeDuplicate(spaceID, spaceSettings, settingsStore)
 	}
 	log.Info("предзаполнение дефолтных настроек завершено")
 }
@@ -50,24 +49,4 @@ func checkAndCreateSetting(spaceID string, spaceSettings []dbmodels.SpaceSetting
 	//не найдена
 	spaceSettingData.SpaceID = spaceID
 	return settingsStore.Create(spaceSettingData)
-}
-
-
-//TODO можно удалить просле первого деплоя
-func removeDuplicate(spaceID string, spaceSettings []dbmodels.SpaceSetting, settingsStore spacesettingsstore.Provider) {
-	codeMap := map[models.SpaceSettingCode]bool{}
-	for _, setting := range spaceSettings {
-		if codeMap[setting.Code] {
-			err := settingsStore.Delete(spaceID, string(setting.Code))
-			if err != nil {
-				log.WithError(err).
-					WithField("space_id", spaceID).
-					WithField("setting_code", setting.Code).
-					Error("ошибка удаления дубля настройки")
-				continue
-			}
-		} else {
-			codeMap[setting.Code] = true
-		}
-	}
 }

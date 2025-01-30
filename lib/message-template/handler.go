@@ -94,15 +94,15 @@ func (i impl) SendEmailMessage(spaceID, templateID, applicantID, userID string) 
 	}
 	tlpData, err := i.getTlpData(applicant.Applicant, applicant.VacancyID, user)
 	if err != nil {
-		return err
+		return "", err
 	}
 	msg, err := buildMsg(msgTemplate.Message, textSign, tlpData)
 	if err != nil {
-		return err
+		return "", err
 	}
 	title, err := buildTitle(msgTemplate.Title, tlpData)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	err = smtp.Instance.SendEMail(email, applicant.Email, msg, title)
@@ -175,15 +175,15 @@ func (i impl) MultiSendEmail(spaceID, userID string, data applicantapimodels.Mul
 
 		tlpData, err := i.getTlpData(applicant.Applicant, applicant.VacancyID, user)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		msg, err := buildMsg(msgTemplate.Message, textSign, tlpData)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		title, err := buildTitle(msgTemplate.Title, tlpData)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		err = smtp.Instance.SendEMail(email, applicant.Email, msg, title)
 		if err != nil {
