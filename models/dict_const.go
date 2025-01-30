@@ -416,3 +416,12 @@ const (
 	HeadReject      RejectInitiator = "Руководитель"
 	ApplicantReject RejectInitiator = "Кандидат"
 )
+
+func (initiator RejectInitiator)IsValid() error {
+	if initiator != HrReject &&
+		initiator != HeadReject &&
+		initiator != ApplicantReject {
+		return errors.New("инициатор отказа указан неверно")
+	}
+	return nil
+}

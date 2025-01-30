@@ -5,7 +5,6 @@ import (
 	"hr-tools-backend/controllers"
 	"hr-tools-backend/lib/applicant"
 	applicanthistoryhandler "hr-tools-backend/lib/applicant-history"
-	applicantdict "hr-tools-backend/lib/dicts/applicant"
 	filestorage "hr-tools-backend/lib/file-storage"
 	messagetemplate "hr-tools-backend/lib/message-template"
 	"hr-tools-backend/middleware"
@@ -28,7 +27,6 @@ func InitApplicantApiRouters(app *fiber.App) {
 		router.Get("doc/:id", controller.GetDoc)       // скачать документ по id
 		router.Delete("doc/:id", controller.deleteDoc) // удлить документ по id
 		router.Post("list", controller.list)
-		router.Post("reject_list", controller.rejectList)
 		router.Post("", controller.create)
 		router.Route("multi-actions", func(mRouter fiber.Router) {
 			mRouter.Put("reject", controller.multiReject)
@@ -377,19 +375,6 @@ func (c *applicantApiController) list(ctx *fiber.Ctx) error {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения списка кандидатов")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewScrollerResponse(list, rowCount))
-}
-
-// @Summary Список c причинами отказов
-// @Tags Кандидат
-// @Description Список c причинами отказов
-// @Param   Authorization		header		string	true	"Authorization token"
-// @Success 200 {object} apimodels.Response{data=applicantapimodels.RejectReasons}
-// @Failure 400 {object} apimodels.Response
-// @Failure 403
-// @Failure 500 {object} apimodels.Response
-// @router /api/v1/space/applicant/reject_list [post]
-func (c *applicantApiController) rejectList(ctx *fiber.Ctx) error {
-	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(applicantdict.GetRejectReasonList()))
 }
 
 // @Summary Создание
