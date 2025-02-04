@@ -59,6 +59,10 @@ var (
 		return c.Route().Path
 	}
 	FuncTagResBody FuncTag = func(c *fiber.Ctx, d *data) interface{} {
+		contentType := c.GetRespHeader(fiber.HeaderContentDisposition, "")
+		if contentType != "" {
+			return ""
+		}
 		return string(c.Response().Body())
 	}
 	FuncTagReqHeaders FuncTag = func(c *fiber.Ctx, d *data) interface{} {

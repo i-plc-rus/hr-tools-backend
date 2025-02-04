@@ -5,4 +5,5 @@ type FileView struct {
 	Name        string `json:"name"`
 	ApplicantID string `json:"applicant_id"`
 	SpaceID     string `json:"space_id"`
+	ContentType string `json:"content_type"`
 }

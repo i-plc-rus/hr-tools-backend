@@ -9,7 +9,7 @@ import (
 type Provider interface {
 	SaveFile(rec dbmodels.FileStorage) (id string, err error)
 	DeleteFile(id, spaceID string) (ok bool, err error)
-	GetFileIDByType(applicantID string, fileType dbmodels.FileType) (id string, err error)
+	GetFileIDByType(applicantID string, fileType dbmodels.FileType) (rec *dbmodels.FileStorage, err error)
 	GetFileListByType(applicantID string, fileType dbmodels.FileType) (list []dbmodels.FileStorage, err error)
 }
 
@@ -33,8 +33,8 @@ func (i impl) GetFileListByType(applicantID string, fileType dbmodels.FileType) 
 	return list, nil
 }
 
-func (i impl) GetFileIDByType(applicantID string, fileType dbmodels.FileType) (id string, err error) {
-	rec := dbmodels.FileStorage{}
+func (i impl) GetFileIDByType(applicantID string, fileType dbmodels.FileType) (rec *dbmodels.FileStorage, err error) {
+	rec = new(dbmodels.FileStorage)
 	err = i.db.
 		Model(&dbmodels.FileStorage{}).
 		Where("applicant_id = ? AND type = ?", applicantID, fileType).
@@ -42,11 +42,11 @@ func (i impl) GetFileIDByType(applicantID string, fileType dbmodels.FileType) (i
 		Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return "", nil
+			return nil, nil
 		}
-		return "", err
+		return nil, err
 	}
-	return rec.ID, nil
+	return rec, nil
 }
 
 func (i impl) SaveFile(rec dbmodels.FileStorage) (id string, err error) {
