@@ -30,6 +30,7 @@ import (
 	spacehandler "hr-tools-backend/lib/space/handler"
 	spacesettingshandler "hr-tools-backend/lib/space/settings/handler"
 	spaceusershander "hr-tools-backend/lib/space/users/hander"
+	supersethandler "hr-tools-backend/lib/superset"
 	vacancyhandler "hr-tools-backend/lib/vacancy"
 	vacancyreqhandler "hr-tools-backend/lib/vacancy-req"
 )
@@ -70,4 +71,5 @@ func InitAllServices(ctx context.Context) {
 	messagetemplate.NewHandler()
 	xlsexport.NewHandler()
 	analytics.NewHandler()
+	supersethandler.NewHandler(config.Conf.Superset.Host, config.Conf.Superset.Username, config.Conf.Superset.Password)
 }

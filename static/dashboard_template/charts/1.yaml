@@ -1,0 +1,59 @@
+slice_name: "\u0421\u0442\u0430\u0442\u0443\u0441\u044B \u043A\u0430\u043D\u0434\u0438\
+  \u0434\u0430\u0442\u043E\u0432 \u0442\u0435\u0441\u0442"
+description: null
+certified_by: null
+certification_details: null
+viz_type: pie
+params:
+  datasource: 1__table
+  viz_type: pie
+  slice_id: 1
+  groupby:
+  - status
+  metric: count
+  adhoc_filters:
+  - expressionType: SIMPLE
+    subject: created_at
+    operator: TEMPORAL_RANGE
+    comparator: No filter
+    clause: WHERE
+    sqlExpression: null
+    isExtra: false
+    isNew: false
+    datasourceWarning: false
+    filterOptionName: filter_pqft5zieuz_fw07aue97zh
+  - expressionType: SIMPLE
+    subject: space_id
+    operator: ==
+    operatorId: EQUALS
+    comparator: 38fd56ad-09f5-48d0-b227-b2e2e06422c2
+    clause: WHERE
+    sqlExpression: null
+    isExtra: false
+    isNew: false
+    datasourceWarning: false
+    filterOptionName: filter_ocmcli81gch_757w5v2yhwf
+  row_limit: 100
+  sort_by_metric: true
+  color_scheme: supersetColors
+  show_labels_threshold: 5
+  show_legend: true
+  legendType: scroll
+  legendOrientation: top
+  label_type: key
+  number_format: SMART_NUMBER
+  date_format: smart_date
+  show_labels: true
+  labels_outside: true
+  outerRadius: 70
+  innerRadius: 30
+  extra_form_data: {}
+  dashboards:
+  - 9
+query_context: '{"datasource":{"id":1,"type":"table"},"force":false,"queries":[{"filters":[{"col":"created_at","op":"TEMPORAL_RANGE","val":"No
+  filter"},{"col":"space_id","op":"==","val":"38fd56ad-09f5-48d0-b227-b2e2e06422c2"}],"extras":{"having":"","where":""},"applied_time_extras":{},"columns":["status"],"metrics":["count"],"orderby":[["count",false]],"annotation_layers":[],"row_limit":100,"series_limit":0,"order_desc":true,"url_params":{},"custom_params":{},"custom_form_data":{}}],"form_data":{"datasource":"1__table","viz_type":"pie","slice_id":1,"groupby":["status"],"metric":"count","adhoc_filters":[{"expressionType":"SIMPLE","subject":"created_at","operator":"TEMPORAL_RANGE","comparator":"No
+  filter","clause":"WHERE","sqlExpression":null,"isExtra":false,"isNew":false,"datasourceWarning":false,"filterOptionName":"filter_pqft5zieuz_fw07aue97zh"},{"expressionType":"SIMPLE","subject":"space_id","operator":"==","operatorId":"EQUALS","comparator":"38fd56ad-09f5-48d0-b227-b2e2e06422c2","clause":"WHERE","sqlExpression":null,"isExtra":false,"isNew":false,"datasourceWarning":false,"filterOptionName":"filter_ocmcli81gch_757w5v2yhwf"}],"row_limit":100,"sort_by_metric":true,"color_scheme":"supersetColors","show_labels_threshold":5,"show_legend":true,"legendType":"scroll","legendOrientation":"top","label_type":"key","number_format":"SMART_NUMBER","date_format":"smart_date","show_labels":true,"labels_outside":true,"outerRadius":70,"innerRadius":30,"extra_form_data":{},"dashboards":[9],"force":false,"result_format":"json","result_type":"full"},"result_format":"json","result_type":"full"}'
+cache_timeout: null
+uuid: e69b5497-920a-4440-b0a9-67c09145e42f
+version: 1.0.0
+dataset_uuid: eeda687f-f294-439d-9cdc-e3515d602edf
