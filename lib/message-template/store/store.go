@@ -7,10 +7,11 @@ import (
 )
 
 type Provider interface {
-	Create(rec dbmodels.MessageTemplate) error
+	Create(rec dbmodels.MessageTemplate) (string, error)
 	Update(id string, updMap map[string]interface{}) error
 	GetByID(spaceID, id string) (rec *dbmodels.MessageTemplate, err error)
 	List(spaceID string) (list []dbmodels.MessageTemplate, err error)
+	Delete(spaceID, id string) error
 }
 
 func NewInstance(db *gorm.DB) Provider {
@@ -38,8 +39,12 @@ func (i impl) GetByID(spaceID, id string) (rec *dbmodels.MessageTemplate, err er
 	return rec, nil
 }
 
-func (i impl) Create(rec dbmodels.MessageTemplate) error {
-	return i.db.Save(&rec).Error
+func (i impl) Create(rec dbmodels.MessageTemplate) (string, error) {
+	err := i.db.Save(&rec).Error
+	if err != nil {
+		return "", err
+	}
+	return rec.ID, nil
 }
 
 func (i impl) Update(id string, updMap map[string]interface{}) error {
@@ -60,4 +65,23 @@ func (i impl) List(spaceID string) (list []dbmodels.MessageTemplate, err error) 
 		return nil, err
 	}
 	return list, nil
+}
+
+func (i impl) Delete(spaceID, id string) error {
+	rec := dbmodels.MessageTemplate{
+		BaseSpaceModel: dbmodels.BaseSpaceModel{
+			BaseModel: dbmodels.BaseModel{
+				ID: id,
+			},
+			SpaceID: spaceID,
+		},
+	}
+	err := i.db.
+		Delete(&rec).
+		Error
+
+	if err != nil {
+		return err
+	}
+	return nil
 }

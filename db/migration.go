@@ -99,6 +99,10 @@ func AutoMigrateDB() error {
 		return errors.Wrap(err, "ошибка создания структуры VacancyTeam")
 	}
 
+	if err := DB.AutoMigrate(&dbmodels.RejectReason{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры RejectReason")
+	}
+
 	if err := DB.AutoMigrate(&dbmodels.SpacePushSetting{}); err != nil {
 		return errors.Wrap(err, "ошибка создания структуры SpacePushSetting")
 	}

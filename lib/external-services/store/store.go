@@ -9,6 +9,7 @@ import (
 type Provider interface {
 	Set(spaceID, code string, value []byte) error
 	Get(spaceID, code string) (value []byte, ok bool, err error)
+	GetRec(spaceID, code string) (rec *dbmodels.ExtData, err error)
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -22,7 +23,7 @@ type impl struct {
 }
 
 func (i impl) Set(spaceID, code string, value []byte) error {
-	rec, err := i.get(spaceID, code)
+	rec, err := i.GetRec(spaceID, code)
 	if err != nil {
 		return err
 	}
@@ -51,14 +52,14 @@ func (i impl) Set(spaceID, code string, value []byte) error {
 }
 
 func (i impl) Get(spaceID, code string) (value []byte, ok bool, err error) {
-	rec, err := i.get(spaceID, code)
+	rec, err := i.GetRec(spaceID, code)
 	if err != nil || rec == nil {
 		return nil, false, err
 	}
 	return rec.Value, true, nil
 }
 
-func (i impl) get(spaceID, code string) (rec *dbmodels.ExtData, err error) {
+func (i impl) GetRec(spaceID, code string) (rec *dbmodels.ExtData, err error) {
 	err = i.db.Model(dbmodels.ExtData{}).
 		Where("space_id = ? AND code = ?", spaceID, code).
 		First(&rec).

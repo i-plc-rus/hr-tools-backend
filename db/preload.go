@@ -14,6 +14,7 @@ import (
 func InitPreload() {
 	addSuperAdmin()
 	fillCities()
+	fillSpaceSettings()
 	addPushSettings()
 }
 

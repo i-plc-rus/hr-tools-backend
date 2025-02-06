@@ -1,16 +1,18 @@
 package spaceapimodels
 
 import (
-	"github.com/pkg/errors"
+	"hr-tools-backend/models"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type SpaceSettingView struct {
-	ID      string `json:"id"`       // идентификтор Настройки
-	SpaceID string `json:"space_id"` // идентификатор пространства, которому принадлежит настройка
-	Name    string `json:"name"`     // Название настройки
-	Code    string `json:"code"`     // Код настройки
-	Value   string `json:"value"`    // Значение настройки
+	ID      string                  `json:"id"`       // идентификтор Настройки
+	SpaceID string                  `json:"space_id"` // идентификатор пространства, которому принадлежит настройка
+	Name    string                  `json:"name"`     // Название настройки
+	Code    models.SpaceSettingCode `json:"code"`     // Код настройки
+	Value   string                  `json:"value"`    // Значение настройки
 }
 
 type UpdateSpaceSettingValue struct {
