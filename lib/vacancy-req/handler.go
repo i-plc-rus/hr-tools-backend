@@ -11,6 +11,8 @@ import (
 	companystore "hr-tools-backend/lib/dicts/company/store"
 	departmentprovider "hr-tools-backend/lib/dicts/department"
 	jobtitleprovider "hr-tools-backend/lib/dicts/job-title"
+	pushhandler "hr-tools-backend/lib/space/push/handler"
+	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	vacancyhandler "hr-tools-backend/lib/vacancy"
 	vacancyreqstore "hr-tools-backend/lib/vacancy-req/store"
 	"hr-tools-backend/models"
@@ -49,6 +51,7 @@ func NewHandler() {
 		companyStructProvider: companystructprovider.Instance,
 		vacancyHandler:        vacancyhandler.Instance,
 		aprovalStagesHandler:  aprovalstageshandler.Instance,
+		spaceUserStore:        spaceusersstore.NewInstance(db.DB),
 	}
 }
 
@@ -62,6 +65,7 @@ type impl struct {
 	companyStructProvider companystructprovider.Provider
 	vacancyHandler        vacancyhandler.Provider
 	aprovalStagesHandler  aprovalstageshandler.Provider
+	spaceUserStore        spaceusersstore.Provider
 }
 
 func (i impl) checkDependency(spaceID string, data vacancyapimodels.VacancyRequestData) (err error) {
@@ -250,7 +254,7 @@ func (i impl) ChangeStatus(spaceID, id, userID string, status models.VRStatus) (
 		WithField("space_id", spaceID).
 		WithField("rec_id", id).
 		WithField("new_status", status)
-	rec, err := i.GetByID(spaceID, id)
+	rec, err := i.getRec(spaceID, id)
 	if err != nil {
 		return "", err
 	}
@@ -265,6 +269,10 @@ func (i impl) ChangeStatus(spaceID, id, userID string, status models.VRStatus) (
 		return "", err
 	}
 	logger.Info("статус заявки обновлен")
+	if status == models.VRStatusCanceled {
+		notification := models.GetPushVRClosed(rec.VacancyName, string(status))
+		go i.sendNotification(*rec, notification)
+	}
 	return "", nil
 }
 
@@ -311,6 +319,23 @@ func (i impl) Approve(spaceID, id, userID string, data vacancyapimodels.VacancyR
 	if isLastStage {
 		return i.ChangeStatus(spaceID, id, userID, models.VRStatusAccepted)
 	}
+	go func(rec dbmodels.VacancyRequest) {
+		code := models.PushVRApproved
+		logger := log.WithField("space_id", spaceID).
+			WithField("rec_id", id).
+			WithField("event_code", code)
+		user, err := i.spaceUserStore.GetByID(userID)
+		if err != nil {
+			logger.WithError(err).Error("ошибка получения пользователя")
+			return
+		}
+		if user == nil {
+			logger.Error("пользователь не найден")
+			return
+		}
+		notification := models.GetPushVRApproved(rec.VacancyName, user.GetFullName())
+		i.sendNotification(rec, notification)
+	}(*rec)
 	return "", nil
 }
 
@@ -339,6 +364,24 @@ func (i impl) Reject(spaceID, id, userID string, data vacancyapimodels.VacancyRe
 			return "", errors.Wrap(err, "ошибка обновления статуса согласования")
 		}
 	}
+
+	go func(rec dbmodels.VacancyRequest) {
+		code := models.PushVRRejected
+		logger := log.WithField("space_id", spaceID).
+			WithField("rec_id", id).
+			WithField("event_code", code)
+		user, err := i.spaceUserStore.GetByID(userID)
+		if err != nil {
+			logger.WithError(err).Error("ошибка получения пользователя")
+			return
+		}
+		if user == nil {
+			logger.Error("пользователь не найден")
+			return
+		}
+		notification := models.GetPushVRRejected(rec.VacancyName, user.GetFullName(), user.Role.ToHuman())
+		i.sendNotification(rec, notification)
+	}(*rec)
 	return "", nil
 }
 
@@ -476,4 +519,16 @@ func (i impl) ToFavorite(id, userID string, isSet bool) error {
 func createCompany(tx *gorm.DB, spaceID, name string) (string, error) {
 	companyStore := companystore.NewInstance(tx)
 	return companyStore.FindOrCreate(spaceID, name)
+}
+
+func (i impl) sendNotification(rec dbmodels.VacancyRequest, data models.NotificationData) {
+	//отправляем автору
+	pushhandler.Instance.SendNotification(rec.AuthorID, data)
+	for _, stage := range rec.ApprovalStages {
+		//отправляем списку пользователей из цепочки согласования
+		if rec.AuthorID == stage.SpaceUserID {
+			continue
+		}
+		pushhandler.Instance.SendNotification(stage.SpaceUserID, data)
+	}
 }

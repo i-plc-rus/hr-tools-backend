@@ -61,7 +61,7 @@ func (i impl) Update(spaceID, vacancyID, userID string, updMap map[string]interf
 	}
 	err := i.db.
 		Model(&dbmodels.VacancyTeam{}).
-		Where("id = ?", userID).
+		Where("user_id = ?", userID).
 		Where("space_id = ?", spaceID).
 		Where("vacancy_id = ?", vacancyID).
 		Updates(updMap).
@@ -91,11 +91,9 @@ func (i impl) List(spaceID, vacancyID string) (list []dbmodels.VacancyTeam, err 
 func (i impl) Delete(spaceID, vacancyID, userID string) (err error) {
 	delRec := dbmodels.VacancyTeam{
 		BaseSpaceModel: dbmodels.BaseSpaceModel{
-			BaseModel: dbmodels.BaseModel{
-				ID: userID,
-			},
 			SpaceID: spaceID,
 		},
+		UserID: userID,
 		VacancyID: vacancyID,
 	}
 	err = i.db.
@@ -112,7 +110,7 @@ func (i impl) SetAsResponsible(spaceID, vacancyID, userID string) error {
 	tx := i.db.Model(&dbmodels.VacancyTeam{}).
 		Where("space_id = ?", spaceID).
 		Where("vacancy_id = ?", vacancyID).
-		UpdateColumn("responsible", gorm.Expr("id = ?", userID))
+		UpdateColumn("responsible", gorm.Expr("user_id = ?", userID))
 	err := tx.Error
 	if err != nil {
 		return err

@@ -11,6 +11,7 @@ import (
 	"hr-tools-backend/lib/external-services/hh/hhclient"
 	extservicestore "hr-tools-backend/lib/external-services/store"
 	filestorage "hr-tools-backend/lib/file-storage"
+	pushhandler "hr-tools-backend/lib/space/push/handler"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	"hr-tools-backend/lib/utils/helpers"
@@ -457,6 +458,9 @@ func (i *impl) HandleNegotiations(ctx context.Context, data dbmodels.Vacancy) er
 		}
 		changes := applicanthistoryhandler.GetCreateChanges("Кандидат добавлен с работного сайта на вакансию", applicantData)
 		i.applicantHistory.Save(applicantData.SpaceID, applicantID, applicantData.VacancyID, "", dbmodels.HistoryTypeNegotiation, changes)
+
+		notification := models.GetPushApplicantNegotiation(data.VacancyName, applicantData.GetFIO())
+		go i.sendNotification(data, notification)
 	}
 	return nil
 }
@@ -633,7 +637,7 @@ func (i *impl) checkPublications(ctx context.Context, spaceID string, list []dbm
 			continue
 		}
 		newStatus := info.GetPubStatus()
-		if newStatus == rec.AvitoStatus {
+		if newStatus == rec.HhStatus {
 			continue
 		}
 		updMap := map[string]interface{}{
@@ -644,6 +648,10 @@ func (i *impl) checkPublications(ctx context.Context, spaceID string, list []dbm
 			logger.
 				WithError(err).
 				Error("ошибка обновления статуса публикации")
+		}
+		if newStatus == models.VacancyPubStatusPublished {
+			notification := models.GetPushVacancyPublished(rec.VacancyName, "HeadHunter")
+			go i.sendNotification(rec, notification)
 		}
 	}
 	return nil
@@ -662,4 +670,16 @@ func (i *impl) downloadResumePdf(ctx context.Context, spaceID, applicantID, resu
 		return err
 	}
 	return i.filesStorage.Upload(ctx, spaceID, applicantID, body, "resume.pdf", dbmodels.ApplicantResume, "application/pdf")
+}
+
+func (i *impl) sendNotification(rec dbmodels.Vacancy, data models.NotificationData) {
+	//отправляем автору
+	pushhandler.Instance.SendNotification(rec.AuthorID, data)
+	for _, teamMember := range rec.VacancyTeam {
+		//отправляем команде
+		if rec.AuthorID == teamMember.ID {
+			continue
+		}
+		pushhandler.Instance.SendNotification(teamMember.ID, data)
+	}
 }

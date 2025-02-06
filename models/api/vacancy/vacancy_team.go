@@ -20,7 +20,7 @@ type TeamPerson struct {
 func TeamPersonConvert(rec dbmodels.VacancyTeam) TeamPerson {
 	result := TeamPerson{
 		Person: Person{
-			ID:       rec.ID,
+			ID:       rec.UserID,
 		},
 		Responsible: rec.Responsible,
 	}
