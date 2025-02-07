@@ -7,6 +7,7 @@ type FileStorage struct {
 	Name        string
 	ApplicantID string
 	Type        FileType
+	ContentType string
 }
 
 func (f FileStorage) ToModel() filesapimodels.FileView {
@@ -15,6 +16,7 @@ func (f FileStorage) ToModel() filesapimodels.FileView {
 		Name:        f.Name,
 		ApplicantID: f.ApplicantID,
 		SpaceID:     f.SpaceID,
+		ContentType: f.ContentType,
 	}
 }
 

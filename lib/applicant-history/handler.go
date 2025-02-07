@@ -4,7 +4,9 @@ import (
 	"hr-tools-backend/db"
 	applicanthistorystore "hr-tools-backend/lib/applicant-history/store"
 	applicantstore "hr-tools-backend/lib/applicant/store"
+	pushhandler "hr-tools-backend/lib/space/push/handler"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
+	vacancystore "hr-tools-backend/lib/vacancy/store"
 	"hr-tools-backend/models"
 	applicantapimodels "hr-tools-backend/models/api/applicant"
 	dbmodels "hr-tools-backend/models/db"
@@ -28,6 +30,7 @@ func NewHandler() {
 		store:          applicanthistorystore.NewInstance(db.DB),
 		userStore:      spaceusersstore.NewInstance(db.DB),
 		applicantStore: applicantstore.NewInstance(db.DB),
+		vacancyStore:   vacancystore.NewInstance(db.DB),
 	}
 }
 
@@ -36,6 +39,7 @@ func NewTxHandler(tx *gorm.DB) Provider {
 		store:          applicanthistorystore.NewInstance(tx),
 		userStore:      spaceusersstore.NewInstance(tx),
 		applicantStore: applicantstore.NewInstance(tx),
+		vacancyStore:   vacancystore.NewInstance(tx),
 	}
 }
 
@@ -43,6 +47,7 @@ type impl struct {
 	store          applicanthistorystore.Provider
 	userStore      spaceusersstore.Provider
 	applicantStore applicantstore.Provider
+	vacancyStore   vacancystore.Provider
 }
 
 func (i impl) List(spaceID, applicantID string, filter applicantapimodels.ApplicantHistoryFilter) ([]applicantapimodels.ApplicantHistoryView, int64, error) {
@@ -123,11 +128,11 @@ func (i impl) SaveWithUser(spaceID, applicantID, vacancyID, userID, userName str
 	_, err := i.store.Create(rec)
 	if err != nil {
 		log.WithField("space_id", spaceID).
-		WithField("applicant_id", applicantID).
-		WithField("vacancy_id", vacancyID).
-		WithField("action", action).
-		WithField("description", changes.Description).
-		WithError(err).Error("ошибка сохранения истории действий по кандидату")
+			WithField("applicant_id", applicantID).
+			WithField("vacancy_id", vacancyID).
+			WithField("action", action).
+			WithField("description", changes.Description).
+			WithError(err).Error("ошибка сохранения истории действий по кандидату")
 	}
 }
 
@@ -170,5 +175,54 @@ func (i impl) SaveNote(spaceID, applicantID, userID string, note applicantapimod
 		logger.WithError(err).Error("ошибка сохранения комментария по кандидату")
 		return errors.New("ошибка сохранения комментария по кандидату")
 	}
+	go func(rec dbmodels.Applicant, userID string) {
+		logger := log.WithField("space_id", spaceID).
+			WithField("applicant_id", applicantID).
+			WithField("event_code", models.PushApplicantNote)
+		vacancyRec := i.getVacancy(rec.SpaceID, rec.VacancyID, logger)
+		if vacancyRec == nil {
+			return
+		}
+		notification := models.GetPushApplicantNote(vacancyRec.VacancyName, rec.GetFIO(), user.GetFullName())
+		i.sendNotification(*vacancyRec, notification)
+	}(applicantRec.Applicant, userID)
 	return nil
+}
+
+func (i *impl) sendNotification(rec dbmodels.Vacancy, data models.NotificationData) {
+	//отправляем автору
+	pushhandler.Instance.SendNotification(rec.AuthorID, data)
+	for _, teamMember := range rec.VacancyTeam {
+		//отправляем команде
+		if rec.AuthorID == teamMember.ID {
+			continue
+		}
+		pushhandler.Instance.SendNotification(teamMember.ID, data)
+	}
+}
+
+func (i *impl) getVacancy(spaceID, vacancyID string, logger *log.Entry) *dbmodels.Vacancy {
+	vacancyRec, err := i.vacancyStore.GetByID(spaceID, vacancyID)
+	if err != nil {
+		logger.WithError(err).Error("ошибка получения вакансии")
+		return nil
+	}
+	if vacancyRec == nil {
+		logger.Error("вакансия не найдена")
+		return nil
+	}
+	return vacancyRec
+}
+
+func (i *impl) getUser(userID string, logger *log.Entry) *dbmodels.SpaceUser {
+	userRec, err := i.userStore.GetByID(userID)
+	if err != nil {
+		logger.WithError(err).Error("ошибка получения пользователя")
+		return nil
+	}
+	if userRec == nil {
+		logger.Error("пользователь не найден")
+		return nil
+	}
+	return userRec
 }

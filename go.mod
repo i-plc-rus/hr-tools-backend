@@ -11,6 +11,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/gotify/configor v1.0.2
+	github.com/lib/pq v1.10.9
 	github.com/minio/minio-go/v7 v7.0.80
 	github.com/onrik/gorm-logrus v0.5.0
 	github.com/pkg/errors v0.9.1
@@ -20,14 +21,18 @@ require (
 	github.com/xuri/excelize/v2 v2.9.0
 	gorm.io/driver/postgres v1.5.9
 	gorm.io/gorm v1.25.12
-    github.com/lib/pq v1.10.9
+)
+
+require (
+	github.com/fasthttp/websocket v1.5.8 // indirect
+	github.com/savsgio/gotils v0.0.0-20240303185622-093b76447511 // indirect
 )
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/MicahParks/keyfunc/v2 v2.1.0 // indirect
-	github.com/andybalholm/brotli v1.0.5 // indirect
+	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
@@ -43,6 +48,7 @@ require (
 	github.com/go-openapi/validate v0.22.3 // indirect
 	github.com/go-yaml/yaml v2.1.0+incompatible // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
+	github.com/gofiber/contrib/websocket v1.3.3
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/pgx/v5 v5.5.5 // indirect
@@ -66,7 +72,7 @@ require (
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	github.com/valyala/fasthttp v1.51.0 // indirect
+	github.com/valyala/fasthttp v1.52.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/xuri/efp v0.0.0-20240408161823-9ad904a10d6d // indirect
 	github.com/xuri/nfp v0.0.0-20240318013403-ab9948c2c4a7 // indirect
