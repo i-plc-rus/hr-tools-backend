@@ -47,7 +47,7 @@ func (c *analyticsApiController) source(ctx *fiber.Ctx) error {
 	payload.Limit = 1000
 	data, err := analytics.Instance.Source(spaceID, payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения аналитики по источникам кандидатов")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(data))
 }
@@ -75,7 +75,7 @@ func (c *analyticsApiController) sourceExport(ctx *fiber.Ctx) error {
 	payload.Limit = 1000
 	data, err := analytics.Instance.SourceExportToXls(spaceID, payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения аналитики по источникам кандидатов для выгрузки в Excel")
 	}
 	fileName := fmt.Sprintf("applicants-%v.xlsx", time.Now().Format("20060102-150405"))
 	ctx.Set("Content-Type", "application/vnd.ms-excel")

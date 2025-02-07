@@ -52,7 +52,7 @@ func InitMsgTemplateApiRouters(app *fiber.App) {
 // @Description Отправить сообщение кандидату на почту
 // @Param   Authorization		header		string	true	"Authorization token"
 // @Param	body				body		msgtemplateapimodels.SendMessage	true	"request body"
-// @Success 200
+// @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
@@ -91,7 +91,7 @@ func (c *msgTemplateApiController) GetTemplatesList(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
 	list, err := messagetemplate.Instance.GetListTemplates(spaceID)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения списка шаблонов")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(list))
 }

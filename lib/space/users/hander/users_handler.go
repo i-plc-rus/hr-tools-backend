@@ -12,7 +12,6 @@ import (
 	dbmodels "hr-tools-backend/models/db"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -48,10 +47,6 @@ type impl struct {
 func (i impl) GetByID(userID string) (user spaceapimodels.SpaceUser, err error) {
 	userDB, err := i.spaceUserStore.GetByID(userID)
 	if err != nil {
-		log.
-			WithField("user_id", userID).
-			WithError(err).
-			Error("ошибка поиска пользователя")
 		return spaceapimodels.SpaceUser{}, err
 	}
 	if userDB == nil {

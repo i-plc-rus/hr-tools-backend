@@ -105,7 +105,7 @@ func (c *spaceUserController) DeleteUser(ctx *fiber.Ctx) error {
 // @Param   Authorization		header		string	true	"Authorization token"
 // @Param 	id 				path 		string  true 	"space user ID"
 // @Param	body				body		spaceapimodels.UpdateUser	true	"request body"
-// @Success 200
+// @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response

@@ -148,12 +148,8 @@ func (i impl) SendEmailMessage(ctx context.Context, spaceID, templateID, applica
 }
 
 func (i impl) GetListTemplates(spaceID string) (list []msgtemplateapimodels.MsgTemplateView, err error) {
-	logger := log.WithField("space_id", spaceID)
 	recList, err := i.msgTemplateStore.List(spaceID)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения списка шаблонов сообщения")
 		return nil, err
 	}
 	for _, template := range recList {
@@ -445,15 +441,7 @@ func (i impl) buildPdf(ctx context.Context, spaceID string, tplData models.Templ
 func (i impl) getSenderEmail(spaceID string, logger *log.Entry) (string, error) {
 	email, err := i.spaceSettingsStore.GetValueByCode(spaceID, models.SpaceSenderEmail)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения почты для отправки из настроек пространства")
-		return "", errors.New("ошибка получения почты для отправки из настроек пространства")
-	}
-	if email == "" {
-		logger.
-			Error("в настройках пространства не указана почта для отправки")
-		return "", errors.New("в настройках пространства не указана почта для отправки")
+		return "", errors.Wrap(err, "ошибка получения почты для отправки из настроек пространства")
 	}
 	return email, nil
 }
@@ -461,15 +449,7 @@ func (i impl) getSenderEmail(spaceID string, logger *log.Entry) (string, error) 
 func (i impl) getMsgTemplate(spaceID, templateID string, logger *log.Entry) (*dbmodels.MessageTemplate, error) {
 	msgTemplate, err := i.msgTemplateStore.GetByID(spaceID, templateID)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения шаблона сообщения")
-		return nil, errors.New("ошибка получения шаблона сообщения")
-	}
-	if msgTemplate == nil {
-		logger.
-			Error("шаблон сообщения не найден")
-		return nil, errors.New("шаблон сообщения не найден")
+		return nil, errors.Wrap(err, "ошибка получения шаблона сообщения")
 	}
 	return msgTemplate, nil
 }

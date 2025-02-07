@@ -496,13 +496,9 @@ func (i impl) ExportToXls(spaceID string, data applicantapimodels.XlsExportReque
 }
 
 func (i impl) ListOfSource(spaceID string, filter applicantapimodels.ApplicantFilter) (data applicantapimodels.ApplicantSourceData, err error) {
-	logger := i.getLogger(spaceID, "", "")
 	recList, err := i.store.ListOfApplicantSource(spaceID, filter)
 	if err != nil {
-		logger.
-			WithError(err).
-			Error("ошибка получения аналитики по источникам кандидатов")
-		return applicantapimodels.ApplicantSourceData{}, errors.New("ошибка получения аналитики по источникам кандидатов")
+		return applicantapimodels.ApplicantSourceData{}, err
 	}
 
 	result := applicantapimodels.ApplicantSourceData{
