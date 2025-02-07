@@ -28,4 +28,7 @@ const (
 	ApplicantPhoto      FileType = "applicant_photo"
 	UserProfilePhoto    FileType = "user_profile_photo"
 	CompanyProfilePhoto FileType = "company_profile_photo"
+	CompanyLogo         FileType = "company_logo"
+	CompanySign         FileType = "company_sign"
+	CompanyStamp        FileType = "company_stamp"
 )
