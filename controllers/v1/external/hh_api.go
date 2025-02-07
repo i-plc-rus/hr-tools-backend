@@ -191,7 +191,7 @@ func (c *hhApiController) attach(ctx *fiber.Ctx) error {
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/v1/space/ext/hh/{id}/status [put]
+// @router /api/v1/space/ext/hh/{id}/status [get]
 func (c *hhApiController) status(ctx *fiber.Ctx) error {
 	id, err := c.GetID(ctx)
 	if err != nil {
