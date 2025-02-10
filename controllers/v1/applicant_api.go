@@ -5,9 +5,9 @@ import (
 	"hr-tools-backend/controllers"
 	"hr-tools-backend/lib/applicant"
 	applicanthistoryhandler "hr-tools-backend/lib/applicant-history"
-	applicantdict "hr-tools-backend/lib/dicts/applicant"
 	filestorage "hr-tools-backend/lib/file-storage"
 	messagetemplate "hr-tools-backend/lib/message-template"
+	"hr-tools-backend/lib/utils/helpers"
 	"hr-tools-backend/middleware"
 	apimodels "hr-tools-backend/models/api"
 	applicantapimodels "hr-tools-backend/models/api/applicant"
@@ -28,7 +28,6 @@ func InitApplicantApiRouters(app *fiber.App) {
 		router.Get("doc/:id", controller.GetDoc)       // скачать документ по id
 		router.Delete("doc/:id", controller.deleteDoc) // удлить документ по id
 		router.Post("list", controller.list)
-		router.Post("reject_list", controller.rejectList)
 		router.Post("", controller.create)
 		router.Route("multi-actions", func(mRouter fiber.Router) {
 			mRouter.Put("reject", controller.multiReject)
@@ -91,8 +90,9 @@ func (c *applicantApiController) UploadResume(ctx *fiber.Ctx) error {
 		return c.SendError(ctx, logger, err, "Ошибка при загрузке файла резюме")
 	}
 
+	contentType := helpers.GetFileContentType(file)
 	spaceID := middleware.GetUserSpace(ctx)
-	err = filestorage.Instance.Upload(ctx.UserContext(), spaceID, applicantID, fileBody, file.Filename, dbmodels.ApplicantResume)
+	err = filestorage.Instance.Upload(ctx.UserContext(), spaceID, applicantID, fileBody, file.Filename, dbmodels.ApplicantResume, contentType)
 	if err != nil {
 		return c.SendError(ctx, logger, err, "Ошибка сохранения файла резюме")
 	}
@@ -132,7 +132,8 @@ func (c *applicantApiController) UploadDoc(ctx *fiber.Ctx) error {
 	}
 
 	spaceID := middleware.GetUserSpace(ctx)
-	err = filestorage.Instance.Upload(ctx.UserContext(), spaceID, applicantID, fileBody, file.Filename, dbmodels.ApplicantDoc)
+	contentType := helpers.GetFileContentType(file)
+	err = filestorage.Instance.Upload(ctx.UserContext(), spaceID, applicantID, fileBody, file.Filename, dbmodels.ApplicantDoc, contentType)
 	if err != nil {
 		return c.SendError(ctx, logger, err, "Ошибка сохранения файла документа")
 	}
@@ -172,7 +173,8 @@ func (c *applicantApiController) uploadPhoto(ctx *fiber.Ctx) error {
 	}
 
 	spaceID := middleware.GetUserSpace(ctx)
-	err = filestorage.Instance.Upload(ctx.UserContext(), spaceID, applicantID, fileBody, file.Filename, dbmodels.ApplicantPhoto)
+	contentType := helpers.GetFileContentType(file)
+	err = filestorage.Instance.Upload(ctx.UserContext(), spaceID, applicantID, fileBody, file.Filename, dbmodels.ApplicantPhoto, contentType)
 	if err != nil {
 		return c.SendError(ctx, logger, err, "Ошибка сохранения файла с фото кандидата")
 	}
@@ -296,11 +298,14 @@ func (c *applicantApiController) GetResume(ctx *fiber.Ctx) error {
 	}
 
 	spaceID := middleware.GetUserSpace(ctx)
-	body, err := filestorage.Instance.GetFileByType(ctx.UserContext(), spaceID, applicantID, dbmodels.ApplicantResume)
+	body, file, err := filestorage.Instance.GetFileByType(ctx.UserContext(), spaceID, applicantID, dbmodels.ApplicantResume)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка выгрузки файла с резюме кандидата")
 	}
-
+	if file != nil && file.ContentType != "" {
+		ctx.Set(fiber.HeaderContentType, file.ContentType)
+		ctx.Set(fiber.HeaderContentDisposition, `inline; filename="`+file.Name+`"`)
+	}
 	return ctx.Send(body)
 }
 
@@ -321,11 +326,14 @@ func (c *applicantApiController) getPhoto(ctx *fiber.Ctx) error {
 	}
 
 	spaceID := middleware.GetUserSpace(ctx)
-	body, err := filestorage.Instance.GetFileByType(ctx.UserContext(), spaceID, applicantID, dbmodels.ApplicantPhoto)
+	body, file, err := filestorage.Instance.GetFileByType(ctx.UserContext(), spaceID, applicantID, dbmodels.ApplicantPhoto)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка выгрузки файла с фото кандидата")
 	}
-
+	if file != nil && file.ContentType != "" {
+		ctx.Set(fiber.HeaderContentType, file.ContentType)
+		ctx.Set(fiber.HeaderContentDisposition, `inline; filename="`+file.Name+`"`)
+	}
 	return ctx.Send(body)
 }
 
@@ -377,19 +385,6 @@ func (c *applicantApiController) list(ctx *fiber.Ctx) error {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения списка кандидатов")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewScrollerResponse(list, rowCount))
-}
-
-// @Summary Список c причинами отказов
-// @Tags Кандидат
-// @Description Список c причинами отказов
-// @Param   Authorization		header		string	true	"Authorization token"
-// @Success 200 {object} apimodels.Response{data=applicantapimodels.RejectReasons}
-// @Failure 400 {object} apimodels.Response
-// @Failure 403
-// @Failure 500 {object} apimodels.Response
-// @router /api/v1/space/applicant/reject_list [post]
-func (c *applicantApiController) rejectList(ctx *fiber.Ctx) error {
-	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(applicantdict.GetRejectReasonList()))
 }
 
 // @Summary Создание
@@ -801,9 +796,12 @@ func (c *applicantApiController) multiSendMail(ctx *fiber.Ctx) error {
 
 	spaceID := middleware.GetUserSpace(ctx)
 	userID := middleware.GetUserID(ctx)
-	failMails, err := messagetemplate.Instance.MultiSendEmail(spaceID, userID, payload)
+	failMails, hMsg, err := messagetemplate.Instance.MultiSendEmail(spaceID, userID, payload)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка отправки писем кандидатам")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(failMails))
 }

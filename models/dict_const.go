@@ -417,6 +417,42 @@ const (
 	ApplicantReject RejectInitiator = "Кандидат"
 )
 
+func (initiator RejectInitiator)IsValid() error {
+	if initiator != HrReject &&
+		initiator != HeadReject &&
+		initiator != ApplicantReject {
+		return errors.New("инициатор отказа указан неверно")
+	}
+	return nil
+}
+
+type TemplateType string
+
+const (
+	TplMail          TemplateType = "Письмо"
+	TplApplicantNote TemplateType = "Комментарий к кандидату"
+	TplRejectNote    TemplateType = "Комментарий к отказу"
+	TplReminder      TemplateType = "Напоминание"
+	TplRatingNote    TemplateType = "Комментарий к оценке"
+	TplSms           TemplateType = "SMS"
+	TplOffer         TemplateType = "Оффер"
+)
+
+var tplMap = map[TemplateType]bool{
+	TplMail:          true,
+	TplApplicantNote: true,
+	TplRejectNote:    true,
+	TplReminder:      true,
+	TplRatingNote:    true,
+	TplSms:           true,
+	TplOffer:         true,
+}
+
+func (t TemplateType) IsValid() bool {
+	_, ok := tplMap[t]
+	return ok
+}
+
 type MessengerType string
 
 const (

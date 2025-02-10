@@ -4,6 +4,7 @@ import (
 	"hr-tools-backend/controllers"
 	filestorage "hr-tools-backend/lib/file-storage"
 	spaceusershander "hr-tools-backend/lib/space/users/hander"
+	"hr-tools-backend/lib/utils/helpers"
 	"hr-tools-backend/middleware"
 	apimodels "hr-tools-backend/models/api"
 	spaceapimodels "hr-tools-backend/models/api/space"
@@ -65,11 +66,14 @@ func (c *spaceUserController) CreateUser(ctx *fiber.Ctx) error {
 	if err := payload.Validate(); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
-	err := spaceusershander.Instance.CreateUser(payload)
+	id, hMsg, err := spaceusershander.Instance.CreateUser(payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка создания пользователя")
 	}
-	return ctx.Status(fiber.StatusCreated).JSON(apimodels.NewResponse(nil))
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
+	}
+	return ctx.Status(fiber.StatusCreated).JSON(apimodels.NewResponse(id))
 }
 
 // @Summary Удалить пользователя
@@ -78,7 +82,7 @@ func (c *spaceUserController) CreateUser(ctx *fiber.Ctx) error {
 // @Param   Authorization		header		string	true	"Authorization token"
 // @Param 	id 				path 		string  true 	"space user ID"
 // @Param	body				body		spaceapimodels.CreateUser	true	"request body"
-// @Success 200
+// @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
@@ -90,7 +94,7 @@ func (c *spaceUserController) DeleteUser(ctx *fiber.Ctx) error {
 	}
 	err = spaceusershander.Instance.DeleteUser(userID)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка удаления пользователя")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -101,7 +105,7 @@ func (c *spaceUserController) DeleteUser(ctx *fiber.Ctx) error {
 // @Param   Authorization		header		string	true	"Authorization token"
 // @Param 	id 				path 		string  true 	"space user ID"
 // @Param	body				body		spaceapimodels.UpdateUser	true	"request body"
-// @Success 200
+// @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
@@ -121,7 +125,7 @@ func (c *spaceUserController) UpdateUser(ctx *fiber.Ctx) error {
 	}
 	err = spaceusershander.Instance.UpdateUser(userID, payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка обновления данных пользователя")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -130,14 +134,14 @@ func (c *spaceUserController) UpdateUser(ctx *fiber.Ctx) error {
 // @Tags Пользователи space
 // @Description Получить список пользователей space
 // @Param   Authorization		header		string	true	"Authorization token"
-// @Param	body				body		apimodels.Pagination	true	"request body"
-// @Success 200
+// @Param	body				body		spaceapimodels.SpaceUserFilter	true	"request body"
+// @Success 200 {object} apimodels.ScrollerResponse{data=[]spaceapimodels.SpaceUser}
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
 // @router /api/v1/users/list [post]
 func (c *spaceUserController) ListUsers(ctx *fiber.Ctx) error {
-	var payload apimodels.Pagination
+	var payload spaceapimodels.SpaceUserFilter
 	if err := c.BodyParser(ctx, &payload); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
@@ -146,11 +150,11 @@ func (c *spaceUserController) ListUsers(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
-	users, err := spaceusershander.Instance.GetListUsers(spaceID, payload.Page, payload.Limit)
+	users, rowCount, err := spaceusershander.Instance.GetListUsers(spaceID, payload)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения списка пользователей")
 	}
-	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(users))
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewScrollerResponse(users, rowCount))
 }
 
 // @Summary Получить пользователя space по ID
@@ -158,7 +162,7 @@ func (c *spaceUserController) ListUsers(ctx *fiber.Ctx) error {
 // @Description Получить пользователя space по ID
 // @Param   Authorization		header		string	true	"Authorization token"
 // @Param 	id 				path 		string  true 	"space user ID"
-// @Success 200
+// @Success 200 {object} apimodels.Response{data=spaceapimodels.SpaceUser}
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
@@ -170,7 +174,7 @@ func (c *spaceUserController) GetUserByID(ctx *fiber.Ctx) error {
 	}
 	user, err := spaceusershander.Instance.GetByID(userID)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError(err.Error()))
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения данных пользователя")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(user))
 }
@@ -278,7 +282,8 @@ func (c *spaceUserController) uploadPhoto(ctx *fiber.Ctx) error {
 	}
 
 	spaceID := middleware.GetUserSpace(ctx)
-	err = filestorage.Instance.Upload(ctx.UserContext(), spaceID, userID, fileBody, file.Filename, dbmodels.UserProfilePhoto)
+	contentType := helpers.GetFileContentType(file)
+	err = filestorage.Instance.Upload(ctx.UserContext(), spaceID, userID, fileBody, file.Filename, dbmodels.UserProfilePhoto, contentType)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка сохранения фото профиля")
 	}
@@ -298,11 +303,14 @@ func (c *spaceUserController) getPhoto(ctx *fiber.Ctx) error {
 	userID := middleware.GetUserID(ctx)
 
 	spaceID := middleware.GetUserSpace(ctx)
-	body, err := filestorage.Instance.GetFileByType(ctx.UserContext(), spaceID, userID, dbmodels.UserProfilePhoto)
+	body, file, err := filestorage.Instance.GetFileByType(ctx.UserContext(), spaceID, userID, dbmodels.UserProfilePhoto)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения данных фото профиля")
 	}
-
+	if file != nil && file.ContentType != "" {
+		ctx.Set(fiber.HeaderContentType, file.ContentType)
+		ctx.Set(fiber.HeaderContentDisposition, `inline; filename="`+file.Name+`"`)
+	}
 	return ctx.Send(body)
 }
 

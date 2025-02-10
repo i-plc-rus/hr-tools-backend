@@ -56,7 +56,7 @@ type Configuration struct {
 		CatalogID string `default:"" env:"YANDEXGPT_CATALOG_ID"`
 	}
 	HH struct {
-		RedirectUri string `default:"https://api.hr-tools.pro/api/v1/oauth/callback/hh" env:"HH_REDIRECT"`
+		RedirectUri string `default:"https://a.hr-tools.pro/api/v1/oauth/callback/hh" env:"HH_REDIRECT"`
 	}
 	S3 struct {
 		Endpoint         string `default:"minio" env:"S3_ENDPOINT"`

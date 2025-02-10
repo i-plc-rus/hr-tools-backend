@@ -1,6 +1,7 @@
 package spaceusersstore
 
 import (
+	spaceapimodels "hr-tools-backend/models/api/space"
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
 	"strings"
@@ -14,7 +15,8 @@ type Provider interface {
 	Create(rec dbmodels.SpaceUser) (string, error)
 	Update(userID string, updMap map[string]interface{}) error
 	Delete(userID string) error
-	GetList(spaceID string, page, limit int) (userList []dbmodels.SpaceUser, err error)
+	GetCountList(spaceID string, filter spaceapimodels.SpaceUserFilter) (count int64, err error)
+	GetList(spaceID string, filter spaceapimodels.SpaceUserFilter) (userList []dbmodels.SpaceUser, err error)
 	ExistByEmail(email string) (bool, error)
 	FindByEmail(email string, checkNew bool) (rec *dbmodels.SpaceUser, err error)
 	GetByID(userID string) (rec *dbmodels.SpaceUser, err error)
@@ -32,11 +34,29 @@ type impl struct {
 	db *gorm.DB
 }
 
-func (i impl) GetList(spaceID string, page, limit int) (userList []dbmodels.SpaceUser, err error) {
-	tx := i.db.Model(dbmodels.SpaceUser{})
+func (i impl) GetCountList(spaceID string, filter spaceapimodels.SpaceUserFilter) (count int64, err error) {
+	var rowCount int64
+	tx := i.db.
+		Model(dbmodels.SpaceUser{}).
+		Where("space_id = ?", spaceID)
+	i.addFilter(tx, filter)
+	err = tx.Count(&rowCount).Error
+	if err != nil {
+		return 0, err
+	}
+	return rowCount, nil
+}
+
+func (i impl) GetList(spaceID string, filter spaceapimodels.SpaceUserFilter) (userList []dbmodels.SpaceUser, err error) {
+	tx := i.db.
+		Model(dbmodels.SpaceUser{}).
+		Select("space_users.*, (last_name || ' ' || first_name) as fio").
+		Where("space_id = ?", spaceID)
+	i.addFilter(tx, filter)
+	i.addSort(tx, filter.Sort)
+	page, limit := filter.GetPage()
 	i.setPage(tx, page, limit)
 	err = tx.
-		Where("space_id = ?", spaceID).
 		Preload(clause.Associations).
 		Find(&userList).
 		Error
@@ -154,23 +174,38 @@ func (i impl) GetListForVacancy(spaceID, vacancyID string, filter vacancyapimode
 	return userList, nil
 }
 
-func (i impl) setPage(tx *gorm.DB, pageValue, limitValue int) {
-	page, limit := GetPage(pageValue, limitValue)
+func (i impl) setPage(tx *gorm.DB, page, limit int) {
 	offset := (page - 1) * limit
 	tx.Limit(limit).Offset(offset)
 }
 
-func GetPage(pageValue, limitValue int) (page, limit int) {
-	page = 1
-	limit = 10
-	if pageValue > 0 {
-		page = pageValue
+func (i impl) addFilter(tx *gorm.DB, filter spaceapimodels.SpaceUserFilter) {
+	if filter.Search != "" {
+		tx.Where("LOWER(last_name || ' ' || first_name) like ?", "%"+strings.ToLower(filter.Search)+"%").
+			Or("LOWER(email) like ?", "%"+strings.ToLower(filter.Search)+"%")
 	}
-	if limitValue > 0 {
-		limit = limitValue
+}
+
+func (i impl) addSort(tx *gorm.DB, sort spaceapimodels.SpaceUserSort) {
+	if sort.NameDesc != nil {
+		if *sort.NameDesc {
+			tx = tx.Order("fio desc")
+		} else {
+			tx = tx.Order("fio asc")
+		}
 	}
-	if limit > 100 {
-		limit = 100
+	if sort.EmailDesc != nil {
+		if *sort.EmailDesc {
+			tx = tx.Order("email desc")
+		} else {
+			tx = tx.Order("email asc")
+		}
 	}
-	return page, limit
+	if sort.RoleDesc != nil {
+		if *sort.RoleDesc {
+			tx = tx.Order("role desc")
+		} else {
+			tx = tx.Order("role asc")
+		}
+	}
 }

@@ -113,27 +113,34 @@ func (i *impl) RequestToken(spaceID, code string) {
 		logger.WithError(err).Error("ошибка получения токена HH")
 		return
 	}
-	err = i.storeToken(spaceID, *token, true)
+	err = i.storeToken(spaceID, *token, time.Now(), true)
 	if err != nil {
 		logger.Error(err)
 	}
 }
 
 func (i *impl) CheckConnected(spaceID string) bool {
+	logger := i.getLogger(spaceID, "")
 	_, ok := i.tokenMap.Load(spaceID)
 	if ok {
 		return true
 	}
-	data, ok, err := i.extStore.Get(spaceID, TokenCode)
-	if err != nil || !ok {
+	rec, err := i.extStore.GetRec(spaceID, TokenCode)
+	if err != nil {
+		logger.WithError(err).Error("ошибка загрузки токена из бд")
 		return false
 	}
+	if rec == nil {
+		return false
+	}
+	data := rec.Value
 	token := hhapimodels.ResponseToken{}
 	err = json.Unmarshal(data, &token)
 	if err != nil {
+		logger.WithError(err).Error("ошибка сериализации токена из бд")
 		return false
 	}
-	i.storeToken(spaceID, token, false)
+	i.storeToken(spaceID, token, rec.UpdatedAt, false)
 	return true
 }
 
@@ -578,10 +585,10 @@ func (i *impl) getArea(ctx context.Context, city *dbmodels.City) (hhapimodels.Di
 	return hhapimodels.DictItem{}, errors.New("город публикации не найден в справочнике")
 }
 
-func (i *impl) storeToken(spaceID string, token hhapimodels.ResponseToken, inDb bool) error {
+func (i *impl) storeToken(spaceID string, token hhapimodels.ResponseToken, requestTime time.Time, inDb bool) error {
 	tokenData := hhapimodels.TokenData{
 		ResponseToken: token,
-		ExpiresAt:     time.Now(),
+		ExpiresAt:     requestTime.Add(time.Duration(token.ExpiresIN) * time.Second),
 	}
 	i.tokenMap.Store(spaceID, tokenData)
 	if inDb {
@@ -603,7 +610,12 @@ func (i *impl) getToken(ctx context.Context, spaceID string) (token, hMsg string
 		return "", "HeadHunter не подключен", nil
 	}
 	tokenData := value.(hhapimodels.TokenData)
-	if time.Now().After(tokenData.ExpiresAt) {
+	if time.Now().After(tokenData.ExpiresAt.Add(time.Second * time.Duration(tokenData.ExpiresIN))) {
+		body, _ := json.Marshal(tokenData)
+		logger := i.getLogger(spaceID, "").
+			WithField("token_data", string(body))
+		logger.Info("время жизни токена истекло, запрашиваем новый")
+
 		req := hhapimodels.RefreshToken{
 			RefreshToken: tokenData.RefreshToken,
 		}
@@ -611,9 +623,10 @@ func (i *impl) getToken(ctx context.Context, spaceID string) (token, hMsg string
 		if err != nil {
 			return "", "", errors.Wrap(err, "ошибка получения токена для HeadHunter")
 		}
-		err = i.storeToken(spaceID, *tokenResp, true)
+		err = i.storeToken(spaceID, *tokenResp, time.Now(), true)
 		if err != nil {
-			return "", "", errors.Wrap(err, "ошибка сохранения токена для HeadHunter")
+			tokenRespBody, _ := json.Marshal(tokenResp)
+			return "", "", errors.Wrapf(err, "ошибка сохранения токена для HeadHunter, ответ: %v", string(tokenRespBody))
 		}
 	}
 	return tokenData.AccessToken, "", nil
@@ -735,7 +748,19 @@ func (i *impl) downloadResumePdf(ctx context.Context, spaceID, applicantID, resu
 	if err != nil {
 		return err
 	}
-	return i.filesStorage.Upload(ctx, spaceID, applicantID, body, "resume.pdf", dbmodels.ApplicantResume)
+	return i.filesStorage.Upload(ctx, spaceID, applicantID, body, "resume.pdf", dbmodels.ApplicantResume, "application/pdf")
+}
+
+func (i *impl) sendNotification(rec dbmodels.Vacancy, data models.NotificationData) {
+	//отправляем автору
+	pushhandler.Instance.SendNotification(rec.AuthorID, data)
+	for _, teamMember := range rec.VacancyTeam {
+		//отправляем команде
+		if rec.AuthorID == teamMember.ID {
+			continue
+		}
+		pushhandler.Instance.SendNotification(teamMember.ID, data)
+	}
 }
 
 func (i *impl) sendNotification(rec dbmodels.Vacancy, data models.NotificationData) {
