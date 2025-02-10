@@ -1,10 +1,12 @@
 package apiv1
 
 import (
+	"hr-tools-backend/controllers"
+	avitoclient "hr-tools-backend/lib/external-services/avito"
+	hhclient "hr-tools-backend/lib/external-services/hh"
+
 	"github.com/gofiber/fiber/v2"
 	log "github.com/sirupsen/logrus"
-	"hr-tools-backend/controllers"
-	hhclient "hr-tools-backend/lib/external-services/hh"
 )
 
 type oAuthApiController struct {
@@ -61,7 +63,7 @@ func (c *oAuthApiController) avitoCallBack(ctx *fiber.Ctx) error {
 	log.Infof("avitoCallBack (code: %v) (state: %v) (uri: %v)", code, spaceID, ctx.Request().URI().String())
 
 	if code != "" && spaceID != "" {
-		go hhclient.Instance.RequestToken(spaceID, code)
+		go avitoclient.Instance.RequestToken(spaceID, code)
 	}
 
 	_, err := ctx.Status(fiber.StatusOK).Write([]byte("ok"))
