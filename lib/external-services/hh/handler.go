@@ -762,15 +762,3 @@ func (i *impl) sendNotification(rec dbmodels.Vacancy, data models.NotificationDa
 		pushhandler.Instance.SendNotification(teamMember.ID, data)
 	}
 }
-
-func (i *impl) sendNotification(rec dbmodels.Vacancy, data models.NotificationData) {
-	//отправляем автору
-	pushhandler.Instance.SendNotification(rec.AuthorID, data)
-	for _, teamMember := range rec.VacancyTeam {
-		//отправляем команде
-		if rec.AuthorID == teamMember.ID {
-			continue
-		}
-		pushhandler.Instance.SendNotification(teamMember.ID, data)
-	}
-}
