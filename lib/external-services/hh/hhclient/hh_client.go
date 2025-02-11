@@ -343,7 +343,6 @@ func (i impl) sendRequest(logger *log.Entry, r *http.Request, resp interface{}, 
 				logger = logger.WithField("response_body", string(responseBody))
 				err = json.Unmarshal(responseBody, resp)
 				if err != nil {
-					logger.WithError(err).Error("ошибка сериализации ответа")
 					return errors.Wrap(err, "ошибка сериализации ответа")
 				}
 			}
