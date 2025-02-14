@@ -35,7 +35,7 @@ type NegotiationResume struct {
 	FirstName    string       `json:"first_name"`
 	LastName     string       `json:"last_name"`
 	MiddleName   string       `json:"middle_name"`
-	Photo        string       `json:"photo"`
+	// Photo        string       `json:"photo"`//unknown format, пока не используется
 	ResumeUrl    string       `json:"url"`
 	Salary       ResumeSalary `json:"salary"`
 }
