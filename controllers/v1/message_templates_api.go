@@ -222,6 +222,7 @@ func (c *msgTemplateApiController) delete(ctx *fiber.Ctx) error {
 // @Tags Шаблоны сообщений
 // @Description Загрузить изображение логотипа компании для шаблона
 // @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    	string  true    "template rec ID"
 // @Param   photo				formData	file 	true 	"Фото"
 // @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
@@ -245,6 +246,7 @@ func (c *msgTemplateApiController) uploadLogo(ctx *fiber.Ctx) error {
 // @Tags Шаблоны сообщений
 // @Description Загрузить изображение подписи для шаблона
 // @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    	string  true    "template rec ID"
 // @Param   photo				formData	file 	true 	"Фото"
 // @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
@@ -268,6 +270,7 @@ func (c *msgTemplateApiController) uploadSign(ctx *fiber.Ctx) error {
 // @Tags Шаблоны сообщений
 // @Description Загрузить изображение печати компании для шаблона
 // @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    	string  true    "template rec ID"
 // @Param   photo				formData	file 	true 	"Фото"
 // @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
@@ -291,6 +294,7 @@ func (c *msgTemplateApiController) uploadStamp(ctx *fiber.Ctx) error {
 // @Tags Шаблоны сообщений
 // @Description Скачать изображение логотипа компании для шаблона
 // @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    	string  true    "template rec ID"
 // @Success 200
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
@@ -308,6 +312,7 @@ func (c *msgTemplateApiController) getLogo(ctx *fiber.Ctx) error {
 // @Tags Шаблоны сообщений
 // @Description Скачать изображение подписи для шаблона
 // @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    	string  true    "template rec ID"
 // @Success 200
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
@@ -325,6 +330,7 @@ func (c *msgTemplateApiController) getSign(ctx *fiber.Ctx) error {
 // @Tags Шаблоны сообщений
 // @Description Скачать изображение печати компании для шаблона
 // @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    	string  true    "template rec ID"
 // @Success 200
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
@@ -342,6 +348,7 @@ func (c *msgTemplateApiController) getStamp(ctx *fiber.Ctx) error {
 // @Tags Шаблоны сообщений
 // @Description Удалить изображение логотипа компании для шаблона
 // @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    	string  true    "template rec ID"
 // @Success 200
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
@@ -359,6 +366,7 @@ func (c *msgTemplateApiController) deleteLogo(ctx *fiber.Ctx) error {
 // @Tags Шаблоны сообщений
 // @Description Удалить изображение подписи для шаблона
 // @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    	string  true    "template rec ID"
 // @Success 200
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
@@ -376,6 +384,7 @@ func (c *msgTemplateApiController) deleteSign(ctx *fiber.Ctx) error {
 // @Tags Шаблоны сообщений
 // @Description Удалить изображение печати компании для шаблона
 // @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    	string  true    "template rec ID"
 // @Success 200
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
@@ -393,6 +402,7 @@ func (c *msgTemplateApiController) deleteStamp(ctx *fiber.Ctx) error {
 // @Tags Шаблоны сообщений
 // @Description Предпросмотр pdf на основе шаблона
 // @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    	string  true    "template rec ID"
 // @Success 200
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
