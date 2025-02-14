@@ -43,3 +43,32 @@ type NegotiationResume struct {
 type NegotiationReadRequest struct {
 	TopicID string `json:"topic_id"`
 }
+
+type NegotiationMessagesResponse struct {
+	Found   int           `json:"found"`
+	Page    int           `json:"page"`
+	Pages   int           `json:"pages"`
+	PerPage int           `json:"per_page"`
+	Items   []MessageItem `json:"items"`
+}
+
+type MessageItem struct {
+	ID               string        `json:"id"`
+	CreatedAt        string        `json:"created_at"`
+	Author           MessageAuthor `json:"author"`
+	Editable         bool          `json:"editable"`
+	ViewedByMe       bool          `json:"viewed_by_me"`
+	ViewedByOpponent bool          `json:"viewed_by_opponent"`
+	Text             string        `json:"text"`
+}
+
+type MessageAuthor struct {
+	ParticipantType ParticipantType `json:"participant_type"`
+}
+
+type ParticipantType string
+
+const (
+	ParticipantEmployer  ParticipantType = "employer"
+	ParticipantApplicant ParticipantType = "applicant"
+)

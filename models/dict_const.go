@@ -452,3 +452,11 @@ func (t TemplateType) IsValid() bool {
 	_, ok := tplMap[t]
 	return ok
 }
+
+type MessengerType string
+
+const (
+	MessengerTypeJob     MessengerType = "job"
+	MessengerTypeSMS     MessengerType = "sms"
+	MessengerTypeWhatsUp MessengerType = "whatsup"
+)
