@@ -45,6 +45,7 @@ type VacancyPubRequest struct {
 	ProfessionalRoles []DictItem `json:"professional_roles"`
 	BillingType       DictItem   `json:"billing_type"`
 	Type              DictItem   `json:"type"`
+	AllowMessages     bool       `json:"allow_messages"` // Разрешение сообщений
 }
 
 type VacancyResponse struct {

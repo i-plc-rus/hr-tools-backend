@@ -49,8 +49,12 @@ func (a Applies) GetBirthDate() (time.Time, error) {
 
 type ApplicationContacts struct {
 	Phones []ContactsPhoneValue `json:"phones"`
+	Chat   ContactsChatValue    `json:"chat"`
 }
 
+type ContactsChatValue struct {
+	Value string `json:"value"`
+}
 type ContactsPhoneValue struct {
 	Value int `json:"value"`
 }

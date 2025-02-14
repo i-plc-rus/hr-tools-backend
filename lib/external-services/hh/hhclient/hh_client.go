@@ -45,6 +45,12 @@ type Provider interface {
 	GetVacancy(ctx context.Context, accessToken, vacancyID string) (*hhapimodels.VacancyInfo, error)
 
 	DownloadResume(ctx context.Context, accessToken, resumeUrl string) ([]byte, error)
+
+	//https://api.hh.ru/openapi/redoc#tag/Otklikipriglasheniya-rabotodatelya/operation/get-negotiation-messages
+	GetMessages(ctx context.Context, accessToken, vacancyID, negotiationID string) (hhapimodels.NegotiationMessagesResponse, error)
+
+	// https://api.hh.ru/openapi/redoc#tag/Otklikipriglasheniya-rabotodatelya/operation/send-negotiation-message
+	SendNewMessage(ctx context.Context, accessToken, vacancyID, negotiationID, message string) error
 }
 
 var Instance Provider
@@ -75,6 +81,8 @@ const (
 	negotiationCollectionTpl  string = "%v&page=%v&per_page=%v"
 	negotiationReadPath       string = "%s/negotiations/read"
 	areasPath                 string = "%s/areas"
+	messagesListPath          string = "%s/negotiations/%v/messages"
+	messageNewPath            string = "%s/negotiations/%v/messages"
 )
 
 func (i impl) GetLoginUri(clientID, spaceID string) (string, error) {
@@ -268,6 +276,42 @@ func (i impl) GetVacancy(ctx context.Context, accessToken, vacancyID string) (*h
 	return &resp, nil
 }
 
+func (i impl) GetMessages(ctx context.Context, accessToken, vacancyID, negotiationID string) (hhapimodels.NegotiationMessagesResponse, error) {
+	uri := fmt.Sprintf(messagesListPath, i.host, negotiationID)
+	logger := log.
+		WithField("vacancy_id", vacancyID).
+		WithField("negotiation_id", negotiationID).
+		WithField("external_request", uri)
+
+	r, _ := http.NewRequestWithContext(ctx, "GET", uri, nil)
+	r.Header.Add("Content-Type", "application/json")
+	resp := hhapimodels.NegotiationMessagesResponse{}
+
+	err := i.sendRequest(logger, r, &resp, accessToken, true)
+	if err != nil {
+		return hhapimodels.NegotiationMessagesResponse{}, err
+	}
+	return resp, nil
+}
+
+func (i impl) SendNewMessage(ctx context.Context, accessToken, vacancyID, negotiationID, message string) error {
+	uri := fmt.Sprintf(messageNewPath, i.host, negotiationID)
+
+	data := url.Values{}
+	data.Set("message", message)
+
+	r, _ := http.NewRequestWithContext(ctx, "POST", uri, strings.NewReader(data.Encode()))
+	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	logger := log.
+		WithField("vacancy_id", vacancyID).
+		WithField("negotiation_id", negotiationID).
+		WithField("external_request", uri).
+		WithField("request_body", fmt.Sprintf("%+v", data.Encode()))
+
+	return i.sendRequest(logger, r, nil, "", true)
+}
+
 func (i impl) getNegotiations(ctx context.Context, accessToken, vacancyID string) (*hhapimodels.NegotiationCollections, error) {
 	uri := fmt.Sprintf(negotiationCollectionPath, i.host, vacancyID)
 	logger := log.
@@ -340,6 +384,7 @@ func (i impl) sendRequest(logger *log.Entry, r *http.Request, resp interface{}, 
 		if resp != nil {
 			responseBody, _ := io.ReadAll(response.Body)
 			if needUnmarshalResponse {
+				logger = logger.WithField("response_body", string(responseBody))
 				err = json.Unmarshal(responseBody, resp)
 				if err != nil {
 					return errors.Wrap(err, "ошибка сериализации ответа")

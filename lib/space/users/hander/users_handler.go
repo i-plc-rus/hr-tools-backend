@@ -10,6 +10,7 @@ import (
 	"hr-tools-backend/models"
 	spaceapimodels "hr-tools-backend/models/api/space"
 	dbmodels "hr-tools-backend/models/db"
+	"sort"
 
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
@@ -269,6 +270,9 @@ func (i impl) GetPushSettings(spaceID, userID string) (data spaceapimodels.PushS
 	for _, rec := range list {
 		settingsList = append(settingsList, rec.ToModelView())
 	}
+	sort.Slice(settingsList, func(i, j int) bool {
+		return settingsList[i].Name < settingsList[j].Name
+	})
 
 	data = spaceapimodels.PushSettings{
 		IsActive: userDB.PushEnabled,
