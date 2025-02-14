@@ -747,7 +747,13 @@ func (i *impl) updateUserID(spaceID string, accessToken string) {
 	if err != nil {
 		logger.
 			WithError(err).
-			Error("ошибка обновления статуса публикации")
+			Error("ошибка получения SelfID")
+		return
+	}
+	if data == nil {
+		logger.
+			Error("отсутсвуют данные SelfID")
+		return
 	}
 
 	b := make([]byte, 8)
