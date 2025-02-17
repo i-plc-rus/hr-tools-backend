@@ -796,7 +796,7 @@ func (c *applicantApiController) multiSendMail(ctx *fiber.Ctx) error {
 
 	spaceID := middleware.GetUserSpace(ctx)
 	userID := middleware.GetUserID(ctx)
-	failMails, hMsg, err := messagetemplate.Instance.MultiSendEmail(spaceID, userID, payload)
+	failMails, hMsg, err := messagetemplate.Instance.MultiSendEmail(ctx.Context(), spaceID, userID, payload)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка отправки писем кандидатам")
 	}

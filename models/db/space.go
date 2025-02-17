@@ -23,6 +23,8 @@ type Space struct {
 	Web              string `gorm:"type:varchar(255)"`
 	TimeZone         string `gorm:"type:varchar(255)"`
 	Description      string
+	CompanyAddress   string `gorm:"type:varchar(500)"` //адрес организации
+	CompanyContact   string `gorm:"type:varchar(500)"` //контакт организации
 }
 
 func (rec Space) ToModel() spaceapimodels.ProfileData {
@@ -32,5 +34,7 @@ func (rec Space) ToModel() spaceapimodels.ProfileData {
 		TimeZone:         rec.TimeZone,
 		Description:      rec.Description,
 		DirectorName:     rec.DirectorName,
+		CompanyAddress:   rec.CompanyAddress,
+		CompanyContact:   rec.CompanyContact,
 	}
 }

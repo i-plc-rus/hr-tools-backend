@@ -2,9 +2,13 @@ package messagetemplate
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"hr-tools-backend/db"
+	applicanthistoryhandler "hr-tools-backend/lib/applicant-history"
 	applicantstore "hr-tools-backend/lib/applicant/store"
+	pdfexport "hr-tools-backend/lib/export/pdf"
+	filestorage "hr-tools-backend/lib/file-storage"
 	messagetemplatestore "hr-tools-backend/lib/message-template/store"
 	"hr-tools-backend/lib/smtp"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
@@ -18,16 +22,18 @@ import (
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 type Provider interface {
-	SendEmailMessage(spaceID, templateID, applicantID, userID string) (hMsg string, err error)
+	SendEmailMessage(ctx context.Context, spaceID, templateID, applicantID, userID string) (hMsg string, err error)
 	GetListTemplates(spaceID string) (list []msgtemplateapimodels.MsgTemplateView, err error)
-	MultiSendEmail(spaceID, userID string, data applicantapimodels.MultiEmailRequest) (failMails []string, hMsg string, err error)
+	MultiSendEmail(ctx context.Context, spaceID, userID string, data applicantapimodels.MultiEmailRequest) (failMails []string, hMsg string, err error)
 	Create(spaceID string, request msgtemplateapimodels.MsgTemplateData) (string, error)
 	GetByID(spaceID, id string) (msgtemplateapimodels.MsgTemplateView, error)
 	Update(spaceID, id string, request msgtemplateapimodels.MsgTemplateData) error
 	Delete(spaceID, id string) error
+	PdfPreview(ctx context.Context, spaceID, tplID, userID string) (body []byte, hMsg string, err error)
 }
 
 var Instance Provider
@@ -39,6 +45,8 @@ func NewHandler() {
 		spaceSettingsStore: spacesettingsstore.NewInstance(db.DB),
 		spaceUsersStore:    spaceusersstore.NewInstance(db.DB),
 		vacancyStore:       vacancystore.NewInstance(db.DB),
+		fileStorage:        filestorage.Instance,
+		applicantHistory:   applicanthistoryhandler.Instance,
 	}
 }
 
@@ -48,9 +56,11 @@ type impl struct {
 	spaceSettingsStore spacesettingsstore.Provider
 	spaceUsersStore    spaceusersstore.Provider
 	vacancyStore       vacancystore.Provider
+	fileStorage        filestorage.Provider
+	applicantHistory   applicanthistoryhandler.Provider
 }
 
-func (i impl) SendEmailMessage(spaceID, templateID, applicantID, userID string) (hMsg string, err error) {
+func (i impl) SendEmailMessage(ctx context.Context, spaceID, templateID, applicantID, userID string) (hMsg string, err error) {
 	logger := log.WithFields(log.Fields{
 		"space_id":     spaceID,
 		"template_id":  templateID,
@@ -86,7 +96,7 @@ func (i impl) SendEmailMessage(spaceID, templateID, applicantID, userID string) 
 	}
 	user, err := i.spaceUsersStore.GetByID(userID)
 	if err != nil {
-		return "", errors.New("ошибка получения профиля отправителя")
+		return "", errors.Wrap(err, "ошибка получения профиля отправителя")
 	}
 	textSign := ""
 	if user != nil {
@@ -104,10 +114,35 @@ func (i impl) SendEmailMessage(spaceID, templateID, applicantID, userID string) 
 	if err != nil {
 		return "", err
 	}
-
-	err = smtp.Instance.SendEMail(email, applicant.Email, msg, title)
+	var attachment *models.File
+	if msgTemplate.TemplateType == models.TplOffer {
+		body, hMsg, err := i.buildPdf(ctx, spaceID, tlpData, msgTemplate)
+		if err != nil {
+			return "", err
+		}
+		if hMsg != "" {
+			return hMsg, nil
+		}
+		attachment = &models.File{
+			FileName:    "offer.pdf",
+			Body:        body,
+			ContentType: "application/pdf",
+		}
+	}
+	err = db.DB.Transaction(func(tx *gorm.DB) error {
+		applicantHistory := applicanthistoryhandler.NewTxHandler(tx)
+		// История изменений
+		changes := applicanthistoryhandler.GetMailSentChange(title)
+		applicantHistory.SaveWithUser(spaceID, applicantID, applicant.VacancyID, userID, user.GetFullName(), dbmodels.HistoryTypeReject, changes)
+		//Отправка письма
+		err = smtp.Instance.SendHtmlEMail(email, applicant.Email, msg, title, attachment)
+		if err != nil {
+			return errors.Wrap(err, "ошибка отправки почты кандидату")
+		}
+		return nil
+	})
 	if err != nil {
-		return "", errors.Wrap(err, "ошибка отправки почты кандидату")
+		return "", err
 	}
 	return "", nil
 }
@@ -123,7 +158,7 @@ func (i impl) GetListTemplates(spaceID string) (list []msgtemplateapimodels.MsgT
 	return list, nil
 }
 
-func (i impl) MultiSendEmail(spaceID, userID string, data applicantapimodels.MultiEmailRequest) (failMails []string, hMsg string, err error) {
+func (i impl) MultiSendEmail(ctx context.Context, spaceID, userID string, data applicantapimodels.MultiEmailRequest) (failMails []string, hMsg string, err error) {
 	logger := log.WithFields(log.Fields{
 		"space_id":    spaceID,
 		"template_id": data.MsgTemplateID,
@@ -140,7 +175,6 @@ func (i impl) MultiSendEmail(spaceID, userID string, data applicantapimodels.Mul
 	if email == "" {
 		return nil, "в настройках пространства не указана почта для отправки", nil
 	}
-
 	msgTemplate, err := i.getMsgTemplate(spaceID, data.MsgTemplateID, logger)
 	if err != nil {
 		return nil, "", err
@@ -148,7 +182,6 @@ func (i impl) MultiSendEmail(spaceID, userID string, data applicantapimodels.Mul
 	if msgTemplate == nil {
 		return nil, "шаблон сообщения не найден", nil
 	}
-
 	user, err := i.spaceUsersStore.GetByID(userID)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "ошибка получения профиля отправителя")
@@ -185,7 +218,22 @@ func (i impl) MultiSendEmail(spaceID, userID string, data applicantapimodels.Mul
 		if err != nil {
 			return nil, "", err
 		}
-		err = smtp.Instance.SendEMail(email, applicant.Email, msg, title)
+		var attachment *models.File
+		if msgTemplate.TemplateType == models.TplOffer {
+			body, hMsg, err := i.buildPdf(ctx, spaceID, tlpData, msgTemplate)
+			if err != nil {
+				return nil, "", err
+			}
+			if hMsg != "" {
+				return nil, hMsg, nil
+			}
+			attachment = &models.File{
+				FileName:    "offer.pdf",
+				Body:        body,
+				ContentType: "application/pdf",
+			}
+		}
+		err = smtp.Instance.SendHtmlEMail(email, applicant.Email, msg, title, attachment)
 		if err != nil {
 			logger.
 				WithError(err).
@@ -193,6 +241,9 @@ func (i impl) MultiSendEmail(spaceID, userID string, data applicantapimodels.Mul
 			failMails = append(failMails, fio)
 			continue
 		}
+		// История изменений
+		changes := applicanthistoryhandler.GetMailSentChange(title)
+		i.applicantHistory.SaveWithUser(spaceID, applicant.ID, applicant.VacancyID, userID, user.GetFullName(), dbmodels.HistoryTypeReject, changes)
 	}
 
 	return failMails, "", nil
@@ -207,6 +258,7 @@ func (i impl) Create(spaceID string, request msgtemplateapimodels.MsgTemplateDat
 		Title:        request.Title,
 		Message:      request.Message,
 		TemplateType: request.TemplateType,
+		PdfMessage:   request.PdfMessage,
 	}
 	return i.msgTemplateStore.Create(rec)
 }
@@ -225,6 +277,7 @@ func (i impl) Update(spaceID, id string, request msgtemplateapimodels.MsgTemplat
 		"title":         request.Title,
 		"message":       request.Message,
 		"template_type": request.TemplateType,
+		"pdf_message":   request.PdfMessage,
 	}
 	err := i.msgTemplateStore.Update(id, updMap)
 	if err != nil {
@@ -279,10 +332,57 @@ func GetVariables() []msgtemplateapimodels.TemplateItem {
 			Name:  "Мое имя",
 			Value: "{{.SelfName}}",
 		},
+		{
+			Name:  "ФИО руководителя",
+			Value: "{{.CompanyDirectorName}}",
+		},
+		{
+			Name:  "Адрес компании",
+			Value: "{{.CompanyAddress}}",
+		},
+		{
+			Name:  "[Контактные данные компании",
+			Value: "{{.CompanyContact}}",
+		},
 	}
 }
 
-func buildTitle(tmpl string, data tplData) (string, error) {
+func (i impl) PdfPreview(ctx context.Context, spaceID, tplID, userID string) (body []byte, hMsg string, err error) {
+	msgTemplate, err := i.msgTemplateStore.GetByID(spaceID, tplID)
+	if err != nil {
+		return nil, "", err
+	}
+	if msgTemplate.TemplateType != models.TplOffer {
+		return nil, "шаблон не предусматривает генерацию pdf", nil
+	}
+	user, err := i.spaceUsersStore.GetByID(userID)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "ошибка получения профиля")
+	}
+	if user == nil {
+		return nil, "пользователь не найден", nil
+	}
+	tplData := models.TemplateData{
+		JobTitle:            "[Название должности]",
+		ApplicantFIO:        "[ФИО кандидата]",
+		ApplicantName:       "[Имя кандидата]",
+		ApplicantLastName:   "[Фимилия кандидата]",
+		ApplicantMiddleName: "[Отчество кандидата]",
+		VacancyName:         "[Название вакансии]",
+		ApplicantSource:     "[Источник кандидата]",
+		VacancyLink:         "[Ссылка на вакансию]",
+		SelfName:            user.GetFullName(),
+		CompanyAddress:      "[Адрес компании]",
+		CompanyContact:      "[Контактные данные компании]",
+		CompanyName:         "[Название компании]",
+		CompanyDirectorName: "[ФИО директора компании]",
+		Files:               models.TemplateFiles{},
+	}
+	return i.buildPdf(context.TODO(), spaceID, tplData, msgTemplate)
+
+}
+
+func buildTitle(tmpl string, data models.TemplateData) (string, error) {
 	tpl, err := template.New("msg_title").Parse(tmpl)
 	if err != nil {
 		return "", err
@@ -295,7 +395,7 @@ func buildTitle(tmpl string, data tplData) (string, error) {
 	return buf.String(), nil
 }
 
-func buildMsg(tmpl string, emailTextSign string, data tplData) (string, error) {
+func buildMsg(tmpl string, emailTextSign string, data models.TemplateData) (string, error) {
 	// возможно в будущем будем искать место вставки подписи и заполнение шаблона,
 	// пока подпись добавляем в конец
 	// если будеи использвать не только text/plain но и text/html, надо будет менять перенос на <br> для последнего
@@ -309,10 +409,33 @@ func buildMsg(tmpl string, emailTextSign string, data tplData) (string, error) {
 		return "", err
 	}
 	msg := buf.String()
+	msg = fmt.Sprintf("<div>%v</div>", msg)
 	if emailTextSign == "" {
 		return msg, nil
 	}
-	return fmt.Sprintf("%v\r\n%v", msg, emailTextSign), nil
+	return fmt.Sprintf("%v<div>%v</div>", msg, emailTextSign), nil
+}
+
+func (i impl) buildPdf(ctx context.Context, spaceID string, tplData models.TemplateData, tplRec *dbmodels.MessageTemplate) (body []byte, hMsg string, err error) {
+	if tplRec.PdfMessage == "" {
+		return nil, "не указан текст шаблона для pdf", nil
+	}
+	tplData.Files.Logo, err = i.getFile(ctx, spaceID, tplRec.ID, dbmodels.CompanyLogo)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "ошибка получения изображения логотипа")
+	}
+
+	tplData.Files.Sign, err = i.getFile(ctx, spaceID, tplRec.ID, dbmodels.CompanySign)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "ошибка получения изображения с подписью")
+	}
+
+	tplData.Files.Stamp, err = i.getFile(ctx, spaceID, tplRec.ID, dbmodels.CompanyStamp)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "ошибка получения изображения со штампом")
+	}
+	body, err = pdfexport.GenerateOffer(tplRec.PdfMessage, tplData)
+	return body, "", err
 }
 
 func (i impl) getSenderEmail(spaceID string, logger *log.Entry) (string, error) {
@@ -331,8 +454,8 @@ func (i impl) getMsgTemplate(spaceID, templateID string, logger *log.Entry) (*db
 	return msgTemplate, nil
 }
 
-func (i impl) getTlpData(applicant dbmodels.Applicant, vacancyID string, user *dbmodels.SpaceUser) (tplData, error) {
-	resilt := tplData{
+func (i impl) getTlpData(applicant dbmodels.Applicant, vacancyID string, user *dbmodels.SpaceUser) (models.TemplateData, error) {
+	result := models.TemplateData{
 		JobTitle:            "",
 		ApplicantFIO:        applicant.GetFIO(),
 		ApplicantName:       applicant.FirstName,
@@ -343,36 +466,47 @@ func (i impl) getTlpData(applicant dbmodels.Applicant, vacancyID string, user *d
 		ApplicantSource:     string(applicant.Source),
 		VacancyLink:         "",
 		SelfName:            user.GetFullName(),
+		CompanyDirectorName: "",
+		CompanyAddress:      "",
+		CompanyContact:      "",
 	}
-	if vacancy, err := i.vacancyStore.GetByID(applicant.SpaceID, vacancyID); err == nil && vacancy != nil {
-		resilt.VacancyName = vacancy.VacancyName
-		if vacancy.JobTitle != nil {
-			resilt.JobTitle = vacancy.JobTitle.Name
-		}
-		if vacancy.Company != nil {
-			resilt.CompanyName = vacancy.Company.Name
-		}
-		if applicant.Source == models.ApplicantSourceAvito {
-			resilt.VacancyLink = vacancy.AvitoUri
-		} else if applicant.Source == models.ApplicantSourceHh {
-			resilt.VacancyLink = vacancy.HhUri
-		}
+	vacancy, err := i.vacancyStore.GetByID(applicant.SpaceID, vacancyID)
+	if err != nil {
+		return models.TemplateData{}, err
 	}
-	return resilt, nil
+	if vacancy == nil {
+		return models.TemplateData{}, errors.New("вакансия не найдена")
+	}
+	result.VacancyName = vacancy.VacancyName
+	if vacancy.JobTitle != nil {
+		result.JobTitle = vacancy.JobTitle.Name
+	}
+	if vacancy.Company != nil {
+		result.CompanyName = vacancy.Company.Name
+		result.CompanyDirectorName = vacancy.Space.DirectorName
+		result.CompanyAddress = vacancy.Space.CompanyAddress
+		result.CompanyContact = vacancy.Space.CompanyContact
+	}
+	if applicant.Source == models.ApplicantSourceAvito {
+		result.VacancyLink = vacancy.AvitoUri
+	} else if applicant.Source == models.ApplicantSourceHh {
+		result.VacancyLink = vacancy.HhUri
+	}
+
+	return result, nil
 }
 
-type tplData struct {
-	JobTitle            string
-	ApplicantFIO        string
-	ApplicantName       string
-	ApplicantLastName   string
-	ApplicantMiddleName string
-	VacancyName         string
-	CompanyName         string
-	ApplicantSource     string
-	VacancyLink         string
-	SelfName            string
+func (i impl) getFile(ctx context.Context, spaceID, tplID string, fileType dbmodels.FileType) (*models.File, error) {
+	body, fileData, err := i.fileStorage.GetFileByType(ctx, spaceID, tplID, fileType)
+	if err != nil {
+		return nil, err
+	}
+	if fileData != nil && body != nil {
+		return &models.File{
+			FileName:    fileData.Name,
+			ContentType: fileData.ContentType,
+			Body:        body,
+		}, nil
+	}
+	return nil, nil
 }
-
-//TODO замена переменных шаблона
-//TODO построение шаблона

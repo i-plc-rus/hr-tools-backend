@@ -26,6 +26,8 @@ type ProfileData struct {
 	TimeZone         string `json:"time_zone"`         // Часовой пояс
 	Description      string `json:"description"`       // Описание компании
 	DirectorName     string `json:"director_name"`     // ФИО руководителя
+	CompanyAddress   string `json:"company_address"`   //адрес организации
+	CompanyContact   string `json:"company_contact"`   //контакт организации
 }
 
 func (p ProfileData) Validate() error {
