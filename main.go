@@ -52,8 +52,9 @@ func main() {
 	apiV1.Use(fiberlog.New(*initializers.LoggerConfig))
 	app.Mount("/api/v1", apiV1)
 	apiV1.Use(cors.New(cors.Config{
-		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization, Content-Disposition",
 		AllowMethods: "GET, POST, PATCH, DELETE, PUT",
+		ExposeHeaders: "Content-Disposition",
 	}))
 	apiv1.InitRegRouters(apiV1)
 	apiv1.InitOrgApiRouters(apiV1)
