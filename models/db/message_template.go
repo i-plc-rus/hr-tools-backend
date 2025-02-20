@@ -11,6 +11,7 @@ type MessageTemplate struct {
 	Title        string              `gorm:"type:varchar(255)"`
 	Message      string              `gorm:"type:varchar(255)"`
 	TemplateType models.TemplateType `gorm:"type:varchar(255)"`
+	PdfMessage   string
 }
 
 func (r MessageTemplate) ToModel() msgtemplateapimodels.MsgTemplateView {
@@ -21,6 +22,7 @@ func (r MessageTemplate) ToModel() msgtemplateapimodels.MsgTemplateView {
 			Title:        r.Title,
 			Message:      r.Message,
 			TemplateType: r.TemplateType,
+			PdfMessage:   r.PdfMessage,
 		},
 	}
 }

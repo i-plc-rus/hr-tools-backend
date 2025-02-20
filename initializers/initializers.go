@@ -21,6 +21,8 @@ import (
 	avitoclient "hr-tools-backend/lib/external-services/avito/client"
 	hhhandler "hr-tools-backend/lib/external-services/hh"
 	"hr-tools-backend/lib/external-services/hh/hhclient"
+	negotiationchathandler "hr-tools-backend/lib/external-services/negotiation-chat"
+	newmsgworker "hr-tools-backend/lib/external-services/negotiation-chat/new-msg-worker"
 	negotiationworker "hr-tools-backend/lib/external-services/negotiation-worker"
 	externalserviceworker "hr-tools-backend/lib/external-services/worker"
 	filestorage "hr-tools-backend/lib/file-storage"
@@ -28,11 +30,13 @@ import (
 	messagetemplate "hr-tools-backend/lib/message-template"
 	spaceauthhandler "hr-tools-backend/lib/space/auth"
 	spacehandler "hr-tools-backend/lib/space/handler"
+	pushhandler "hr-tools-backend/lib/space/push/handler"
 	spacesettingshandler "hr-tools-backend/lib/space/settings/handler"
 	spaceusershander "hr-tools-backend/lib/space/users/hander"
 	supersethandler "hr-tools-backend/lib/superset"
 	vacancyhandler "hr-tools-backend/lib/vacancy"
 	vacancyreqhandler "hr-tools-backend/lib/vacancy-req"
+	connectionhub "hr-tools-backend/lib/ws/hub/connection-hub"
 )
 
 var LoggerConfig *fiberlog.Config
@@ -43,8 +47,10 @@ func InitAllServices(ctx context.Context) {
 	InitDBConnection()
 	InitS3()
 	InitSmtp()
+	connectionhub.Init()
 	filestorage.NewHandler()
 	cityprovider.NewHandler()
+	pushhandler.NewHandler()
 	hhclient.NewProvider(config.Conf.HH.RedirectUri)
 	avitoclient.NewProvider()
 	applicanthistoryhandler.NewHandler()
@@ -71,5 +77,7 @@ func InitAllServices(ctx context.Context) {
 	messagetemplate.NewHandler()
 	xlsexport.NewHandler()
 	analytics.NewHandler()
+	negotiationchathandler.NewHandler()
+	newmsgworker.StartWorker(ctx)
 	supersethandler.NewHandler(config.Conf.Superset.Host, config.Conf.Superset.Username, config.Conf.Superset.Password)
 }

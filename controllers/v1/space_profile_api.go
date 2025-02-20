@@ -33,6 +33,7 @@ func InitSpaceProfileRouters(app *fiber.App) {
 // @Summary Получение профиля
 // @Tags Профиль организации
 // @Description Получение профиля
+// @Param   Authorization		header		string	true	"Authorization token"
 // @Success 200 {object} apimodels.Response{data=spaceapimodels.ProfileData}
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
@@ -49,6 +50,8 @@ func (c *spaceProfileApiController) getProfile(ctx *fiber.Ctx) error {
 
 // @Summary Обновление профиля
 // @Tags Профиль организации
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param	body body	 spaceapimodels.ProfileData	true	"request body"
 // @Description Обновление профиля
 // @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response

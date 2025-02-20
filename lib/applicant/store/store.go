@@ -26,6 +26,7 @@ type Provider interface {
 	ApplicantsByStages(spaceID string, vacancyIDs []string) (list []dbmodels.ApplicantsStage, err error)
 	ListOfApplicantByIDs(spaceID string, ids []string, filter *applicantapimodels.ApplicantFilter) ([]dbmodels.ApplicantWithJob, error)
 	ListOfApplicantSource(spaceID string, filter applicantapimodels.ApplicantFilter) ([]dbmodels.ApplicantSource, error)
+	ListOfActiveApplicants() ([]dbmodels.Applicant, error)
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -237,12 +238,27 @@ func (i impl) ListOfApplicantSource(spaceID string, filter applicantapimodels.Ap
 		Joins("left join job_titles as jt on v.job_title_id = jt.id").
 		Joins("left join selection_stages as st on selection_stage_id = st.id").
 		Where("applicants.space_id = ?", spaceID)
-		
+
 	i.addApplicantFilter(tx, filter)
 	tx.Group("applicants.source")
 	tx.Group("is_negotiation")
 
 	err := tx.Find(&list).Error
+
+	if err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (i impl) ListOfActiveApplicants() ([]dbmodels.Applicant, error) {
+	list := []dbmodels.Applicant{}
+	tx := i.db.
+		Model(dbmodels.Applicant{}).
+		Where("applicants.status in (?)", []models.ApplicantStatus{models.ApplicantStatusNegotiation, models.ApplicantStatusInProcess}).
+		Where("applicants.negotiation_status <> ?", models.NegotiationStatusRejected).
+		Where("applicants.source in (?)", []models.ApplicantSource{models.ApplicantSourceAvito, models.ApplicantSourceHh})
+	err := tx.Preload(clause.Associations).Find(&list).Error
 
 	if err != nil {
 		return nil, err

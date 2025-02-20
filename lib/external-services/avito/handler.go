@@ -2,6 +2,7 @@ package avitohandler
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"hr-tools-backend/db"
@@ -10,12 +11,14 @@ import (
 	externalservices "hr-tools-backend/lib/external-services"
 	avitoclient "hr-tools-backend/lib/external-services/avito/client"
 	extservicestore "hr-tools-backend/lib/external-services/store"
+	pushhandler "hr-tools-backend/lib/space/push/handler"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	"hr-tools-backend/lib/utils/helpers"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	"hr-tools-backend/models"
 	avitoapimodels "hr-tools-backend/models/api/avito"
+	negotiationapimodels "hr-tools-backend/models/api/negotiation"
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
 	"strconv"
@@ -55,6 +58,7 @@ type impl struct {
 const (
 	TokenCode              = "AVITO_TOKEN"
 	LastApplicationDateTpl = "AVITO_LAST_APPL_DATE:%v"
+	AvitoUserID            = "AVITO_USERID"
 )
 
 func (i *impl) getLogger(spaceID, vacancyID string) *log.Entry {
@@ -361,6 +365,72 @@ func (i *impl) HandleNegotiations(ctx context.Context, data dbmodels.Vacancy) er
 	return nil
 }
 
+func (i *impl) SendMessage(ctx context.Context, data dbmodels.Applicant, msg string) error {
+	accessToken, hMsg, err := i.getToken(ctx, data.SpaceID)
+	if err != nil {
+		return err
+	}
+	if hMsg != "" {
+		return errors.New(hMsg)
+	}
+
+	return i.client.SendNewMessage(ctx, accessToken, i.getUserID(data.SpaceID), data.ChatID, msg)
+}
+
+func (i *impl) GetMessages(ctx context.Context, user dbmodels.SpaceUser, data dbmodels.Applicant) ([]negotiationapimodels.MessageItem, error) {
+	accessToken, hMsg, err := i.getToken(ctx, data.SpaceID)
+	if err != nil {
+		return nil, err
+	}
+	if hMsg != "" {
+		return nil, errors.New(hMsg)
+	}
+	messages, err := i.client.GetMessages(ctx, accessToken, i.getUserID(data.SpaceID), data.ChatID)
+	result := make([]negotiationapimodels.MessageItem, 0, len(messages.Messages))
+	for _, item := range messages.Messages {
+		msg := negotiationapimodels.MessageItem{
+			ID:              item.ID,
+			SelfMessage:     item.Direction == "out",
+			Text:            item.Content.Text,
+			MessageDateTime: helpers.ParseAvitoTime(item.Created),
+		}
+		if msg.SelfMessage {
+			msg.AuthorFullName = user.GetFullName()
+		} else {
+			msg.AuthorFullName = data.GetFIO()
+		}
+		result = append(result, msg)
+	}
+	return result, nil
+}
+
+func (i *impl) GetLastInMessage(ctx context.Context, data dbmodels.Applicant) (*negotiationapimodels.MessageItem, error) {
+	if data.ChatID == "" {
+		return nil, nil
+	}
+	accessToken, hMsg, err := i.getToken(ctx, data.SpaceID)
+	if err != nil {
+		return nil, err
+	}
+	if hMsg != "" {
+		return nil, errors.New(hMsg)
+	}
+	info, err := i.client.GetChatInfo(ctx, accessToken, i.getUserID(data.SpaceID), data.ChatID)
+	if err != nil {
+		return nil, err
+	}
+	msg := negotiationapimodels.MessageItem{
+		ID:              info.LastMessage.ID,
+		SelfMessage:     info.LastMessage.Direction == "out",
+		Text:            info.LastMessage.Content.Text,
+		MessageDateTime: helpers.ParseAvitoTime(info.LastMessage.Created),
+	}
+	if !msg.SelfMessage {
+		msg.AuthorFullName = data.GetFIO()
+	}
+	return &msg, nil
+}
+
 func (i *impl) storeApplicant(resume *avitoapimodels.Resume, apply avitoapimodels.Applies, data dbmodels.Vacancy) {
 	logger := i.getLogger(data.SpaceID, data.ID).
 		WithField("negotiation_id", apply.ID)
@@ -371,6 +441,7 @@ func (i *impl) storeApplicant(resume *avitoapimodels.Resume, apply avitoapimodel
 		},
 		VacancyID:       data.ID,
 		NegotiationID:   apply.ID,
+		ChatID:          apply.Contacts.Chat.Value,
 		ExtApplicantID:  apply.Applicant.ID,
 		ResumeID:        strconv.Itoa(resume.ID),
 		Source:          models.ApplicantSourceAvito,
@@ -426,6 +497,9 @@ func (i *impl) storeApplicant(resume *avitoapimodels.Resume, apply avitoapimodel
 	}
 	changes := applicanthistoryhandler.GetCreateChanges("Кандидат добавлен с работного сайта на вакансию", applicantData)
 	i.applicantHistory.Save(applicantData.SpaceID, applicantID, applicantData.VacancyID, "", dbmodels.HistoryTypeNegotiation, changes)
+
+	notification := models.GetPushApplicantNegotiation(data.VacancyName, applicantData.GetFIO())
+	go i.sendNotification(data, notification)
 }
 
 func (i *impl) getValue(spaceID string, code models.SpaceSettingCode) (string, error) {
@@ -445,6 +519,7 @@ func (i *impl) storeToken(spaceID string, token avitoapimodels.ResponseToken, in
 			return errors.Wrap(err, "ошибка сохранения токена Avito в бд")
 		}
 	}
+	i.updateUserID(spaceID, token.AccessToken)
 	return nil
 }
 
@@ -610,6 +685,10 @@ func (i *impl) CheckIsModerationDone(ctx context.Context, spaceID string, list [
 				WithError(err).
 				Error("ошибка обновления статуса публикации")
 		}
+		if newStatus == models.VacancyPubStatusPublished {
+			notification := models.GetPushVacancyPublished(rec.VacancyName, "Avito")
+			go i.sendNotification(rec, notification)
+		}
 	}
 	return nil
 }
@@ -648,4 +727,49 @@ func (i *impl) CheckIsActivePublications(ctx context.Context, spaceID string, li
 		}
 	}
 	return nil
+}
+
+func (i *impl) sendNotification(rec dbmodels.Vacancy, data models.NotificationData) {
+	//отправляем автору
+	pushhandler.Instance.SendNotification(rec.AuthorID, data)
+	for _, teamMember := range rec.VacancyTeam {
+		//отправляем команде
+		if rec.AuthorID == teamMember.ID {
+			continue
+		}
+		pushhandler.Instance.SendNotification(teamMember.ID, data)
+	}
+}
+
+func (i *impl) updateUserID(spaceID string, accessToken string) {
+	logger := i.getLogger(spaceID, "")
+	data, err := i.client.Self(context.TODO(), accessToken)
+	if err != nil {
+		logger.
+			WithError(err).
+			Error("ошибка получения SelfID")
+		return
+	}
+	if data == nil {
+		logger.
+			Error("отсутсвуют данные SelfID")
+		return
+	}
+
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, uint64(data.ID))
+	i.extStore.Set(spaceID, AvitoUserID, b)
+}
+
+func (i *impl) getUserID(spaceID string) int64 {
+	logger := i.getLogger(spaceID, "")
+	b, ok, err := i.extStore.Get(spaceID, AvitoUserID)
+	if err != nil {
+		logger.WithError(err).Warn("не удалось получить идентификатор пользователя Avito")
+		return 0
+	}
+	if !ok {
+		return 0
+	}
+	return int64(binary.LittleEndian.Uint64(b))
 }

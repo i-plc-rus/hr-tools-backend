@@ -145,6 +145,12 @@ func GetArchiveChange(reason string) dbmodels.ApplicantChanges {
 	}
 }
 
+func GetMailSentChange(title string) dbmodels.ApplicantChanges {
+	return dbmodels.ApplicantChanges{
+		Description: fmt.Sprintf("Отправлен емайл с темой: %v", title),
+	}
+}
+
 func getParamChanges(oldParams, newParams dbmodels.ApplicantParams) []dbmodels.ApplicantChange {
 	result := []dbmodels.ApplicantChange{}
 	rType := reflect.TypeOf(oldParams)

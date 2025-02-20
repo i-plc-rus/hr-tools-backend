@@ -27,6 +27,7 @@ type SpaceUser struct {
 	UsePersonalSign     bool    // использовать личный текст подписи
 	JobTitleID          *string `gorm:"type:varchar(36)"`
 	JobTitle            *JobTitle
+	PushEnabled         bool
 }
 
 func (r SpaceUser) ToModel() spaceapimodels.SpaceUser {
@@ -54,7 +55,7 @@ func (r SpaceUser) ToModel() spaceapimodels.SpaceUser {
 }
 
 func (r SpaceUser) ToProfile() spaceapimodels.SpaceUserProfileView {
-	result :=  spaceapimodels.SpaceUserProfileView{
+	result := spaceapimodels.SpaceUserProfileView{
 		ID:              r.ID,
 		Role:            r.Role.ToHuman(),
 		IsEmailVerified: r.IsEmailVerified,
@@ -68,7 +69,6 @@ func (r SpaceUser) ToProfile() spaceapimodels.SpaceUserProfileView {
 			UsePersonalSign:     r.UsePersonalSign,
 			TextSign:            r.TextSign,
 		},
-		
 	}
 	if r.JobTitle != nil {
 		result.JobTitleName = r.JobTitle.Name

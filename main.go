@@ -15,6 +15,7 @@ import (
 	"hr-tools-backend/fiberlog"
 	"hr-tools-backend/initializers"
 	"hr-tools-backend/middleware"
+	"hr-tools-backend/lib/ws"
 	"os"
 	"os/signal"
 	"sync"
@@ -37,13 +38,23 @@ func main() {
 	}
 	app.Use(swagger.New(swaggerCfg))
 
+	wsApp := fiber.New(fiber.Config{
+		BodyLimit: 10 * 1024 * 1024, // limit of 10MB
+	})
+	wsApp.Use(fiberlog.New(*initializers.LoggerConfig))
+	wsApp.Use(middleware.AuthorizationRequired())
+	app.Mount("/ws", wsApp)
+	ws.InitWs(wsApp)
+
+
 	//api
 	apiV1 := fiber.New()
 	apiV1.Use(fiberlog.New(*initializers.LoggerConfig))
 	app.Mount("/api/v1", apiV1)
 	apiV1.Use(cors.New(cors.Config{
-		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization, Content-Disposition",
 		AllowMethods: "GET, POST, PATCH, DELETE, PUT",
+		ExposeHeaders: "Content-Disposition",
 	}))
 	apiv1.InitRegRouters(apiV1)
 	apiv1.InitOrgApiRouters(apiV1)
@@ -75,6 +86,7 @@ func main() {
 	apiv1.InitNegotiationApiRouters(space)
 	apiv1.InitApplicantApiRouters(space)
 	apiv1.InitAnalyticsApiRouters(space)
+	apiv1.InitMessengerApiRouters(space)
 	apiv1.InitSupersetApiRouters(space)
 
 	ext := fiber.New()

@@ -61,6 +61,9 @@ func (i impl) GetFileByType(ctx context.Context, spaceID, applicantID string, fi
 	if err != nil {
 		return nil, nil, err
 	}
+	if file == nil {
+		return nil, nil, nil
+	}
 	fileBody, err := i.GetFile(ctx, spaceID, file.ID)
 	return fileBody, file, err
 }

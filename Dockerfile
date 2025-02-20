@@ -20,5 +20,6 @@ WORKDIR /app
 COPY --from=build /app/hr-tools-backend .
 COPY --from=build /app/docs docs
 COPY --from=build /app/static_preload static_preload
+COPY --from=build /app/static static
 
 CMD ["/app/hr-tools-backend"]
