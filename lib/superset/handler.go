@@ -22,6 +22,7 @@ import (
 
 type Provider interface {
 	GetGuestToken(ctx context.Context, spaceID string) (string, error)
+	ImportDashboard(ctx context.Context, spaceID string) error
 }
 
 var Instance Provider
@@ -63,34 +64,22 @@ func getCacheKey(spaceID string) string {
 
 func (i impl) GetGuestToken(ctx context.Context, spaceID string) (string, error) {
 	cacheKey := getCacheKey(spaceID)
-	//TODO
-	// cacheValue, ok := i.cache.Get(cacheKey)
-	// if ok {
-	// 	return cacheValue.(string), nil
-	// }
-	if i.password == "" {
-		return "", errors.New("не задан пароль доступа в Superset")
+	cacheValue, ok := i.cache.Get(cacheKey)
+	if ok {
+		return cacheValue.(string), nil
 	}
 
-	accessToken, err := i.accessToken()
+	accessToken, csrfToken, csrfCookies, err := i.authorize()
 	if err != nil {
-		return "", errors.Wrap(err, "ошибка получения токена авторизации")
+		return "", err
 	}
 
-	csrfToken, csrfCookies, err := i.csrfToken(accessToken)
-	if err != nil {
-		return "", errors.Wrap(err, "ошибка получения CSRF токена")
-	}
-
-	ok, err := i.checkDashboard(accessToken, spaceID)
+	ok, err = i.checkDashboard(accessToken, spaceID)
 	if err != nil {
 		return "", errors.Wrap(err, "ошибка проверки наличия дашборда")
 	}
 	if !ok {
-		err = i.importDashboard(ctx, accessToken, csrfToken, csrfCookies, spaceID)
-		if err != nil {
-			return "", errors.Wrap(err, "ошибка создания дашборда на основе шаблона")
-		}
+		return "", errors.New("дашборд не найден, обратитесь к администратору")
 	}
 
 	guestToken, err := i.guestToken(accessToken, csrfToken, csrfCookies, spaceID)
@@ -99,6 +88,35 @@ func (i impl) GetGuestToken(ctx context.Context, spaceID string) (string, error)
 	}
 	i.cache.Set(cacheKey, guestToken, reportCacheTTL)
 	return guestToken, nil
+}
+
+func (i impl) ImportDashboard(ctx context.Context, spaceID string) error {
+	accessToken, csrfToken, csrfCookies, err := i.authorize()
+	if err != nil {
+		return err
+	}
+	err = i.importDashboard(ctx, accessToken, csrfToken, csrfCookies, spaceID)
+	if err != nil {
+		return errors.Wrap(err, "ошибка создания дашборда на основе шаблона")
+	}
+	return nil
+}
+
+func (i impl) authorize() (accessToken, csrfToken string, csrfCookies []*http.Cookie, err error) {
+	if i.password == "" {
+		return "", "", nil, errors.New("не задан пароль доступа в Superset")
+	}
+
+	accessToken, err = i.accessToken()
+	if err != nil {
+		return "", "", nil, errors.Wrap(err, "ошибка получения токена авторизации")
+	}
+
+	csrfToken, csrfCookies, err = i.csrfToken(accessToken)
+	if err != nil {
+		return "", "", nil, errors.Wrap(err, "ошибка получения CSRF токена")
+	}
+	return accessToken, csrfToken, csrfCookies, err
 }
 
 func (i impl) accessToken() (string, error) {
@@ -158,7 +176,7 @@ func (i impl) guestToken(accessToken, csrfToken string, csrfCookies []*http.Cook
 			},
 		},
 		RLS: []supersetapimodels.RLS{
-			{Clause: fmt.Sprintf("company_id = %v", spaceID)},
+			{Clause: fmt.Sprintf("space_id = %v", spaceID)},
 		},
 		User: supersetapimodels.User{
 			Username: guestUsername,
@@ -260,14 +278,15 @@ func (i impl) checkDashboard(accessToken, spaceID string) (bool, error) {
 		if resp.StatusCode == http.StatusNotFound {
 			return false, nil
 		}
-		responseBody, _ := io.ReadAll(resp.Body)
+		responseBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return false, err
+		}
 		if responseBody != nil {
 			return false, errors.Errorf("статус ответа %d, ответ: %v", resp.StatusCode, string(responseBody))
 		}
 		return false, errors.Errorf("статус ответа %d", resp.StatusCode)
 	}
-	responseBody, _ := io.ReadAll(resp.Body)
-	fmt.Println(string(responseBody))
 	return true, nil
 }
 
@@ -286,6 +305,10 @@ func (i impl) importDashboard(ctx context.Context, accessToken, csrfToken string
 	}
 
 	_, err = part.Write(zipData)
+	if err != nil {
+		return err
+	}
+	err = writer.WriteField("overwrite", "true")
 	if err != nil {
 		return err
 	}
@@ -312,7 +335,10 @@ func (i impl) importDashboard(ctx context.Context, accessToken, csrfToken string
 	responseBody, _ := io.ReadAll(response.Body)
 	if response.StatusCode != http.StatusOK {
 		responseBody, _ := io.ReadAll(response.Body)
-		return errors.New(string(responseBody))
+		if len(responseBody) != 0 {
+			return errors.New(string(responseBody))
+		}
+		return errors.New(fmt.Sprintf("Status: %v", response.Status))
 	}
 	log.
 		WithField("space_id", spaceID).
@@ -330,19 +356,19 @@ func zipWriter(spaceID string) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		err = addFolder(w, "static/dashboard_template/charts","dashboard_template/charts", spaceID)
+		err = addFolder(w, "static/dashboard_template/charts", "dashboard_template/charts", spaceID)
 		if err != nil {
 			return err
 		}
-		err = addFolder(w, "static/dashboard_template/dashboards","dashboard_template/dashboards", spaceID)
+		err = addFolder(w, "static/dashboard_template/dashboards", "dashboard_template/dashboards", spaceID)
 		if err != nil {
 			return err
 		}
-		err = addFolder(w, "static/dashboard_template/databases","dashboard_template/databases", spaceID)
+		err = addFolder(w, "static/dashboard_template/databases", "dashboard_template/databases", spaceID)
 		if err != nil {
 			return err
 		}
-		err = addFolder(w, "static/dashboard_template/datasets/PostgreSQL","dashboard_template/datasets/PostgreSQL", spaceID)
+		err = addFolder(w, "static/dashboard_template/datasets/PostgreSQL", "dashboard_template/datasets/PostgreSQL", spaceID)
 		if err != nil {
 			return err
 		}

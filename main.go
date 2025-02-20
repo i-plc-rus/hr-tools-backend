@@ -99,6 +99,7 @@ func main() {
 	apiV1.Mount("/admin_panel", adminPanel)
 	//admin.Use(middleware.SuperAdminRoleRequired())
 	apiv1.InitAdminApiRouters(adminPanel)
+	apiv1.InitSupersetAdminApiRouters(adminPanel)
 
 	app.Hooks().OnShutdown()
 
