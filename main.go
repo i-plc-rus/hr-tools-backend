@@ -3,23 +3,25 @@ package main
 import (
 	"context"
 	"fmt"
+	"hr-tools-backend/config"
+	apiv1 "hr-tools-backend/controllers/v1"
+	"hr-tools-backend/controllers/v1/dict"
+	"hr-tools-backend/controllers/v1/external"
+	webhooksapi "hr-tools-backend/controllers/v1/webhooks"
+	"hr-tools-backend/fiberlog"
+	"hr-tools-backend/initializers"
+	"hr-tools-backend/lib/ws"
+	"hr-tools-backend/middleware"
+	"os"
+	"os/signal"
+	"sync"
+	"time"
+
 	"github.com/gofiber/contrib/swagger"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	fiberRecover "github.com/gofiber/fiber/v2/middleware/recover"
 	log "github.com/sirupsen/logrus"
-	"hr-tools-backend/config"
-	apiv1 "hr-tools-backend/controllers/v1"
-	"hr-tools-backend/controllers/v1/dict"
-	"hr-tools-backend/controllers/v1/external"
-	"hr-tools-backend/fiberlog"
-	"hr-tools-backend/initializers"
-	"hr-tools-backend/middleware"
-	"hr-tools-backend/lib/ws"
-	"os"
-	"os/signal"
-	"sync"
-	"time"
 )
 
 func main() {
@@ -62,6 +64,10 @@ func main() {
 	apiv1.InitSpaceUserRouters(apiV1)
 	apiv1.InitGptApiRouters(apiV1)
 	apiv1.InitOAuthApiRouters(apiV1)
+
+	fWebhooks := fiber.New()
+	apiV1.Mount("/webhooks", fWebhooks)
+	webhooksapi.InitwhatsAppWebhookApiRouters(fWebhooks)
 
 	//dict
 	dicts := fiber.New()

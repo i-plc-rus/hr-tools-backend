@@ -69,6 +69,12 @@ type Configuration struct {
 		MailTitle string `default:"Восстановление пароля" env:"RECOVERY_MAIL_TITLE"`
 		MailBody  string `default:"Здравствуйте,<br>Вы запросили сброс пароля вашей учетной записи.<br>Пожалуйста, нажмите кнопку ниже, чтобы создать новый пароль. Если вы не хотели сбрасывать свой пароль, просто проигнорируйте это письмо.<br>[link]<br>Обратите внимание, что эту ссылку можно использовать только один раз. Если вы отправили более 1 запроса на сброс пароля, используйте последнюю полученную вами ссылку." env:"RECOVERY_MAIL_BODY"`
 	}
+	WhatsUpp struct {
+		BaseUrl           string `default:"https://graph.facebook.com" env:"WHATSAPP_BASE_URL"`
+		AccessToken       string `default:"your-access-token" env:"WHATSAPP_ACCESS_TOKEN"`
+		APIVersion        string `default:"v20.0" env:"WHATSAPP_API_VERSION"`
+		BusinessAccountID string `default:"your-business-account-id" env:"WHATSAPP_BUSINESS_ACCOUNT_ID"`
+	}
 }
 
 func configFiles() []string {
