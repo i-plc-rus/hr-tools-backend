@@ -16,37 +16,22 @@ type Provider interface {
 	SendInteractiveMessage(ctx context.Context, recipient string, params message.InteractiveReplyButtonsRequest) error
 }
 
-var Instance Provider
-
-func Connect(ctx context.Context, baseUrl, accessToken, apiVersion, businessAccountID string) error {
+func GetClient(baseUrl, accessToken, apiVersion, businessAccountID string) (Provider, error) {
 	httpClient := &http.Client{}
 	clientOptions := []whttp.CoreClientOption[message.Message]{
 		whttp.WithCoreClientHTTPClient[message.Message](httpClient),
-		whttp.WithCoreClientRequestInterceptor[message.Message](
-			func(ctx context.Context, req *http.Request) error {
-				// fmt.Println("Request Intercepted")
-				return nil
-			},
-		),
-		whttp.WithCoreClientResponseInterceptor[message.Message](
-			func(ctx context.Context, resp *http.Response) error {
-				// fmt.Println("Response Intercepted")
-				return nil
-			},
-		),
 	}
-	Instance = impl{
+	return impl{
 		coreClient: whttp.NewSender[message.Message](clientOptions...),
 		configReader: config.ReaderFunc(func(ctx context.Context) (*config.Config, error) {
 			return &config.Config{
-				BaseURL:           baseUrl,           // Replace with your API URL
-				AccessToken:       accessToken,       // Replace with your access token
-				APIVersion:        apiVersion,        // WhatsApp API version
-				BusinessAccountID: businessAccountID, // Replace with your business account ID
+				BaseURL:           baseUrl,           // API URL
+				AccessToken:       accessToken,       // access token
+				APIVersion:        apiVersion,        // PI version
+				BusinessAccountID: businessAccountID, // business account ID
 			}, nil
 		}),
-	}
-	return nil
+	}, nil
 }
 
 type impl struct {
@@ -70,7 +55,7 @@ func (i impl) SendTextMessage(ctx context.Context, recipient, msg string) error 
 		Body: msg,
 	}, "")
 
-	// Send the text message
+	// Send
 	response, err := client.SendText(ctx, textMessage)
 	if err != nil {
 		return errors.Wrap(err, "ошибка отправки сообщения")

@@ -1,16 +1,17 @@
 package webhooksapi
 
 import (
-	"github.com/gofiber/fiber/v2"
 	"context"
-	"fmt"
+	"encoding/json"
+	"hr-tools-backend/lib/whatsup"
 	"net/http"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/piusalfred/whatsapp/webhooks"
 	"github.com/piusalfred/whatsapp/webhooks/business"
 	"github.com/piusalfred/whatsapp/webhooks/message"
-	"github.com/gofiber/fiber/v2/middleware/adaptor"
-	// log "github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 func InitwhatsAppWebhookApiRouters(app *fiber.App) {
@@ -23,8 +24,6 @@ func InitwhatsAppWebhookApiRouters(app *fiber.App) {
 			Validate:  false,
 			AppSecret: "",
 		},
-		// LoggingMiddleware[message.Notification],
-		// AddMetadataMiddleware[message.Notification],
 	)
 	businessListener := webhooks.NewListener(
 		HandleBusinessNotification,
@@ -35,8 +34,6 @@ func InitwhatsAppWebhookApiRouters(app *fiber.App) {
 			Validate:  false,
 			AppSecret: "",
 		},
-		// LoggingMiddleware[business.Notification],
-		// AddMetadataMiddleware[business.Notification],
 	)
 	app.Route("whatsapp", func(router fiber.Router) {
 		router.Post("messages", adaptor.HTTPHandlerFunc(messageListener.HandleNotification))
@@ -46,40 +43,45 @@ func InitwhatsAppWebhookApiRouters(app *fiber.App) {
 	})
 }
 
-
+// @Summary Business messages WebHookApi
+// @Tags Webhooks. WhatsApp
+// @Description Business messages WebHookApi
+// @Success 200
+// @Failure 400
+// @Failure 403
+// @Failure 500
+// @router /api/v1/webhooks/whatsapp/business [post]
 func HandleBusinessNotification(ctx context.Context, notification *business.Notification) *webhooks.Response {
-	fmt.Printf("Business notification received: %+v\n", notification)
+	for _, entity := range notification.Entry {
+		logger := log.WithField("business_account_id", entity.ID)
+		body, err := json.Marshal(notification)
+		if err == nil {
+			logger = logger.
+				WithField("request_body", string(body))
+		}
+		logger.Info("Получен вебхук whatsApp business API")
+	}
 	return &webhooks.Response{StatusCode: http.StatusOK}
 }
 
-// @Summary Создание пользователя
+// @Summary Messages WebHookApi
 // @Tags Webhooks. WhatsApp
-// @Description Создание пользователя
+// @Description Messages WebHookApi
 // @Success 200
 // @Failure 400
 // @Failure 403
 // @Failure 500
 // @router /api/v1/webhooks/whatsapp/messages [post]
 func HandleMessageNotification(ctx context.Context, notification *message.Notification) *webhooks.Response {
-	fmt.Printf("Message notification received: %+v\n", notification)
+	for _, entity := range notification.Entry {
+		logger := log.WithField("business_account_id", entity.ID)
+		body, err := json.Marshal(notification)
+		if err == nil {
+			logger = logger.
+				WithField("request_body", string(body))
+		}
+		logger.Info("Получен вебхук whatsApp messages API")
+		whatsup.Instance.HandleWebHook(ctx, entity)
+	}
 	return &webhooks.Response{StatusCode: http.StatusOK}
 }
-
-// LoggingMiddleware logs the start and end of request processing
-// func LoggingMiddleware[T any](next webhooks.NotificationHandlerFunc[T]) webhooks.NotificationHandlerFunc[T] {
-// 	return func(ctx context.Context, notification *T) *webhooks.Response {
-// 		fmt.Println("Logging: Before handling notification")
-// 		response := next(ctx, notification)
-// 		fmt.Println("Logging: After handling notification")
-// 		return response
-// 	}
-// }
-
-// // AddMetadataMiddleware adds some metadata to the context
-// func AddMetadataMiddleware[T any](next webhooks.NotificationHandlerFunc[T]) webhooks.NotificationHandlerFunc[T] {
-// 	return func(ctx context.Context, notification *T) *webhooks.Response {
-// 		fmt.Println("Adding metadata to the context")
-// 		ctx = context.WithValue(ctx, "metadata", "some value")
-// 		return next(ctx, notification)
-// 	}
-// }

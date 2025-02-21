@@ -71,9 +71,7 @@ type Configuration struct {
 	}
 	WhatsUpp struct {
 		BaseUrl           string `default:"https://graph.facebook.com" env:"WHATSAPP_BASE_URL"`
-		AccessToken       string `default:"your-access-token" env:"WHATSAPP_ACCESS_TOKEN"`
 		APIVersion        string `default:"v20.0" env:"WHATSAPP_API_VERSION"`
-		BusinessAccountID string `default:"your-business-account-id" env:"WHATSAPP_BUSINESS_ACCOUNT_ID"`
 	}
 }
 
