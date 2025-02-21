@@ -3,7 +3,6 @@ package spacehandler
 import (
 	"context"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"hr-tools-backend/db"
 	companystructload "hr-tools-backend/lib/company-struct-load"
@@ -12,7 +11,6 @@ import (
 	spacestore "hr-tools-backend/lib/space/store"
 	spaceusershander "hr-tools-backend/lib/space/users/hander"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
-	supersethandler "hr-tools-backend/lib/superset"
 	authutils "hr-tools-backend/lib/utils/auth-utils"
 	"hr-tools-backend/models"
 	spaceapimodels "hr-tools-backend/models/api/space"
@@ -72,16 +70,6 @@ func (i impl) CreateOrganizationSpace(request spaceapimodels.CreateOrganization)
 	if err != nil {
 		return err
 	}
-	go func(spaceID string) {
-		// создаем отдельный дашборд в superset
-		err = i.createSupersetDashboard(context.Background(), spaceID)
-		if err != nil {
-			log.
-				WithError(err).
-				WithField("space_id", spaceID).
-				Info("superset - ошибка создания дашборда")
-		}
-	}(spaceID)
 	return nil
 }
 
@@ -187,8 +175,4 @@ func (i impl) makeS3Bucket(ctx context.Context, spaceID string) error {
 		return errors.Wrap(err, "ошибка создания бакета для space")
 	}
 	return nil
-}
-
-func (i impl) createSupersetDashboard(ctx context.Context, spaceID string) error {
-	return supersethandler.Instance.ImportDashboard(ctx, spaceID)
 }

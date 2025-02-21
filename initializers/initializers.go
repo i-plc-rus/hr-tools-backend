@@ -79,5 +79,5 @@ func InitAllServices(ctx context.Context) {
 	analytics.NewHandler()
 	negotiationchathandler.NewHandler()
 	newmsgworker.StartWorker(ctx)
-	supersethandler.NewHandler(config.Conf.Superset.Host, config.Conf.Superset.Username, config.Conf.Superset.Password)
+	supersethandler.NewHandler(config.Conf.Superset.Host, config.Conf.Superset.Username, config.Conf.Superset.Password, config.Conf.Superset.DashboardParams)
 }

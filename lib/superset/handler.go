@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/config"
+	"hr-tools-backend/models"
 	supersetapimodels "hr-tools-backend/models/api/superset"
 	"io"
 	"mime/multipart"
@@ -21,25 +22,30 @@ import (
 )
 
 type Provider interface {
-	GetGuestToken(ctx context.Context, spaceID string) (string, error)
-	ImportDashboard(ctx context.Context, spaceID string) error
+	GetGuestToken(ctx context.Context, spaceID, dashboardCode string) (token, dashboardID, hMsg string, err error)
 }
 
 var Instance Provider
 
 type impl struct {
-	host     string
-	username string
-	password string
-	cache    *cache.Cache
+	host              string
+	username          string
+	password          string
+	cache             *cache.Cache
+	dashboardParamMap map[string]string //[code]dashboardID
 }
 
-func NewHandler(host, username, password string) {
+func NewHandler(host, username, password string, dashboardParams models.DashboardParams) {
+	dashboardParamMap := map[string]string{}
+	for _, param := range dashboardParams {
+		dashboardParamMap[param.Code] = param.DashboardID
+	}
 	Instance = impl{
-		host:     host,
-		username: username,
-		password: password,
-		cache:    cache.New(cacheTTL, cacheTTL),
+		host:              host,
+		username:          username,
+		password:          password,
+		cache:             cache.New(cacheTTL, cacheTTL),
+		dashboardParamMap: dashboardParamMap,
 	}
 }
 
@@ -62,44 +68,28 @@ func getCacheKey(spaceID string) string {
 	return fmt.Sprintf(cacheKeyPattern, spaceID)
 }
 
-func (i impl) GetGuestToken(ctx context.Context, spaceID string) (string, error) {
+func (i impl) GetGuestToken(ctx context.Context, spaceID, dashboardCode string) (token, dashboardID, hMsg string, err error) {
+	dashboardID, ok := i.dashboardParamMap[dashboardCode]
+	if !ok || dashboardID == "" {
+		return "", "", "дашборд не найден", nil
+	}
 	cacheKey := getCacheKey(spaceID)
 	cacheValue, ok := i.cache.Get(cacheKey)
 	if ok {
-		return cacheValue.(string), nil
+		return cacheValue.(string), dashboardID, "", nil
 	}
 
 	accessToken, csrfToken, csrfCookies, err := i.authorize()
 	if err != nil {
-		return "", err
-	}
-
-	ok, err = i.checkDashboard(accessToken, spaceID)
-	if err != nil {
-		return "", errors.Wrap(err, "ошибка проверки наличия дашборда")
-	}
-	if !ok {
-		return "", errors.New("дашборд не найден, обратитесь к администратору")
+		return "", "", "", err
 	}
 
 	guestToken, err := i.guestToken(accessToken, csrfToken, csrfCookies, spaceID)
 	if err != nil {
-		return "", errors.Wrap(err, "ошибка получения гостевого токена")
+		return "", "", "", errors.Wrap(err, "ошибка получения гостевого токена")
 	}
 	i.cache.Set(cacheKey, guestToken, reportCacheTTL)
-	return guestToken, nil
-}
-
-func (i impl) ImportDashboard(ctx context.Context, spaceID string) error {
-	accessToken, csrfToken, csrfCookies, err := i.authorize()
-	if err != nil {
-		return err
-	}
-	err = i.importDashboard(ctx, accessToken, csrfToken, csrfCookies, spaceID)
-	if err != nil {
-		return errors.Wrap(err, "ошибка создания дашборда на основе шаблона")
-	}
-	return nil
+	return guestToken, dashboardID, "", nil
 }
 
 func (i impl) authorize() (accessToken, csrfToken string, csrfCookies []*http.Cookie, err error) {
@@ -169,12 +159,7 @@ func (i impl) accessToken() (string, error) {
 func (i impl) guestToken(accessToken, csrfToken string, csrfCookies []*http.Cookie, spaceID string) (string, error) {
 	url := fmt.Sprintf(guestTokenPath, i.host)
 	guestReq := supersetapimodels.SupersetGuestTokenReq{
-		Resources: []supersetapimodels.Resource{
-			{
-				ID:   spaceID,
-				Type: config.Conf.Superset.ResourcesType,
-			},
-		},
+		Resources: []supersetapimodels.Resource{},
 		RLS: []supersetapimodels.RLS{
 			{Clause: fmt.Sprintf("space_id = %v", spaceID)},
 		},
@@ -182,6 +167,14 @@ func (i impl) guestToken(accessToken, csrfToken string, csrfCookies []*http.Cook
 			Username: guestUsername,
 		},
 	}
+	for _, id := range i.dashboardParamMap {
+		guestReq.Resources = append(guestReq.Resources,
+			supersetapimodels.Resource{
+				ID:   id,
+				Type: config.Conf.Superset.ResourcesType,
+			})
+	}
+
 	body, err := json.Marshal(guestReq)
 	if err != nil {
 		return "", errors.Wrap(err, "ошибка десериализации запроса на получение гостевого токена")

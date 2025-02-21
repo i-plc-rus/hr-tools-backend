@@ -28,3 +28,8 @@ type User struct {
 	LastName  string `json:"last_name"`
 	Username  string `json:"username"`
 }
+
+type GuestTokenResponse struct {
+	Token       string `json:"token"`        // Гостевой токен
+	DashboardID string `json:"dashboard_id"` // Идентификатор дашборда
+}
