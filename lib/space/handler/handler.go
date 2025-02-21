@@ -36,9 +36,11 @@ type impl struct {
 }
 
 func (i impl) CreateOrganizationSpace(request spaceapimodels.CreateOrganization) error {
+	var spaceID string
 	err := db.DB.Transaction(func(tx *gorm.DB) error {
+		var err error
 		// создаем пространство для организации
-		spaceID, err := i.createSpace(tx, request)
+		spaceID, err = i.createSpace(tx, request)
 		if err != nil {
 			return err
 		}
@@ -68,7 +70,6 @@ func (i impl) CreateOrganizationSpace(request spaceapimodels.CreateOrganization)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 

@@ -2,6 +2,8 @@ package config
 
 import (
 	"github.com/gotify/configor"
+	"hr-tools-backend/models"
+	"strings"
 )
 
 var Conf *Configuration
@@ -69,6 +71,15 @@ type Configuration struct {
 		MailTitle string `default:"Восстановление пароля" env:"RECOVERY_MAIL_TITLE"`
 		MailBody  string `default:"Здравствуйте,<br>Вы запросили сброс пароля вашей учетной записи.<br>Пожалуйста, нажмите кнопку ниже, чтобы создать новый пароль. Если вы не хотели сбрасывать свой пароль, просто проигнорируйте это письмо.<br>[link]<br>Обратите внимание, что эту ссылку можно использовать только один раз. Если вы отправили более 1 запроса на сброс пароля, используйте последнюю полученную вами ссылку." env:"RECOVERY_MAIL_BODY"`
 	}
+	Superset struct {
+		Host          string `default:"https://superset.hr-tools.pro" env:"SUPERSET_HOST"`
+		Username      string `default:"admin" env:"SUPERSET_USERNAME"`
+		Password      string `default:"P@SSW0RD" env:"SUPERSET_PASSWORD"`
+		ResourcesType string `default:"dashboard" env:"SUPERSET_RESOURCES_TYPE"`
+		//список дашбордов ';' Формат эллемента списка: Code:DashboardID; Пример: recruiter_funnel:9df52fe6-4e65-43b2-a58c-a717804fd913;cohort_funnel:d7c63a3f-897d-402d-ac9c-ea06254c3238;
+		Dashboards      string `default:"" env:"SUPERSET_DASHBOARDS"`
+		DashboardParams models.DashboardParams
+	}
 }
 
 func configFiles() []string {
@@ -83,6 +94,28 @@ func InitConfig() {
 	err := configor.New(&configor.Config{}).Load(conf, configFiles()...)
 	if err != nil {
 		panic(err)
+	}
+	conf.Superset.DashboardParams = models.DashboardParams{}
+	if conf.Superset.Dashboards != "" {
+		rules := strings.Split(conf.Superset.Dashboards, ";")
+		for _, rule := range rules {
+			values := strings.Split(rule, ":")
+			if len(values) != 2 {
+				continue
+			}
+			r := models.DashboardParam{}
+			for i, value := range values {
+				switch i {
+				case 0:
+					r.Code = value
+					break
+				case 1:
+					r.DashboardID = value
+					break
+				}
+			}
+			conf.Superset.DashboardParams = append(conf.Superset.DashboardParams, r)
+		}
 	}
 	Conf = conf
 }
