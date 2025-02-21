@@ -2,6 +2,7 @@ package whatsup
 
 import (
 	"context"
+	"fmt"
 	"hr-tools-backend/config"
 	"hr-tools-backend/db"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
@@ -14,7 +15,7 @@ import (
 )
 
 type Provider interface {
-	SendWelcome(ctx context.Context, spaceID, recipient string) error
+	SendWelcome(ctx context.Context, spaceID, recipient, vacancyName string) error
 	SendAgreement(ctx context.Context, spaceID, recipient string) error
 	SendMsgWithFreeText(ctx context.Context, spaceID, recipient, msg string) error
 	SendMsgWithSelection(ctx context.Context, spaceID, recipient, msg string, buttons []*message.InteractiveReplyButton) error
@@ -36,7 +37,7 @@ type impl struct {
 }
 
 const (
-	welcomeMsgBody   = "Здравствуйте! Вы откликнулись на вакансию «Менеджер по продажам в IT». Хотите пройти тест? Нажмите кнопку 'Да' для начала."
+	welcomeMsgBody   = "Здравствуйте! Вы откликнулись на вакансию «%v». Хотите пройти тест? Нажмите кнопку 'Да' для начала."
 	agreementMsgBody = "Пожалуйста, подтвердите согласие на обработку ваших персональных данных для участия в процессе подбора. Нажмите 'Согласен' для подтверждения."
 )
 
@@ -50,16 +51,17 @@ func (i impl) getClient(spaceID string) (whatsappclient.Provider, error) {
 	}
 	businessAccountID, err := i.spaceSettingsStore.GetValueByCode(spaceID, models.WhatsAppBusinessAccountID)
 	if err != nil {
-		return nil, errors.Wrap(err, "ошибка получения business account id WhatsApp")
+		return nil, errors.Wrap(err, "ошибка получения WhatsApp business account id")
 	}
 	if businessAccountID == "" {
 		return nil, errors.New("WhatsApp business account id не указан")
 	}
-	return whatsappclient.GetClient(config.Conf.WhatsUpp.BaseUrl, accessToken, config.Conf.WhatsUpp.APIVersion, businessAccountID)
+	return whatsappclient.GetClient(config.Conf.WhatsApp.BaseUrl, accessToken, config.Conf.WhatsApp.APIVersion, businessAccountID)
 }
 
-func (i impl) SendWelcome(ctx context.Context, spaceID, recipient string) error {
-	params := i.getRequest(welcomeMsgBody)
+func (i impl) SendWelcome(ctx context.Context, spaceID, recipient, vacancyName string) error {
+	msg := fmt.Sprintf(welcomeMsgBody, vacancyName)
+	params := i.getRequest(msg)
 	params.Buttons = []*message.InteractiveReplyButton{
 		{
 			ID:    "submit_test",

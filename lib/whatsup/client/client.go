@@ -27,7 +27,7 @@ func GetClient(baseUrl, accessToken, apiVersion, businessAccountID string) (Prov
 			return &config.Config{
 				BaseURL:           baseUrl,           // API URL
 				AccessToken:       accessToken,       // access token
-				APIVersion:        apiVersion,        // PI version
+				APIVersion:        apiVersion,        // API version
 				BusinessAccountID: businessAccountID, // business account ID
 			}, nil
 		}),
@@ -39,6 +39,7 @@ type impl struct {
 	coreClient   *whttp.CoreClient[message.Message]
 }
 
+// SendTextMessage recipient's WhatsApp phone number (including country code)
 func (i impl) SendTextMessage(ctx context.Context, recipient, msg string) error {
 	logger := log.WithField("recipient", recipient)
 
@@ -46,9 +47,6 @@ func (i impl) SendTextMessage(ctx context.Context, recipient, msg string) error 
 	if err != nil {
 		return errors.Wrap(err, "ошибка создания клиента")
 	}
-
-	// Define the recipient's WhatsApp phone number (including country code)
-	// recipient := "1234567890"
 
 	// Create a new text message request
 	textMessage := message.NewRequest(recipient, &message.Text{
@@ -61,7 +59,7 @@ func (i impl) SendTextMessage(ctx context.Context, recipient, msg string) error 
 		return errors.Wrap(err, "ошибка отправки сообщения")
 	}
 
-	logger.Infof("Сообщение успешно отправтено %v. Response: %+v", recipient, response)
+	logger.Infof("Сообщение успешно отправлено %v. Response: %+v", recipient, response)
 	return nil
 }
 
@@ -96,6 +94,6 @@ func (i impl) SendInteractiveMessage(ctx context.Context, recipient string, para
 		return errors.Wrap(err, "ошибка отправки сообщения")
 	}
 
-	logger.Infof("Сообщение успешно отправтено %v. Response: %+v", recipient, response)
+	logger.Infof("Сообщение успешно отправлено %v. Response: %+v", recipient, response)
 	return nil
 }

@@ -80,7 +80,7 @@ type Configuration struct {
 		Dashboards      string `default:"" env:"SUPERSET_DASHBOARDS"`
 		DashboardParams models.DashboardParams
 	}
-	WhatsUpp struct {
+	WhatsApp struct {
 		BaseUrl           string `default:"https://graph.facebook.com" env:"WHATSAPP_BASE_URL"`
 		APIVersion        string `default:"v20.0" env:"WHATSAPP_API_VERSION"`
 	}
