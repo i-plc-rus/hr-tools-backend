@@ -2,6 +2,7 @@ package gpthandler
 
 import (
 	"errors"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/config"
 	"hr-tools-backend/db"
@@ -44,8 +45,8 @@ func (i impl) GenerateVacancyDescription(spaceID, text string) (resp gptmodels.G
 	}
 	//promt := "Ты - рекрутер компании Рога и Копыта. В компании придерживаемся свободного стиля, используем эмодзи в текстах вакансии"
 	resp.Description, err = yagptclient.
-		NewClient(config.Conf.YandexGPT.IAMToken, config.Conf.YandexGPT.CatalogID, promt).
-		GenerateVacancyDescription(text)
+		NewClient(config.Conf.YandexGPT.IAMToken, config.Conf.YandexGPT.CatalogID).
+		GenerateByPromtAndText(promt, fmt.Sprintf("Сгенерируй описание для вакансии имея эти вводные данные: %s", text))
 	if err != nil {
 		log.
 			WithField("space_id", spaceID).
