@@ -2,9 +2,11 @@ package apiv1
 
 import (
 	"hr-tools-backend/controllers"
+	"hr-tools-backend/lib/survey"
 	vacancyhandler "hr-tools-backend/lib/vacancy"
 	"hr-tools-backend/middleware"
 	apimodels "hr-tools-backend/models/api"
+	surveyapimodels "hr-tools-backend/models/api/survey"
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 
 	"github.com/gofiber/fiber/v2"
@@ -40,6 +42,10 @@ func InitVacancyApiRouters(app *fiber.App) {
 					userIDRoute.Put("set_as_responsible", controller.setAsResponsible)
 					userIDRoute.Put("exclude", controller.excludeFromTeam)
 				})
+			})
+			idRoute.Route("survey", func(surveyRoute fiber.Router) {
+				surveyRoute.Get("", controller.getSurvey)
+				surveyRoute.Post("", controller.saveSurvey)
 			})
 		})
 	})
@@ -534,4 +540,64 @@ func (c *vacancyApiController) setAsResponsible(ctx *fiber.Ctx) error {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка назначения участника ответственным по вакансии")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Получение анкеты (генерация, в случае отсутствия)
+// @Tags Анкета по вакансии
+// @Description Получение анкеты (генерация, в случае отсутствия)
+// @Param   Authorization		header	string	true	"Authorization token"
+// @Param   id          		path    string  true    "идентификатор вакансии"
+// @Success 200 {object} apimodels.Response{data=surveyapimodels.SurveyView}
+// @Failure 400 {object} apimodels.Response
+// @Failure 404 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/vacancy/{id}/survey [get]
+func (c *vacancyApiController) getSurvey(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	resp, err := survey.Instance.GetSurvey(spaceID, id)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения анкеты по вакансии")
+	}
+	if resp == nil {
+		return ctx.Status(fiber.StatusNotFound).JSON(apimodels.NewError("Анкета отсутсвует"))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(resp))
+}
+
+// @Summary Сохранение анкеты(перегенерация вопросов в случае если вопрос не подходит)
+// @Tags Анкета по вакансии
+// @Description Сохранение анкеты
+// @Param   Authorization		header	string	true	"Authorization token"
+// @Param   id          		path    string  true         "rec ID"
+// @Param	body body	 surveyapimodels.Survey	true	"request body"
+// @Success 200 {object} apimodels.Response{data=surveyapimodels.SurveyView}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/vacancy/{id}/survey [post]
+func (c *vacancyApiController) saveSurvey(ctx *fiber.Ctx) error {
+	var payload surveyapimodels.Survey
+	if err := c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	if err := payload.Validate(); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	resp, err := survey.Instance.SaveSurvey(spaceID, id, payload)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка сохранения анкеты по вакансии")
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(resp))
 }
