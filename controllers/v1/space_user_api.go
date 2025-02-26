@@ -184,6 +184,7 @@ func (c *spaceUserController) GetUserByID(ctx *fiber.Ctx) error {
 // @Tags Пользователи space
 // @Description Скачать фото
 // @Param   Authorization		header		string	true	"Authorization token"
+// @Param 	id 					path 		string  true 	"space user ID"
 // @Success 200
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
