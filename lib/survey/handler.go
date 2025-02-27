@@ -1,9 +1,7 @@
 package survey
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"hr-tools-backend/db"
 	gpthandler "hr-tools-backend/lib/gpt"
 	vacancysurvaystore "hr-tools-backend/lib/survey/vacancy-survay-store"
@@ -16,8 +14,8 @@ import (
 )
 
 type Provider interface {
-	SaveSurvey(spaceID, vacancyID string, survay surveyapimodels.Survey) (*surveyapimodels.SurveyView, error)
-	GetSurvey(spaceID, vacancyID string) (*surveyapimodels.SurveyView, error)
+	SaveHRSurvey(spaceID, vacancyID string, survay surveyapimodels.HRSurvey) (*surveyapimodels.HRSurveyView, error)
+	GetHRSurvey(spaceID, vacancyID string) (*surveyapimodels.HRSurveyView, error)
 }
 
 var Instance Provider
@@ -34,16 +32,16 @@ type impl struct {
 	vacancyStore vacancystore.Provider
 }
 
-func (i impl) SaveSurvey(spaceID, vacancyID string, survay surveyapimodels.Survey) (*surveyapimodels.SurveyView, error) {
-	rec := dbmodels.VacancySurvey{
+func (i impl) SaveHRSurvey(spaceID, vacancyID string, survay surveyapimodels.HRSurvey) (*surveyapimodels.HRSurveyView, error) {
+	rec := dbmodels.HRSurvey{
 		BaseSpaceModel: dbmodels.BaseSpaceModel{SpaceID: spaceID},
 		IsFilledOut:    false,
 		VacancyID:      vacancyID,
-		Survey: dbmodels.SurveyQuestions{
-			Questions: make([]dbmodels.SurveyQuestion, 0, len(survay.Questions)),
+		Survey: dbmodels.HRSurveyQuestions{
+			Questions: make([]dbmodels.HRSurveyQuestion, 0, len(survay.Questions)),
 		},
 	}
-	regenerateQuestions := []dbmodels.SurveyQuestion{}
+	regenerateQuestions := []dbmodels.HRSurveyQuestion{}
 	selectedCount := 0
 	for _, question := range survay.Questions {
 		switch question.Selected {
@@ -94,24 +92,24 @@ func (i impl) SaveSurvey(spaceID, vacancyID string, survay surveyapimodels.Surve
 	if err != nil {
 		return nil, errors.Wrap(err, "ошибка сохранения анкеты")
 	}
-	result := surveyapimodels.SurveyView{
+	result := surveyapimodels.HRSurveyView{
 		IsFilledOut: rec.IsFilledOut,
-		Survey: surveyapimodels.Survey{
+		HRSurvey: surveyapimodels.HRSurvey{
 			Questions: rec.Survey.Questions,
 		},
 	}
 	return &result, nil
 }
 
-func (i impl) GetSurvey(spaceID, vacancyID string) (*surveyapimodels.SurveyView, error) {
+func (i impl) GetHRSurvey(spaceID, vacancyID string) (*surveyapimodels.HRSurveyView, error) {
 	rec, err := i.vSurvayStore.GetByVacancyID(spaceID, vacancyID)
 	if err != nil {
 		return nil, err
 	}
 	if rec != nil {
-		result := surveyapimodels.SurveyView{
+		result := surveyapimodels.HRSurveyView{
 			IsFilledOut: rec.IsFilledOut,
-			Survey: surveyapimodels.Survey{
+			HRSurvey: surveyapimodels.HRSurvey{
 				Questions: rec.Survey.Questions,
 			},
 		}
@@ -126,16 +124,19 @@ func (i impl) GetSurvey(spaceID, vacancyID string) (*surveyapimodels.SurveyView,
 	if err != nil {
 		return nil, errors.Wrap(err, "ошибка генерации анкеты")
 	}
-	return i.SaveSurvey(spaceID, vacancyID, *surveyData)
+	return i.SaveHRSurvey(spaceID, vacancyID, *surveyData)
 }
 
-func (i impl) generateSurvey(vacancyRec dbmodels.Vacancy) (*surveyapimodels.Survey, error) {
-	content := buildGeneratePromt(vacancyRec)
-	surveyResp, err := gpthandler.Instance.Gen(vacancyRec.SpaceID, content) //TODO новый метод
+func (i impl) generateSurvey(vacancyRec dbmodels.Vacancy) (*surveyapimodels.HRSurvey, error) {
+	content, err := surveyapimodels.GetVacancyDataContent(vacancyRec)
+	if err != nil {
+		return nil, err
+	}
+	surveyResp, err := gpthandler.Instance.GenerateHRSurvey(vacancyRec.SpaceID, content)
 	if err != nil {
 		return nil, errors.Wrap(err, "ошибка вызова ИИ при геренации анкеты")
 	}
-	surveyData := new(surveyapimodels.Survey)
+	surveyData := new(surveyapimodels.HRSurvey)
 	err = json.Unmarshal([]byte(surveyResp.Description), surveyData)
 	if err != nil {
 		return nil, errors.Wrap(err, "ошибка декодирования json в структуру вопросов для анкеты")
@@ -143,79 +144,66 @@ func (i impl) generateSurvey(vacancyRec dbmodels.Vacancy) (*surveyapimodels.Surv
 	return surveyData, nil
 }
 
-func (i impl) regenerateSurvey(vacancyRec dbmodels.Vacancy, questions []dbmodels.SurveyQuestion) (*surveyapimodels.Survey, error) {
-	content, err := buildReGeneratePromt(vacancyRec, questions)
+func (i impl) regenerateSurvey(vacancyRec dbmodels.Vacancy, questions []dbmodels.HRSurveyQuestion) (*surveyapimodels.HRSurvey, error) {
+	content, err := surveyapimodels.GetVacancyDataContent(vacancyRec)
 	if err != nil {
 		return nil, err
 	}
-	surveyResp, err := gpthandler.Instance.ReGen(vacancyRec.SpaceID, content) //TODO новый метод
+	questionsContent, err := getQuestionPromt(questions)
+	if err != nil {
+		return nil, err
+	}
+	surveyResp, err := gpthandler.Instance.ReGenerateHRSurvey(vacancyRec.SpaceID, content, questionsContent)
 	if err != nil {
 		return nil, errors.Wrap(err, "ошибка вызова ИИ при перегеренации анкеты")
 	}
-	surveyData := new(surveyapimodels.Survey)
+	surveyData := new(surveyapimodels.HRSurvey)
 	err = json.Unmarshal([]byte(surveyResp.Description), surveyData)
 	if err != nil {
 		return nil, errors.Wrap(err, "ошибка декодирования json в структуру вопросов для анкеты")
 	}
 	// берем только необходимое кол-во вопросов и проставляем им те же идентификаторы
 	// если вернулось меньше вопросов чем запросили, возвращаем старые в место отсутсвующих
-	result := surveyapimodels.Survey{Questions: make([]dbmodels.SurveyQuestion, 0, len(questions))}
-	newQuestionsCount := len(surveyData.Questions)
-	for j, question := range questions {
-		if newQuestionsCount < j+1 {
-			result.Questions = append(result.Questions, question)
-		} else {
-			newQuestion := surveyData.Questions[j]
-			resultQuestion := dbmodels.SurveyQuestion{
-				SurveyQuestionGenerated: dbmodels.SurveyQuestionGenerated{
-					QuestionID:   question.QuestionID,
-					QuestionText: newQuestion.QuestionText,
-					QuestionType: newQuestion.QuestionType,
-					Answers:      newQuestion.Answers,
-					Comment:      newQuestion.Comment,
-				},
-			}
-			result.Questions = append(result.Questions, resultQuestion)
-		}
+	result := surveyapimodels.HRSurvey{Questions: make([]dbmodels.HRSurveyQuestion, 0, len(questions))}
+	newQuestions := surveyData.Questions
+	for _, oldQuestion := range questions {
+		var regeneratedQuestion dbmodels.HRSurveyQuestion
+		regeneratedQuestion, newQuestions = getQuestion(newQuestions, oldQuestion)
+		result.Questions = append(result.Questions, regeneratedQuestion)
 	}
 	return &result, nil
 }
 
-func buildGeneratePromt(rec dbmodels.Vacancy) string {
-	// формируем текст:
-	// «Менеджер по продажам в IT. Основные обязанности: холодные b2b-продажи, ведение переговоров, заключение сделок. Требования: опыт более 2 лет, умение работать в CRM. Желательна специализация в IT-сфере.»\nНужно:\n
-	// 1. Сгенерировать 5 вопросов с вариантами ответов, чтобы интервьюер мог уточнить важные аспекты вакансии.\n
-	return fmt.Sprintf("\"%v\" %v\"\n1. Сгенерировать 5 вопросов с вариантами ответов, чтобы интервьюер мог уточнить важные аспекты вакансии.\n", rec.VacancyName, rec.Requirements)
+func getQuestion(newQuestions []dbmodels.HRSurveyQuestion, oldQuestion dbmodels.HRSurveyQuestion) (dbmodels.HRSurveyQuestion, []dbmodels.HRSurveyQuestion) {
+	remainingNewQuestions := []dbmodels.HRSurveyQuestion{}
+	var selectedQuestion *dbmodels.HRSurveyQuestion
+	for _, newQuestion := range newQuestions {
+		if selectedQuestion == nil && newQuestion.QuestionType == oldQuestion.QuestionType {
+			newQuestion.QuestionID = oldQuestion.QuestionID
+			selectedQuestion = &newQuestion
+		}
+		remainingNewQuestions = append(remainingNewQuestions, newQuestion)
+	}
+	if selectedQuestion == nil {
+		return oldQuestion, newQuestions
+	}
+	return *selectedQuestion, remainingNewQuestions
 }
 
-func buildReGeneratePromt(rec dbmodels.Vacancy, questions []dbmodels.SurveyQuestion) (string, error) {
-	// формируем текст:
-	// «Менеджер по продажам в IT. Основные обязанности: холодные b2b-продажи, ведение переговоров, заключение сделок. Требования: опыт более 2 лет, умение работать в CRM. Желательна специализация в IT-сфере.»\n
-	// 1. Вопрос "Какие навыки продаж вы считаете ключевыми?" не подошёл. Сгенерируй новый вопрос с типом "free_text", добавь комментарий и опцию "Не подходит".\n
-	// если несколько вопросов:
-	// 1. Вопросы questions": [...] не подошли. Сгенерируй новые вопросы с аналогичными типами, добавь комментарий и опцию "Не подходит".\n
-	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("\"%v\" %v\"\n", rec.VacancyName, rec.Requirements))
-	if len(questions) == 1 {
-		question := questions[0]
-		buffer.WriteString(fmt.Sprintf("1. Вопрос \"%v\" не подошёл. Сгенерируй новый вопрос с типом \"%v\", добавь комментарий и опцию \"Не подходит\".\n",
-			question.QuestionText, question.QuestionType))
-	} else {
-		regenData := surveyapimodels.ReGenerateSurvey{
-			Questions: make([]surveyapimodels.NotSuitableQuestion, 0, len(questions)),
-		}
-		for _, question := range questions {
-			regenData.Questions = append(regenData.Questions, surveyapimodels.NotSuitableQuestion{
-				QuestionID:   question.QuestionID,
-				QuestionText: question.QuestionText,
-				QuestionType: question.QuestionType,
-			})
-		}
-		bQuestions, err := json.Marshal(regenData)
-		if err != nil {
-			return "", errors.Wrap(err, "ошибка десериализации вопросов для перегенерации")
-		}
-		buffer.WriteString(fmt.Sprintf("1. Вопросы\n%v\nне подошли. Сгенерируй новые вопросы с аналогичными типами. \n", string(bQuestions)))
+func getQuestionPromt(questions []dbmodels.HRSurveyQuestion) (string, error) {
+	regenData := surveyapimodels.ReGenerateSurvey{
+		Questions: make([]surveyapimodels.NotSuitableQuestion, 0, len(questions)),
 	}
-	return buffer.String(), nil
+	for _, question := range questions {
+		regenData.Questions = append(regenData.Questions, surveyapimodels.NotSuitableQuestion{
+			QuestionID:   question.QuestionID,
+			QuestionText: question.QuestionText,
+			QuestionType: question.QuestionType,
+		})
+	}
+	bQuestions, err := json.Marshal(regenData)
+	if err != nil {
+		return "", errors.Wrap(err, "ошибка десериализации вопросов для перегенерации")
+	}
+	return string(bQuestions), nil
 }

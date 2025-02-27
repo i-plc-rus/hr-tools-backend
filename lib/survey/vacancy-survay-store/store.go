@@ -7,8 +7,8 @@ import (
 )
 
 type Provider interface {
-	Save(rec dbmodels.VacancySurvey) (id string, err error)
-	GetByVacancyID(spaceID, vacancyID string) (rec *dbmodels.VacancySurvey, err error)
+	Save(rec dbmodels.HRSurvey) (id string, err error)
+	GetByVacancyID(spaceID, vacancyID string) (rec *dbmodels.HRSurvey, err error)
 	Update(spaceID, id string, updMap map[string]interface{}) error
 	Delete(spaceID, id string) error
 	DeleteByVacancyID(spaceID, vacancyID string) error
@@ -24,7 +24,7 @@ type impl struct {
 	db *gorm.DB
 }
 
-func (i impl) Save(rec dbmodels.VacancySurvey) (id string, err error) {
+func (i impl) Save(rec dbmodels.HRSurvey) (id string, err error) {
 	existedRec, err := i.GetByVacancyID(rec.SpaceID, rec.VacancyID)
 	if err != nil {
 		return "", err
@@ -41,8 +41,8 @@ func (i impl) Save(rec dbmodels.VacancySurvey) (id string, err error) {
 	return rec.ID, nil
 }
 
-func (i impl) GetByVacancyID(spaceID, vacancyID string) (*dbmodels.VacancySurvey, error) {
-	rec := dbmodels.VacancySurvey{}
+func (i impl) GetByVacancyID(spaceID, vacancyID string) (*dbmodels.HRSurvey, error) {
+	rec := dbmodels.HRSurvey{}
 	err := i.db.
 		Where("space_id = ?", spaceID).
 		Where("vacancy_id = ?", vacancyID).
@@ -62,7 +62,7 @@ func (i impl) Update(spaceID, id string, updMap map[string]interface{}) error {
 		return nil
 	}
 	err := i.db.
-		Model(&dbmodels.VacancySurvey{}).
+		Model(&dbmodels.HRSurvey{}).
 		Where("id = ?", id).
 		Where("space_id = ?", spaceID).
 		Updates(updMap).
@@ -74,7 +74,7 @@ func (i impl) Update(spaceID, id string, updMap map[string]interface{}) error {
 }
 
 func (i impl) Delete(spaceID, id string) error {
-	rec := dbmodels.VacancySurvey{
+	rec := dbmodels.HRSurvey{
 		BaseSpaceModel: dbmodels.BaseSpaceModel{
 			BaseModel: dbmodels.BaseModel{ID: id},
 			SpaceID:   spaceID,
@@ -91,8 +91,8 @@ func (i impl) Delete(spaceID, id string) error {
 }
 
 func (i impl) DeleteByVacancyID(spaceID, vacancyID string) error {
-	rec := dbmodels.VacancySurvey{}
-	err := i.db.Model(&dbmodels.VacancySurvey{}).
+	rec := dbmodels.HRSurvey{}
+	err := i.db.Model(&dbmodels.HRSurvey{}).
 		Where("space_id = ?", spaceID).
 		Where("vacancy_id = ?", vacancyID).
 		Delete(&rec).Error

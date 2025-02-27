@@ -542,12 +542,12 @@ func (c *vacancyApiController) setAsResponsible(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
 
-// @Summary Получение анкеты (генерация, в случае отсутствия)
-// @Tags Анкета по вакансии
-// @Description Получение анкеты (генерация, в случае отсутствия)
+// @Summary Получение анкеты HR (генерация, в случае отсутствия)
+// @Tags Анкета HR по вакансии
+// @Description Получение анкеты HR (генерация, в случае отсутствия)
 // @Param   Authorization		header	string	true	"Authorization token"
 // @Param   id          		path    string  true    "идентификатор вакансии"
-// @Success 200 {object} apimodels.Response{data=surveyapimodels.SurveyView}
+// @Success 200 {object} apimodels.Response{data=surveyapimodels.HRSurveyView}
 // @Failure 400 {object} apimodels.Response
 // @Failure 404 {object} apimodels.Response
 // @Failure 403
@@ -560,7 +560,7 @@ func (c *vacancyApiController) getSurvey(ctx *fiber.Ctx) error {
 	}
 
 	spaceID := middleware.GetUserSpace(ctx)
-	resp, err := survey.Instance.GetSurvey(spaceID, id)
+	resp, err := survey.Instance.GetHRSurvey(spaceID, id)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения анкеты по вакансии")
 	}
@@ -570,19 +570,19 @@ func (c *vacancyApiController) getSurvey(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(resp))
 }
 
-// @Summary Сохранение анкеты(перегенерация вопросов в случае если вопрос не подходит)
-// @Tags Анкета по вакансии
-// @Description Сохранение анкеты
+// @Summary Сохранение анкеты HR (перегенерация вопросов в случае если вопрос не подходит)
+// @Tags Анкета HR по вакансии
+// @Description Сохранение анкеты HR (перегенерация вопросов в случае если вопрос не подходит)
 // @Param   Authorization		header	string	true	"Authorization token"
 // @Param   id          		path    string  true         "rec ID"
-// @Param	body body	 surveyapimodels.Survey	true	"request body"
-// @Success 200 {object} apimodels.Response{data=surveyapimodels.SurveyView}
+// @Param	body body	 surveyapimodels.HRSurvey	true	"request body"
+// @Success 200 {object} apimodels.Response{data=surveyapimodels.HRSurveyView}
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
 // @router /api/v1/space/vacancy/{id}/survey [post]
 func (c *vacancyApiController) saveSurvey(ctx *fiber.Ctx) error {
-	var payload surveyapimodels.Survey
+	var payload surveyapimodels.HRSurvey
 	if err := c.BodyParser(ctx, &payload); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
@@ -595,7 +595,7 @@ func (c *vacancyApiController) saveSurvey(ctx *fiber.Ctx) error {
 	}
 
 	spaceID := middleware.GetUserSpace(ctx)
-	resp, err := survey.Instance.SaveSurvey(spaceID, id, payload)
+	resp, err := survey.Instance.SaveHRSurvey(spaceID, id, payload)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка сохранения анкеты по вакансии")
 	}
