@@ -49,6 +49,7 @@ type Applicant struct {
 	StartDate             time.Time                `comment:"Дата выхода"`
 	RejectReason          string                   `gorm:"type:varchar(255)" comment:"Причина отказа"`
 	RejectInitiator       models.RejectInitiator   `gorm:"type:varchar(255)" comment:"Инициатор отказа"`
+	ApplicantSurvey       *ApplicantSurvey
 }
 
 type ApplicantWithJob struct {

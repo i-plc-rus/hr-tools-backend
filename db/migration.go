@@ -115,6 +115,10 @@ func AutoMigrateDB() error {
 		return errors.Wrap(err, "ошибка создания структуры HRSurvey")
 	}
 
+	if err := DB.AutoMigrate(&dbmodels.ApplicantSurvey{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры ApplicantSurvey")
+	}
+
 	log.Info("Миграция прошла успешно")
 	return nil
 }

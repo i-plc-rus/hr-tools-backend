@@ -16,6 +16,7 @@ type Provider interface {
 	GenerateVacancyDescription(spaceID, text string) (resp gptmodels.GenVacancyDescResponse, err error)
 	GenerateHRSurvey(spaceID, vacancyInfo string) (resp gptmodels.GenVacancyDescResponse, err error)
 	ReGenerateHRSurvey(spaceID, vacancyInfo, questions string) (resp gptmodels.GenVacancyDescResponse, err error)
+	GenerateApplicantSurvey(spaceID, vacancyInfo, applicantInfo, hrSurvey string) (resp gptmodels.GenVacancyDescResponse, err error)
 }
 
 type impl struct {
@@ -31,14 +32,22 @@ func NewHandler() {
 }
 
 const (
-	HrSurveySysPromt    = "Ты — нейросеть, помогаешь HR-специалистам формировать опрос для оценки кандидатов."
-	HrSurveyPromt1      = "У нас есть вакансия: %v \r\nНужно:"
-	HrSurveyPromt2Gen   = "1. Сгенерировать 5 вопросов (3 с одиночным выбором, 2 со свободным ответом) по ключевым аспектам: опыт, навыки, soft skills."
-	HrSurveyPromt2ReGen = "1. Вопросы: %v не подошли. Сгенерируй новые вопросы с аналогичными типами."
-	HrSurveyPromt3      = "2. Формат ответа – JSON со структурой: { \"questions\": [ { \"question_id\": \"qX\", \"question_text\": \"...\", \"question_type\": \"single_choice\"/\"free_text\", \"answers\": [ \"value\": \"...\" ], \"comment\": \"...\" } ] }."
-	HrSurveyPromt4      = "3. Каждый вопрос должен сопровождаться кратким комментарием."
-	HrSurveyPromt5      = "4. Варианты ответов для одиночного выбора: \"Обязательно\", \"Желательно\", \"Не требуется\" + \"Не подходит\" (для перегенерации)."
-	HrSurveyPromt6      = "5. Свободные ответы включают опцию \"Не подходит\"."
+	HrSurveySysPromt        = "Ты — нейросеть, помогаешь HR-специалистам формировать опрос для оценки кандидатов."
+	HrSurveyPromt1          = "У нас есть вакансия: %v \r\nНужно:"
+	HrSurveyPromt2Gen       = "1. Сгенерировать 5 вопросов (3 с одиночным выбором, 2 со свободным ответом) по ключевым аспектам: опыт, навыки, soft skills."
+	HrSurveyPromt2ReGen     = "1. Вопросы: %v не подошли. Сгенерируй новые вопросы с аналогичными типами."
+	HrSurveyPromt3          = "2. Формат ответа – JSON со структурой: { \"questions\": [ { \"question_id\": \"qX\", \"question_text\": \"...\", \"question_type\": \"single_choice\"/\"free_text\", \"answers\": [ \"value\": \"...\" ], \"comment\": \"...\" } ] }."
+	HrSurveyPromt4          = "3. Каждый вопрос должен сопровождаться кратким комментарием."
+	HrSurveyPromt5          = "4. Варианты ответов для одиночного выбора: \"Обязательно\", \"Желательно\", \"Не требуется\" + \"Не подходит\" (для перегенерации)."
+	HrSurveyPromt6          = "5. Свободные ответы включают опцию \"Не подходит\"."
+	ApplicantSurveySysPromt = "Ты — нейросеть, помогаешь HR формировать опрос для кандидатов."
+	ApplicantSurveyPromt1   = "Вакансия: %v"
+	ApplicantSurveyPromt2   = "Кандидат: %v"
+	ApplicantSurveyPromt3   = "Приоритеты HR: %v"
+	ApplicantSurveyPromt4   = "Нужно:"
+	ApplicantSurveyPromt5   = "1. Сгенерировать 5 вопросов для оценки соответствия."
+	ApplicantSurveyPromt6   = "2. Формат: { \"questions\": [ { \"question_id\": \"\", \"question_text\": \"\", \"question_type\": \"\", \"answers\": [], \"weight\": <число>, \"comment\": \"\" } ] }."
+	ApplicantSurveyPromt7   = "3. Веса соответствуют анкете HR."
 )
 
 func (i impl) GenerateVacancyDescription(spaceID, text string) (resp gptmodels.GenVacancyDescResponse, err error) {
@@ -106,6 +115,30 @@ func (i impl) ReGenerateHRSurvey(spaceID, vacancyInfo, questions string) (resp g
 	resp.Description, err = yagptclient.
 		NewClient(config.Conf.YandexGPT.IAMToken, config.Conf.YandexGPT.CatalogID).
 		GenerateByPromtAndText(HrSurveySysPromt, userPromt)
+	if err != nil {
+		log.
+			WithField("space_id", spaceID).
+			WithError(err).
+			Error("ошибка перегенерации вопросов для HR анкеты через YandexGPT")
+		return resp, err
+	}
+	return resp, nil
+}
+
+func (i impl) GenerateApplicantSurvey(spaceID, vacancyInfo, applicantInfo, hrSurvey string) (resp gptmodels.GenVacancyDescResponse, err error) {
+	userPromt := fmt.Sprintf("%v\r\n%v\r\n%v\r\n%v\r\n%v\r\n%v\r\n%v",
+		fmt.Sprintf(ApplicantSurveyPromt1, vacancyInfo),
+		fmt.Sprintf(ApplicantSurveyPromt2, applicantInfo),
+		fmt.Sprintf(ApplicantSurveyPromt3, hrSurvey),
+		ApplicantSurveyPromt4,
+		ApplicantSurveyPromt5,
+		ApplicantSurveyPromt6,
+		ApplicantSurveyPromt7,
+	)
+
+	resp.Description, err = yagptclient.
+		NewClient(config.Conf.YandexGPT.IAMToken, config.Conf.YandexGPT.CatalogID).
+		GenerateByPromtAndText(ApplicantSurveySysPromt, userPromt)
 	if err != nil {
 		log.
 			WithField("space_id", spaceID).

@@ -3,7 +3,9 @@ package survey
 import (
 	"encoding/json"
 	"hr-tools-backend/db"
+	applicantstore "hr-tools-backend/lib/applicant/store"
 	gpthandler "hr-tools-backend/lib/gpt"
+	applicantsurveystore "hr-tools-backend/lib/survey/applicant-survey-store"
 	vacancysurveystore "hr-tools-backend/lib/survey/vacancy-survey-store"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	surveyapimodels "hr-tools-backend/models/api/survey"
@@ -16,20 +18,26 @@ import (
 type Provider interface {
 	SaveHRSurvey(spaceID, vacancyID string, survey surveyapimodels.HRSurvey) (*surveyapimodels.HRSurveyView, error)
 	GetHRSurvey(spaceID, vacancyID string) (*surveyapimodels.HRSurveyView, error)
+	GetApplicantSurvey(spaceID, vacancyID, applicantID string) (*surveyapimodels.ApplicantSurveyView, error)
+	GenApplicantSurvey(spaceID, vacancyID, applicantID string) (ok bool, err error)
 }
 
 var Instance Provider
 
 func NewHandler() {
 	Instance = impl{
-		vSurveyStore: vacancysurveystore.NewInstance(db.DB),
-		vacancyStore: vacancystore.NewInstance(db.DB),
+		vSurveyStore:   vacancysurveystore.NewInstance(db.DB),
+		vacancyStore:   vacancystore.NewInstance(db.DB),
+		applicantStore: applicantstore.NewInstance(db.DB),
+		aSurveyStore:   applicantsurveystore.NewInstance(db.DB),
 	}
 }
 
 type impl struct {
-	vSurveyStore vacancysurveystore.Provider
-	vacancyStore vacancystore.Provider
+	vSurveyStore   vacancysurveystore.Provider
+	vacancyStore   vacancystore.Provider
+	applicantStore applicantstore.Provider
+	aSurveyStore   applicantsurveystore.Provider
 }
 
 func (i impl) SaveHRSurvey(spaceID, vacancyID string, survey surveyapimodels.HRSurvey) (*surveyapimodels.HRSurveyView, error) {
@@ -127,6 +135,64 @@ func (i impl) GetHRSurvey(spaceID, vacancyID string) (*surveyapimodels.HRSurveyV
 	return i.SaveHRSurvey(spaceID, vacancyID, *surveyData)
 }
 
+func (i impl) GetApplicantSurvey(spaceID, vacancyID, applicantID string) (*surveyapimodels.ApplicantSurveyView, error) {
+	applicant, err := i.applicantStore.GetByID(spaceID, applicantID)
+	if err != nil {
+		return nil, errors.Wrap(err, "ошибка получения данных кандидата")
+	}
+	if applicant == nil {
+		return nil, errors.New("кандидат не найден")
+	}
+	if applicant.ApplicantSurvey != nil {
+		result := surveyapimodels.ApplicantSurveyView{
+			ApplicantSurvey: surveyapimodels.ApplicantSurvey{
+				Questions: applicant.ApplicantSurvey.Survey.Questions,
+			},
+			IsFilledOut: applicant.ApplicantSurvey.IsFilledOut,
+		}
+		return &result, nil
+	}
+	return nil, errors.New("опрос отсутсвует")
+}
+
+func (i impl) GenApplicantSurvey(spaceID, vacancyID, applicantID string) (ok bool, err error) {
+	applicant, err := i.applicantStore.GetByID(spaceID, applicantID)
+	if err != nil {
+		return false, errors.Wrap(err, "ошибка получения данных кандидата")
+	}
+	if applicant == nil {
+		return false, nil
+	}
+	if applicant.ApplicantSurvey != nil {
+		return false, nil
+	}
+
+	vacancyRec, err := i.vacancyStore.GetByID(spaceID, vacancyID)
+	if err != nil {
+		return false, errors.Wrap(err, "ошибка получения вакансии")
+	}
+	if vacancyRec == nil || vacancyRec.HRSurvey == nil {
+		return false, nil
+	}
+
+	surveyData, err := i.generateApplicantSurvey(*vacancyRec, applicant.Applicant, *vacancyRec.HRSurvey)
+	if err != nil {
+		return false, errors.Wrap(err, "ошибка генерации анкеты")
+	}
+	rec := dbmodels.ApplicantSurvey{
+		BaseSpaceModel:  dbmodels.BaseSpaceModel{SpaceID: spaceID},
+		VacancySurveyID: vacancyRec.HRSurvey.ID,
+		ApplicantID:     applicantID,
+		Survey:          dbmodels.ApplicantSurveyQuestions{Questions: surveyData.Questions},
+		IsFilledOut:     false,
+	}
+	_, err = i.aSurveyStore.Save(rec)
+	if err != nil {
+		return false, errors.Wrap(err, "ошибка сохранения анкеты")
+	}
+	return true, nil
+}
+
 func (i impl) generateSurvey(vacancyRec dbmodels.Vacancy) (*surveyapimodels.HRSurvey, error) {
 	content, err := surveyapimodels.GetVacancyDataContent(vacancyRec)
 	if err != nil {
@@ -139,7 +205,7 @@ func (i impl) generateSurvey(vacancyRec dbmodels.Vacancy) (*surveyapimodels.HRSu
 	surveyData := new(surveyapimodels.HRSurvey)
 	err = json.Unmarshal([]byte(surveyResp.Description), surveyData)
 	if err != nil {
-		return nil, errors.Wrap(err, "ошибка декодирования json в структуру вопросов для анкеты")
+		return nil, errors.Wrapf(err, "ошибка декодирования json в структуру вопросов для анкеты, json: %v", surveyResp.Description)
 	}
 	return surveyData, nil
 }
@@ -160,7 +226,7 @@ func (i impl) regenerateSurvey(vacancyRec dbmodels.Vacancy, questions []dbmodels
 	surveyData := new(surveyapimodels.HRSurvey)
 	err = json.Unmarshal([]byte(surveyResp.Description), surveyData)
 	if err != nil {
-		return nil, errors.Wrap(err, "ошибка декодирования json в структуру вопросов для анкеты")
+		return nil, errors.Wrapf(err, "ошибка декодирования json в структуру вопросов для анкеты, json: %v", surveyResp.Description)
 	}
 	// берем только необходимое кол-во вопросов и проставляем им те же идентификаторы
 	// если вернулось меньше вопросов чем запросили, возвращаем старые в место отсутсвующих
@@ -206,4 +272,32 @@ func getQuestionPromt(questions []dbmodels.HRSurveyQuestion) (string, error) {
 		return "", errors.Wrap(err, "ошибка десериализации вопросов для перегенерации")
 	}
 	return string(bQuestions), nil
+}
+
+func (i impl) generateApplicantSurvey(vacancyRec dbmodels.Vacancy, applicantRec dbmodels.Applicant, hrSurveyRec dbmodels.HRSurvey) (*surveyapimodels.ApplicantSurvey, error) {
+	vacancyInfo, err := surveyapimodels.GetVacancyDataContent(vacancyRec)
+	if err != nil {
+		return nil, err
+	}
+
+	applicantInfo, err := surveyapimodels.GetApplicantDataContent(applicantRec)
+	if err != nil {
+		return nil, err
+	}
+
+	hrSurvey, err := surveyapimodels.GetHRDataContent(hrSurveyRec)
+	if err != nil {
+		return nil, err
+	}
+
+	surveyResp, err := gpthandler.Instance.GenerateApplicantSurvey(vacancyRec.SpaceID, vacancyInfo, applicantInfo, hrSurvey)
+	if err != nil {
+		return nil, errors.Wrap(err, "ошибка вызова ИИ при геренации анкеты для кандидата")
+	}
+	applicantSurvey := new(surveyapimodels.ApplicantSurvey)
+	err = json.Unmarshal([]byte(surveyResp.Description), applicantSurvey)
+	if err != nil {
+		return nil, errors.Wrapf(err, "ошибка декодирования json в структуру вопросов для анкеты, json: %v", surveyResp.Description)
+	}
+	return applicantSurvey, nil
 }
