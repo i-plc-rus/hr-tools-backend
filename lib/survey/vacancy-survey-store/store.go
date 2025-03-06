@@ -1,9 +1,10 @@
-package vacancysurvaystore
+package vacancysurveystore
 
 import (
+	dbmodels "hr-tools-backend/models/db"
+
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
-	dbmodels "hr-tools-backend/models/db"
 )
 
 type Provider interface {
