@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"hr-tools-backend/db"
 	gpthandler "hr-tools-backend/lib/gpt"
-	vacancysurvaystore "hr-tools-backend/lib/survey/vacancy-survay-store"
+	vacancysurveystore "hr-tools-backend/lib/survey/vacancy-survey-store"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	surveyapimodels "hr-tools-backend/models/api/survey"
 	dbmodels "hr-tools-backend/models/db"
@@ -14,7 +14,7 @@ import (
 )
 
 type Provider interface {
-	SaveHRSurvey(spaceID, vacancyID string, survay surveyapimodels.HRSurvey) (*surveyapimodels.HRSurveyView, error)
+	SaveHRSurvey(spaceID, vacancyID string, survey surveyapimodels.HRSurvey) (*surveyapimodels.HRSurveyView, error)
 	GetHRSurvey(spaceID, vacancyID string) (*surveyapimodels.HRSurveyView, error)
 }
 
@@ -22,28 +22,28 @@ var Instance Provider
 
 func NewHandler() {
 	Instance = impl{
-		vSurvayStore: vacancysurvaystore.NewInstance(db.DB),
+		vSurveyStore: vacancysurveystore.NewInstance(db.DB),
 		vacancyStore: vacancystore.NewInstance(db.DB),
 	}
 }
 
 type impl struct {
-	vSurvayStore vacancysurvaystore.Provider
+	vSurveyStore vacancysurveystore.Provider
 	vacancyStore vacancystore.Provider
 }
 
-func (i impl) SaveHRSurvey(spaceID, vacancyID string, survay surveyapimodels.HRSurvey) (*surveyapimodels.HRSurveyView, error) {
+func (i impl) SaveHRSurvey(spaceID, vacancyID string, survey surveyapimodels.HRSurvey) (*surveyapimodels.HRSurveyView, error) {
 	rec := dbmodels.HRSurvey{
 		BaseSpaceModel: dbmodels.BaseSpaceModel{SpaceID: spaceID},
 		IsFilledOut:    false,
 		VacancyID:      vacancyID,
 		Survey: dbmodels.HRSurveyQuestions{
-			Questions: make([]dbmodels.HRSurveyQuestion, 0, len(survay.Questions)),
+			Questions: make([]dbmodels.HRSurveyQuestion, 0, len(survey.Questions)),
 		},
 	}
 	regenerateQuestions := []dbmodels.HRSurveyQuestion{}
 	selectedCount := 0
-	for _, question := range survay.Questions {
+	for _, question := range survey.Questions {
 		switch question.Selected {
 		case "Обязательно":
 			question.Weight = 30
@@ -88,7 +88,7 @@ func (i impl) SaveHRSurvey(spaceID, vacancyID string, survay surveyapimodels.HRS
 		return rec.Survey.Questions[i].QuestionID < rec.Survey.Questions[j].QuestionID
 	})
 
-	_, err := i.vSurvayStore.Save(rec)
+	_, err := i.vSurveyStore.Save(rec)
 	if err != nil {
 		return nil, errors.Wrap(err, "ошибка сохранения анкеты")
 	}
@@ -102,7 +102,7 @@ func (i impl) SaveHRSurvey(spaceID, vacancyID string, survay surveyapimodels.HRS
 }
 
 func (i impl) GetHRSurvey(spaceID, vacancyID string) (*surveyapimodels.HRSurveyView, error) {
-	rec, err := i.vSurvayStore.GetByVacancyID(spaceID, vacancyID)
+	rec, err := i.vSurveyStore.GetByVacancyID(spaceID, vacancyID)
 	if err != nil {
 		return nil, err
 	}
