@@ -380,16 +380,16 @@ func (i impl) sendRequest(logger *log.Entry, r *http.Request, resp interface{}, 
 	}
 	client := &http.Client{}
 	response, err := client.Do(r)
-	addResponseBody(logger, response)
-	addStatusCode(logger, response)
+	// читаем Body только 1 раз
+	responseBody, logger := getResponseBody(logger, response)
+	logger = addStatusCode(logger, response)
 	if err != nil {
 		logger.WithError(err).Error("ошибка отправки запроса в HH")
 		return errors.Wrap(err, "ошибка отправки запроса в HH")
 	}
 	if response != nil && (response.StatusCode >= 200 && response.StatusCode <= 300) {
-		if resp != nil {
-			responseBody, _ := io.ReadAll(response.Body)
-			if needUnmarshalResponse {
+		if resp != nil && needUnmarshalResponse {
+			if responseBody != nil {
 				err = json.Unmarshal(responseBody, resp)
 				if err != nil {
 					logger.WithError(err).Error("ошибка сериализации ответа")
@@ -401,8 +401,7 @@ func (i impl) sendRequest(logger *log.Entry, r *http.Request, resp interface{}, 
 	}
 
 	errorResp := hhapimodels.ErrorData{}
-	if response != nil {
-		responseBody, _ := io.ReadAll(response.Body)
+	if response != nil && responseBody != nil {
 		err = json.Unmarshal(responseBody, &errorResp)
 		if err != nil {
 			logger.WithError(err).Error("ошибка сериализации ответа с ошибкой")
@@ -412,12 +411,12 @@ func (i impl) sendRequest(logger *log.Entry, r *http.Request, resp interface{}, 
 	return errors.Errorf("Некорректный запрос. Ошибка: %+v", errorResp)
 }
 
-func addResponseBody(logger *log.Entry, response *http.Response) *log.Entry {
+func getResponseBody(logger *log.Entry, response *http.Response) ([]byte, *log.Entry) {
 	if response != nil {
 		responseBody, _ := io.ReadAll(response.Body)
-		return logger.WithField("response_body", string(responseBody))
+		return responseBody, logger.WithField("response_body", string(responseBody))
 	}
-	return logger
+	return nil, logger
 }
 
 func addStatusCode(logger *log.Entry, response *http.Response) *log.Entry {
@@ -425,17 +424,4 @@ func addStatusCode(logger *log.Entry, response *http.Response) *log.Entry {
 		return logger.WithField("response_status_code", response.StatusCode)
 	}
 	return logger
-}
-
-func getErrorData(response *http.Response) (data hhapimodels.ErrorData, statusCode int, err error) {
-	errorResp := hhapimodels.ErrorData{}
-	if response != nil {
-		responseBody, _ := io.ReadAll(response.Body)
-		err = json.Unmarshal(responseBody, &errorResp)
-		if err != nil {
-			return hhapimodels.ErrorData{}, response.StatusCode, errors.Wrap(err, "ошибка сериализации ответа")
-		}
-		return errorResp, response.StatusCode, nil
-	}
-	return hhapimodels.ErrorData{}, 0, nil
 }
