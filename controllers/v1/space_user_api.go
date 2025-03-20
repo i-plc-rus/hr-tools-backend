@@ -204,6 +204,8 @@ func (c *spaceUserController) getGetUserPhoto(ctx *fiber.Ctx) error {
 	if file != nil && file.ContentType != "" {
 		ctx.Set(fiber.HeaderContentType, file.ContentType)
 		ctx.Set(fiber.HeaderContentDisposition, `inline; filename="`+file.Name+`"`)
+	} else {
+		ctx.Set(fiber.HeaderContentDisposition, `inline;`)
 	}
 	return ctx.Send(body)
 }
@@ -339,6 +341,8 @@ func (c *spaceUserController) getPhoto(ctx *fiber.Ctx) error {
 	if file != nil && file.ContentType != "" {
 		ctx.Set(fiber.HeaderContentType, file.ContentType)
 		ctx.Set(fiber.HeaderContentDisposition, `inline; filename="`+file.Name+`"`)
+	} else {
+		ctx.Set(fiber.HeaderContentDisposition, `inline;`)
 	}
 	return ctx.Send(body)
 }
