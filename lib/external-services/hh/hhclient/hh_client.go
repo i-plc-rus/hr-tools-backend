@@ -380,8 +380,8 @@ func (i impl) sendRequest(logger *log.Entry, r *http.Request, resp interface{}, 
 	}
 	client := &http.Client{}
 	response, err := client.Do(r)
-	addResponseBody(logger, response)
-	addStatusCode(logger, response)
+	logger = addResponseBody(logger, response)
+	logger = addStatusCode(logger, response)
 	if err != nil {
 		logger.WithError(err).Error("ошибка отправки запроса в HH")
 		return errors.Wrap(err, "ошибка отправки запроса в HH")
