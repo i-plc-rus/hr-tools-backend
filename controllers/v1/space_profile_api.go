@@ -132,6 +132,8 @@ func (c *spaceProfileApiController) getPhoto(ctx *fiber.Ctx) error {
 	if file != nil && file.ContentType != "" {
 		ctx.Set(fiber.HeaderContentType, file.ContentType)
 		ctx.Set(fiber.HeaderContentDisposition, `inline; filename="`+file.Name+`"`)
+	} else {
+		ctx.Set(fiber.HeaderContentDisposition, `inline;`)
 	}
 	return ctx.Send(body)
 }

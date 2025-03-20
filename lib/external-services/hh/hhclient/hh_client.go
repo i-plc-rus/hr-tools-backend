@@ -380,13 +380,19 @@ func (i impl) sendRequest(logger *log.Entry, r *http.Request, resp interface{}, 
 	}
 	client := &http.Client{}
 	response, err := client.Do(r)
+	addResponseBody(logger, response)
+	addStatusCode(logger, response)
+	if err != nil {
+		logger.WithError(err).Error("ошибка отправки запроса в HH")
+		return errors.Wrap(err, "ошибка отправки запроса в HH")
+	}
 	if response != nil && (response.StatusCode >= 200 && response.StatusCode <= 300) {
 		if resp != nil {
 			responseBody, _ := io.ReadAll(response.Body)
 			if needUnmarshalResponse {
-				logger = logger.WithField("response_body", string(responseBody))
 				err = json.Unmarshal(responseBody, resp)
 				if err != nil {
+					logger.WithError(err).Error("ошибка сериализации ответа")
 					return errors.Wrap(err, "ошибка сериализации ответа")
 				}
 			}
@@ -397,17 +403,39 @@ func (i impl) sendRequest(logger *log.Entry, r *http.Request, resp interface{}, 
 	errorResp := hhapimodels.ErrorData{}
 	if response != nil {
 		responseBody, _ := io.ReadAll(response.Body)
-		logger = logger.WithField("response_body", string(responseBody))
 		err = json.Unmarshal(responseBody, &errorResp)
 		if err != nil {
-			logger.WithError(err).Error("ошибка сериализации ответа")
+			logger.WithError(err).Error("ошибка сериализации ответа с ошибкой")
 		}
-
 	}
-	logger.Error("ошибка отправки запроса в HH")
-	if response.StatusCode == 403 {
-		err = errors.Errorf("Ошибка: %v, Причины: %+v", errorResp.Error, errorResp.Errors)
-		return errors.New("Необходима повторная авторизация")
-	}
+	logger.Error("Некорректный запрос в HH")
 	return errors.Errorf("Некорректный запрос. Ошибка: %+v", errorResp)
+}
+
+func addResponseBody(logger *log.Entry, response *http.Response) *log.Entry {
+	if response != nil {
+		responseBody, _ := io.ReadAll(response.Body)
+		return logger.WithField("response_body", string(responseBody))
+	}
+	return logger
+}
+
+func addStatusCode(logger *log.Entry, response *http.Response) *log.Entry {
+	if response != nil {
+		return logger.WithField("response_status_code", response.StatusCode)
+	}
+	return logger
+}
+
+func getErrorData(response *http.Response) (data hhapimodels.ErrorData, statusCode int, err error) {
+	errorResp := hhapimodels.ErrorData{}
+	if response != nil {
+		responseBody, _ := io.ReadAll(response.Body)
+		err = json.Unmarshal(responseBody, &errorResp)
+		if err != nil {
+			return hhapimodels.ErrorData{}, response.StatusCode, errors.Wrap(err, "ошибка сериализации ответа")
+		}
+		return errorResp, response.StatusCode, nil
+	}
+	return hhapimodels.ErrorData{}, 0, nil
 }
