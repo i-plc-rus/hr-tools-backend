@@ -166,6 +166,22 @@ const (
 	ExperienceMoreThan10 Experience = "moreThan10" // Более 10 лет
 )
 
+func (s Experience) ToString() string {
+	switch s {
+	case ExperienceNoMatter:
+		return "Без опыта"
+	case ExperienceMoreThan1:
+		return "Более 1 года"
+	case ExperienceMoreThan3:
+		return "Более 3 лет"
+	case ExperienceMoreThan5:
+		return "Более 5 лет"
+	case ExperienceMoreThan10:
+		return "Более 10 лет"
+	}
+	return ""
+}
+
 type Schedule string
 
 const (
@@ -417,7 +433,7 @@ const (
 	ApplicantReject RejectInitiator = "Кандидат"
 )
 
-func (initiator RejectInitiator)IsValid() error {
+func (initiator RejectInitiator) IsValid() error {
 	if initiator != HrReject &&
 		initiator != HeadReject &&
 		initiator != ApplicantReject {

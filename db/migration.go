@@ -111,6 +111,10 @@ func AutoMigrateDB() error {
 		return errors.Wrap(err, "ошибка создания структуры PushData")
 	}
 
+	if err := DB.AutoMigrate(&dbmodels.HRSurvey{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры HRSurvey")
+	}
+
 	log.Info("Миграция прошла успешно")
 	return nil
 }
