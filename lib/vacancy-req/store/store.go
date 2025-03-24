@@ -156,7 +156,7 @@ func (i impl) SetPin(id, userID string) error {
 
 func (i impl) RemovePin(id, userID string) error {
 	rec := dbmodels.VrPinned{}
-	err := i.db.Model(&dbmodels.Pinned{}).
+	err := i.db.Model(&dbmodels.VrPinned{}).
 		Where("space_user_id = ?", userID).
 		Where("vacancy_request_id = ?", id).
 		Delete(&rec).Error
