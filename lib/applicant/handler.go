@@ -18,6 +18,7 @@ import (
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
 	"math"
+	"sort"
 	"time"
 
 	"github.com/lib/pq"
@@ -37,7 +38,7 @@ type Provider interface {
 	UpdateApplicant(spaceID string, id, userID string, applicant applicantapimodels.ApplicantData) error
 	ApplicantAddTag(spaceID string, id, userID string, tag string) error
 	ApplicantRemoveTag(spaceID string, id, userID string, tag string) error
-	ChangeStage(spaceID, userID string, applicantID, stageID string) error
+	ChangeStage(spaceID, userID string, applicantID, stageID string) (hMsg string, err error)
 	MultiChangeStage(spaceID, userID string, data applicantapimodels.MultiChangeStageRequest) error
 	ResolveDuplicate(spaceID string, mainID, minorID, userID string, isDuplicate bool) error
 	ApplicantReject(spaceID string, id, userID string, data applicantapimodels.RejectRequest) error
@@ -418,16 +419,12 @@ func (i impl) ApplicantRemoveTag(spaceID string, id, userID string, tag string) 
 	return nil
 }
 
-func (i impl) ChangeStage(spaceID, userID string, applicantID, stageID string) error {
+func (i impl) ChangeStage(spaceID, userID string, applicantID, stageID string) (hMsg string, err error) {
 	userName, err := i.getUserName(userID)
 	if err != nil {
-		return errors.Wrap(err, "ошибка перевода кандидата на этап")
+		return "", errors.Wrap(err, "ошибка перевода кандидата на этап")
 	}
-	err = i.сhangeStage(nil, spaceID, userID, userName, applicantID, stageID)
-	if err != nil {
-		return err
-	}
-	return nil
+	return i.сhangeStage(nil, spaceID, userID, userName, applicantID, stageID)
 }
 
 func (i impl) MultiChangeStage(spaceID, userID string, data applicantapimodels.MultiChangeStageRequest) error {
@@ -437,9 +434,12 @@ func (i impl) MultiChangeStage(spaceID, userID string, data applicantapimodels.M
 	}
 	err = db.DB.Transaction(func(tx *gorm.DB) error {
 		for _, id := range data.IDs {
-			err = i.сhangeStage(nil, spaceID, userID, userName, id, data.StageID)
+			hMsg, err := i.сhangeStage(nil, spaceID, userID, userName, id, data.StageID)
 			if err != nil {
 				return err
+			}
+			if hMsg != "" {
+				return errors.New(hMsg)
 			}
 		}
 		return nil
@@ -749,7 +749,7 @@ func (i impl) getUserName(userID string) (string, error) {
 	return models.SystemUser, nil
 }
 
-func (i impl) сhangeStage(tx *gorm.DB, spaceID, userID, userName string, applicantID, stageID string) error {
+func (i impl) сhangeStage(tx *gorm.DB, spaceID, userID, userName string, applicantID, stageID string) (hMsg string, err error) {
 	logger := i.getLogger(spaceID, applicantID, userID).
 		WithField("stage_id", stageID)
 	store := i.store
@@ -765,17 +765,33 @@ func (i impl) сhangeStage(tx *gorm.DB, spaceID, userID, userName string, applic
 		logger.
 			WithError(err).
 			Error("ошибка получения данных кандидата")
-		return errors.New("ошибка получения данных кандидата")
+		return "", errors.Wrap(err, "ошибка получения данных кандидата")
+	}
+	if applicantRec == nil {
+		return "кандидат не найден", nil
 	}
 	if applicantRec.Status != models.ApplicantStatusInProcess {
-		return errors.Errorf("перевода по этапам возможен только на статусе '%v'", models.ApplicantStatusInProcess)
+		return fmt.Sprintf("перевода по этапам возможен только на статусе '%v'", models.ApplicantStatusInProcess), nil
 	}
-	stageRec, err := selectionStageStore.GetByID(spaceID, applicantRec.VacancyID, stageID)
+	stageList, err := selectionStageStore.List(spaceID, applicantRec.VacancyID)
 	if err != nil {
-		return err
+		return "", err
+	}
+	sort.Slice(stageList, func(i, j int) bool {
+		return stageList[i].StageOrder < stageList[j].StageOrder
+	})
+	var stageRec *dbmodels.SelectionStage
+	for _, stage := range stageList {
+		if stage.ID == stageID {
+			stageRec = &stage
+			break
+		}
 	}
 	if stageRec == nil {
-		return errors.New("этап не найден")
+		return "этап не найден", nil
+	}
+	if applicantRec.SelectionStage != nil && applicantRec.SelectionStage.StageOrder > stageRec.StageOrder {
+		return "перевод кандидата на предыдущие этапы подбора невозможен", nil
 	}
 	updMap := map[string]interface{}{
 		"selection_stage_id": stageRec.ID,
@@ -783,9 +799,9 @@ func (i impl) сhangeStage(tx *gorm.DB, spaceID, userID, userName string, applic
 
 	switch stageRec.Name {
 	case dbmodels.NegotiationStage:
-		return errors.Errorf("перевод кандидата с текущего этапа на этап '%v' невозможен", stageRec.Name)
+		return fmt.Sprintf("перевод кандидата с текущего этапа на этап '%v' невозможен", stageRec.Name), nil
 	case dbmodels.AddedStage:
-		return errors.Errorf("перевод кандидата с текущего этапа на этап '%v' невозможен", stageRec.Name)
+		return fmt.Sprintf("перевод кандидата с текущего этапа на этап '%v' невозможен", stageRec.Name), nil
 	case dbmodels.ScreenStage:
 	case dbmodels.ManagerInterviewStage:
 	case dbmodels.ClientInterviewStage:
@@ -799,7 +815,7 @@ func (i impl) сhangeStage(tx *gorm.DB, spaceID, userID, userName string, applic
 		logger.
 			WithError(err).
 			Error("ошибка изменения этапа подбора для кандидата")
-		return errors.New("ошибка изменения этапа подбора для кандидата")
+		return "", errors.New("ошибка изменения этапа подбора для кандидата")
 	}
 	changes := applicanthistoryhandler.GetStageChange(stageRec.Name)
 	applicantHistory.SaveWithUser(spaceID, applicantID, applicantRec.VacancyID, userID, userName, dbmodels.HistoryTypeStageChange, changes)
@@ -814,7 +830,7 @@ func (i impl) сhangeStage(tx *gorm.DB, spaceID, userID, userName string, applic
 		notification := models.GetPushApplicantNewStage(vacancyRec.VacancyName, userName, stageRec.Name)
 		i.sendNotification(*vacancyRec, notification)
 	}(applicantRec.Applicant, userName)
-	return nil
+	return "", nil
 }
 
 func (i *impl) sendNotification(rec dbmodels.Vacancy, data models.NotificationData) {

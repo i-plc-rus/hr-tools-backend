@@ -621,9 +621,12 @@ func (c *applicantApiController) changeStage(ctx *fiber.Ctx) error {
 	}
 	spaceID := middleware.GetUserSpace(ctx)
 	userID := middleware.GetUserID(ctx)
-	err = applicant.Instance.ChangeStage(spaceID, userID, id, stageID)
+	hMsg, err := applicant.Instance.ChangeStage(spaceID, userID, id, stageID)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка перевода кандидата на другой этап подбора")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
