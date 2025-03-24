@@ -12,6 +12,7 @@ type Provider interface {
 	Update(spaceID, code, value string) error
 	List(spaceID string) (settingsList []dbmodels.SpaceSetting, err error)
 	GetValueByCode(spaceID string, code models.SpaceSettingCode) (value string, err error)
+	GetSpaceIDByCodeAndValue(code, value string) (spaceID string, err error)
 	Delete(spaceID, code string) error
 }
 
@@ -41,6 +42,21 @@ func (i impl) GetValueByCode(spaceID string, code models.SpaceSettingCode) (valu
 		return "", err
 	}
 	return value, nil
+}
+
+func (i impl) GetSpaceIDByCodeAndValue(code, value string) (spaceID string, err error) {
+	err = i.db.Model(dbmodels.SpaceSetting{}).
+		Select("space_id").
+		Where("code = ? and value = ?", code, value).
+		First(&spaceID).
+		Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", nil
+		}
+		return "", err
+	}
+	return spaceID, nil
 }
 
 func (i impl) List(spaceID string) (settingsList []dbmodels.SpaceSetting, err error) {
