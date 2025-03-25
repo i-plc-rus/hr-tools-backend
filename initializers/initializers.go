@@ -56,7 +56,7 @@ func InitAllServices(ctx context.Context) {
 	avitoclient.NewProvider()
 	applicanthistoryhandler.NewHandler()
 	spaceusershander.NewHandler()
-	spacehandler.NewHandler()
+	spacehandler.NewHandler(config.Conf.Sales.Email)
 	spaceauthhandler.NewHandler()
 	adminpanelauthhandler.NewHandler()
 	adminpanelhandler.NewHandler()

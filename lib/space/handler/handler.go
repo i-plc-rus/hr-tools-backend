@@ -7,6 +7,8 @@ import (
 	"hr-tools-backend/db"
 	companystructload "hr-tools-backend/lib/company-struct-load"
 	filestorage "hr-tools-backend/lib/file-storage"
+	messagetemplate "hr-tools-backend/lib/message-template"
+	"hr-tools-backend/lib/smtp"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
 	spacestore "hr-tools-backend/lib/space/store"
 	spaceusershander "hr-tools-backend/lib/space/users/hander"
@@ -21,18 +23,23 @@ type Provider interface {
 	CreateOrganizationSpace(request spaceapimodels.CreateOrganization) error
 	GetProfile(spaceID string) (spaceapimodels.ProfileData, error)
 	UpdateProfile(spaceID string, data spaceapimodels.ProfileData) error
+	SendLicenseRequest(spaceID, userID, text string) (hMsg string, err error)
 }
 
 var Instance Provider
 
-func NewHandler() {
+func NewHandler(salesEmail string) {
 	Instance = impl{
-		spaceStore: spacestore.NewInstance(db.DB),
+		spaceStore:     spacestore.NewInstance(db.DB),
+		spaceUserStore: spaceusersstore.NewInstance(db.DB),
+		salesEmail:     salesEmail,
 	}
 }
 
 type impl struct {
-	spaceStore spacestore.Provider
+	spaceStore     spacestore.Provider
+	spaceUserStore spaceusersstore.Provider
+	salesEmail     string
 }
 
 func (i impl) CreateOrganizationSpace(request spaceapimodels.CreateOrganization) error {
@@ -100,6 +107,40 @@ func (i impl) UpdateProfile(spaceID string, data spaceapimodels.ProfileData) err
 	}
 	return nil
 
+}
+
+func (i impl) SendLicenseRequest(spaceID, userID, text string) (hMsg string, err error) {
+	spaceRec, err := i.spaceStore.GetByID(spaceID)
+	if err != nil {
+		return "", err
+	}
+	if spaceRec == nil {
+		return "Профиль организации не найден", nil
+	}
+	userRec, err := i.spaceUserStore.GetByID(userID)
+	if err != nil {
+		return "", err
+	}
+	if userRec == nil {
+		return "Профиль пользователя не найден", nil
+	}
+	email, err := messagetemplate.Instance.GetSenderEmail(spaceID)
+	if err != nil {
+		return "", err
+	}
+	if email == "" {
+		return "в настройках пространства не указана почта для отправки", nil
+	}
+	msg, err := messagetemplate.BuildLicenceRenewMsg(text, *userRec, *spaceRec)
+	if err != nil {
+		return "", err
+	}
+	title := messagetemplate.GetLicenceRenewTitle()
+	err = smtp.Instance.SendHtmlEMail(email, i.salesEmail, msg, title, nil)
+	if err != nil {
+		return "", errors.Wrap(err, "ошибка отправки почты в отдел продаж")
+	}
+	return "", nil
 }
 
 func (i impl) createSpace(tx *gorm.DB, request spaceapimodels.CreateOrganization) (spaceID string, err error) {

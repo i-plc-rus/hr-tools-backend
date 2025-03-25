@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 	"hr-tools-backend/db"
 	applicanthistoryhandler "hr-tools-backend/lib/applicant-history"
 	applicantstore "hr-tools-backend/lib/applicant/store"
@@ -19,10 +22,8 @@ import (
 	msgtemplateapimodels "hr-tools-backend/models/api/message-template"
 	dbmodels "hr-tools-backend/models/db"
 	"html/template"
-
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"gorm.io/gorm"
+	"os"
+	"strings"
 )
 
 type Provider interface {
@@ -34,6 +35,7 @@ type Provider interface {
 	Update(spaceID, id string, request msgtemplateapimodels.MsgTemplateData) error
 	Delete(spaceID, id string) error
 	PdfPreview(ctx context.Context, spaceID, tplID, userID string) (body []byte, hMsg string, err error)
+	GetSenderEmail(spaceID string) (string, error)
 }
 
 var Instance Provider
@@ -67,7 +69,7 @@ func (i impl) SendEmailMessage(ctx context.Context, spaceID, templateID, applica
 		"applicant_id": applicantID,
 	})
 
-	email, err := i.getSenderEmail(spaceID, logger)
+	email, err := i.GetSenderEmail(spaceID)
 	if err != nil {
 		return "", err
 	}
@@ -168,7 +170,7 @@ func (i impl) MultiSendEmail(ctx context.Context, spaceID, userID string, data a
 		return nil, "", errors.New("smtp клиент не настроен")
 	}
 
-	email, err := i.getSenderEmail(spaceID, logger)
+	email, err := i.GetSenderEmail(spaceID)
 	if err != nil {
 		return nil, "", err
 	}
@@ -438,7 +440,7 @@ func (i impl) buildPdf(ctx context.Context, spaceID string, tplData models.Templ
 	return body, "", err
 }
 
-func (i impl) getSenderEmail(spaceID string, logger *log.Entry) (string, error) {
+func (i impl) GetSenderEmail(spaceID string) (string, error) {
 	email, err := i.spaceSettingsStore.GetValueByCode(spaceID, models.SpaceSenderEmail)
 	if err != nil {
 		return "", errors.Wrap(err, "ошибка получения почты для отправки из настроек пространства")
@@ -509,4 +511,47 @@ func (i impl) getFile(ctx context.Context, spaceID, tplID string, fileType dbmod
 		}, nil
 	}
 	return nil, nil
+}
+
+func BuildLicenceRenewMsg(text string, user dbmodels.SpaceUser, space dbmodels.Space) (string, error) {
+	tmplBody, err := getLicenceRenewTpl()
+	if err != nil {
+		return "", err
+	}
+	body := strings.Replace(string(tmplBody), "\n", "", -1)
+	tpl, err := template.New("msg_body").Parse(body)
+	if err != nil {
+		return "", err
+	}
+	data := models.SalesTemplateData{
+		OrganizationName: space.OrganizationName,
+		Inn:              space.Inn,
+		Kpp:              space.Kpp,
+		OGRN:             space.OGRN,
+		DirectorName:     space.DirectorName,
+		UserFIO:          user.GetFullName(),
+		UserPhoneNumber:  user.PhoneNumber,
+		TextRequest:      text,
+	}
+
+	buf := new(bytes.Buffer)
+	err = tpl.Execute(buf, data)
+	if err != nil {
+		return "", err
+	}
+	msg := buf.String()
+	return msg, nil
+}
+
+func GetLicenceRenewTitle() string {
+	return "Продление лицензии"
+}
+
+func getLicenceRenewTpl() ([]byte, error) {
+	filePath := "static/sales_licence_renew.html"
+	body, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, errors.Wrapf(err, "ошибка чтения файла шаблона %v", filePath)
+	}
+	return body, nil
 }
