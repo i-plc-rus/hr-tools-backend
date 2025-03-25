@@ -17,7 +17,7 @@ import (
 )
 
 type Provider interface {
-	CreateUser(request spaceapimodels.CreateUser) (id, hMsg string, err error)
+	CreateUser(request spaceapimodels.CreateUser, authorSpaceID string) (id, hMsg string, err error)
 	UpdateUser(userID string, request spaceapimodels.UpdateUser) error
 	DeleteUser(userID string) error
 	GetListUsers(spaceID string, filter spaceapimodels.SpaceUserFilter) (usersList []spaceapimodels.SpaceUser, rowCount int64, err error)
@@ -56,7 +56,7 @@ func (i impl) GetByID(userID string) (user spaceapimodels.SpaceUser, err error) 
 	return userDB.ToModel(), nil
 }
 
-func (i impl) CreateUser(request spaceapimodels.CreateUser) (id, hMsg string, err error) {
+func (i impl) CreateUser(request spaceapimodels.CreateUser, authorSpaceID string) (id, hMsg string, err error) {
 	userExist, err := i.spaceUserStore.ExistByEmail(request.Email)
 	if err != nil {
 		return "", "", err
@@ -71,7 +71,7 @@ func (i impl) CreateUser(request spaceapimodels.CreateUser) (id, hMsg string, er
 		Email:           request.Email,
 		IsActive:        true,
 		PhoneNumber:     request.PhoneNumber,
-		SpaceID:         request.SpaceID,
+		SpaceID:         authorSpaceID,
 		TextSign:        request.TextSign,
 		IsEmailVerified: !smtp.Instance.IsConfigured(),
 	}
@@ -110,15 +110,26 @@ func (i impl) UpdateUser(userID string, request spaceapimodels.UpdateUser) error
 
 	err = db.DB.Transaction(func(tx *gorm.DB) error {
 		updMap := map[string]interface{}{
-			"first_name":   request.FirstName,
-			"last_name":    request.LastName,
-			"is_admin":     request.IsAdmin,
-			"password":     authutils.GetMD5Hash(request.Password),
+			"first_name": request.FirstName,
+			"last_name":  request.LastName,
 			"phone_number": request.PhoneNumber,
-			"text_sign":    request.TextSign,
 		}
-		if request.JobTitleID != "" {
+		if request.IsAdmin != nil {
+			if *request.IsAdmin {
+				updMap["role"] = models.SpaceAdminRole
+			} else {
+				updMap["role"] = models.SpaceUserRole
+			}
+		}
+		if request.Password != nil && *request.Password != "" {
+			updMap["password"] = authutils.GetMD5Hash(*request.Password)
+		}
+
+		if request.JobTitleID != nil && *request.JobTitleID != "" {
 			updMap["job_title_id"] = request.JobTitleID
+		}
+		if request.TextSign != nil {
+			updMap["text_sign"] = *request.TextSign
 		}
 		isEmailChanged := user.Email != request.Email
 		if isEmailChanged {

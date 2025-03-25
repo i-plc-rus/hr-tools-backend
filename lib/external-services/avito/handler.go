@@ -41,6 +41,8 @@ func NewHandler() {
 		applicantStore:     applicantstore.NewInstance(db.DB),
 		applicantHistory:   applicanthistoryhandler.Instance,
 		tokenMap:           sync.Map{},
+		refreshMap:         map[string]avitoapimodels.ResponseToken{},
+		refreshMx:          sync.Mutex{},
 	}
 }
 
@@ -53,6 +55,8 @@ type impl struct {
 	applicantStore     applicantstore.Provider
 	applicantHistory   applicanthistoryhandler.Provider
 	tokenMap           sync.Map
+	refreshMap         map[string]avitoapimodels.ResponseToken
+	refreshMx          sync.Mutex
 }
 
 const (
@@ -108,28 +112,23 @@ func (i *impl) RequestToken(spaceID, code string) {
 		logger.WithError(err).Error("ошибка получения токена Avito")
 		return
 	}
-	err = i.storeToken(spaceID, *token, true)
+	_, err = i.storeToken(spaceID, *token, time.Now(), true)
 	if err != nil {
 		logger.Error(err)
 	}
 }
 
-func (i *impl) CheckConnected(spaceID string) bool {
-	_, ok := i.tokenMap.Load(spaceID)
-	if ok {
-		return true
-	}
-	data, ok, err := i.extStore.Get(spaceID, TokenCode)
-	if err != nil || !ok {
-		return false
-	}
-	token := avitoapimodels.ResponseToken{}
-	err = json.Unmarshal(data, &token)
+func (i *impl) CheckConnected(ctx context.Context, spaceID string) bool {
+	logger := i.getLogger(spaceID, "")
+	accessToken, hMsg, err := i.getToken(ctx, spaceID)
 	if err != nil {
+		logger.WithError(err).Error("ошибка получения токена avito")
 		return false
 	}
-	i.storeToken(spaceID, token, false)
-	return true
+	if hMsg != "" || accessToken == "" {
+		return false
+	}
+	return i.checkToken(spaceID, accessToken)
 }
 
 func (i *impl) VacancyPublish(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error) {
@@ -506,57 +505,65 @@ func (i *impl) getValue(spaceID string, code models.SpaceSettingCode) (string, e
 	return i.spaceSettingsStore.GetValueByCode(spaceID, code)
 }
 
-func (i *impl) storeToken(spaceID string, token avitoapimodels.ResponseToken, inDb bool) error {
+func (i *impl) storeToken(spaceID string, token avitoapimodels.ResponseToken, requestTime time.Time, inDb bool) (avitoapimodels.TokenData, error) {
 	tokenData := avitoapimodels.TokenData{
 		ResponseToken: token,
-		ExpiresAt:     time.Now(),
+		ExpiresAt:     requestTime.Add(time.Duration(token.ExpiresIN) * time.Second),
 	}
 	i.tokenMap.Store(spaceID, tokenData)
 	if inDb {
 		data, err := json.Marshal(token)
 		err = i.extStore.Set(spaceID, TokenCode, data)
 		if err != nil {
-			return errors.Wrap(err, "ошибка сохранения токена Avito в бд")
+			return tokenData, errors.Wrap(err, "ошибка сохранения токена Avito в бд")
 		}
 	}
 	i.updateUserID(spaceID, token.AccessToken)
-	return nil
+	return tokenData, nil
 }
 
 func (i *impl) getToken(ctx context.Context, spaceID string) (token, hMsg string, err error) {
-	if !i.CheckConnected(spaceID) {
-		return "", "Avito не подключен", nil
+	tokenData, ok, err := i.getTokenFromStorage(spaceID)
+	if err != nil {
+		return "", "", err
 	}
-	value, ok := i.tokenMap.Load(spaceID)
 	if !ok {
 		return "", "Avito не подключен", nil
 	}
-	tokenData := value.(avitoapimodels.TokenData)
-	if time.Now().After(tokenData.ExpiresAt) {
-		clientID, err := i.getValue(spaceID, models.AvitoClientIDSetting)
-		if err != nil {
-			return "", "", errors.Wrap(err, "ошибка получения настройки ClientID для Avito")
-		}
-
-		clientSecret, err := i.getValue(spaceID, models.AvitoClientSecretSetting)
-		if err != nil {
-			return "", "", errors.Wrap(err, "ошибка получения настройки ClientSecret для Avito")
-		}
-		req := avitoapimodels.RefreshToken{
-			RefreshToken: tokenData.RefreshToken,
-			ClientID:     clientID,
-			ClientSecret: clientSecret,
-		}
-		tokenResp, err := i.client.RefreshToken(ctx, req)
-		if err != nil {
-			return "", "", errors.New("ошибка получения токена для Avito")
-		}
-		err = i.storeToken(spaceID, *tokenResp, true)
-		if err != nil {
-			return "", "", errors.New("ошибка сохранения токена для Avito")
-		}
+	if !tokenData.IsExpired() {
+		return tokenData.AccessToken, "", nil
 	}
-	return tokenData.AccessToken, "", nil
+	body, _ := json.Marshal(tokenData)
+	logger := i.getLogger(spaceID, "").
+		WithField("token_data", string(body))
+	logger.Info("время жизни токена Avito истекло, запрашиваем новый")
+
+	clientID, err := i.getValue(spaceID, models.AvitoClientIDSetting)
+	if err != nil {
+		return "", "", errors.Wrap(err, "ошибка получения настройки ClientID для Avito")
+	}
+
+	clientSecret, err := i.getValue(spaceID, models.AvitoClientSecretSetting)
+	if err != nil {
+		return "", "", errors.Wrap(err, "ошибка получения настройки ClientSecret для Avito")
+	}
+	tokenResp, refreshed, err := i.refresh(ctx, tokenData.RefreshToken, clientID, clientSecret)
+	if err != nil {
+		return "", "", err
+	}
+	if !refreshed {
+		return tokenResp.AccessToken, "", nil
+	}
+	tokenData, err = i.storeToken(spaceID, tokenResp, time.Now(), true)
+	if err != nil {
+		tokenRespBody, _ := json.Marshal(tokenResp)
+		logger.
+			WithError(err).
+			WithField("refresh_token_data", string(tokenRespBody)).
+			Error("ошибка сохранения обновленного токена Avito")
+		return "", "", errors.Wrap(err, "ошибка сохранения обновленного токена")
+	}
+	return tokenResp.AccessToken, "", nil
 }
 
 func (i *impl) fillVacancyData(rec *dbmodels.Vacancy) (req *avitoapimodels.VacancyPubRequest, hMsg string) {
@@ -772,4 +779,74 @@ func (i *impl) getUserID(spaceID string) int64 {
 		return 0
 	}
 	return int64(binary.LittleEndian.Uint64(b))
+}
+
+func (i *impl) refresh(ctx context.Context, refreshToken, clientID, clientSecret string) (resp avitoapimodels.ResponseToken, refreshed bool, err error) {
+	i.refreshMx.Lock()
+	defer i.refreshMx.Unlock()
+	data, ok := i.refreshMap[refreshToken]
+	if ok {
+		return data, false, nil
+	}
+	req := avitoapimodels.RefreshToken{
+		RefreshToken: refreshToken,
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+	}
+
+	tokenResp, err := i.client.RefreshToken(ctx, req)
+	if err != nil {
+		return avitoapimodels.ResponseToken{}, false, errors.Wrap(err, "ошибка получения токена для Avito")
+	}
+	i.refreshMap[refreshToken] = *tokenResp
+	return *tokenResp, true, nil
+}
+
+func (i *impl) getTokenFromStorage(spaceID string) (avitoapimodels.TokenData, bool, error) {
+	logger := i.getLogger(spaceID, "")
+	value, ok := i.tokenMap.Load(spaceID)
+	if ok {
+		tokenData := value.(avitoapimodels.TokenData)
+		return tokenData, true, nil
+	}
+	rec, err := i.extStore.GetRec(spaceID, TokenCode)
+	if err != nil {
+		return avitoapimodels.TokenData{}, false, errors.Wrap(err, "ошибка загрузки токена из бд")
+	}
+	if rec == nil {
+		return avitoapimodels.TokenData{}, false, nil
+	}
+	data := rec.Value
+	token := avitoapimodels.ResponseToken{}
+	err = json.Unmarshal(data, &token)
+	if err != nil {
+		return avitoapimodels.TokenData{}, false, errors.Wrap(err, "ошибка сериализации токена из бд")
+	}
+	tokenData, err := i.storeToken(spaceID, token, rec.UpdatedAt, false)
+	if err != nil {
+		logger.WithError(err).Error("ошибка сохранения токена")
+	}
+	return tokenData, true, nil
+}
+
+func (i *impl) checkToken(spaceID string, accessToken string) (valid bool) {
+	logger := i.getLogger(spaceID, "").
+		WithField("accessToken", accessToken)
+	if accessToken == "" {
+		logger.Error("checkToken: отсутсвует токен avito")
+		return false
+	}
+	data, err := i.client.Self(context.TODO(), accessToken)
+	if err != nil {
+		logger.
+			WithError(err).
+			Error("ошибка получения информации о токене avito")
+		return false
+	}
+	if data == nil {
+		logger.
+			Error("отсутсвуют данные о токене в avito")
+		return false
+	}
+	return true
 }
