@@ -56,3 +56,7 @@ type MeEmployer struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
+
+func (t TokenData) IsExpired() bool {
+	return time.Now().After(t.ExpiresAt.Add(time.Second * time.Duration(t.ExpiresIN)))
+}
