@@ -17,6 +17,7 @@ type Provider interface {
 	GenerateHRSurvey(spaceID, vacancyInfo string) (resp gptmodels.GenVacancyDescResponse, err error)
 	ReGenerateHRSurvey(spaceID, vacancyInfo, questions string) (resp gptmodels.GenVacancyDescResponse, err error)
 	GenerateApplicantSurvey(spaceID, vacancyInfo, applicantInfo, hrSurvey string) (resp gptmodels.GenVacancyDescResponse, err error)
+	ScoreApplicant(spaceID, vacancyInfo, applicantInfo, hrSurvey, applicantAnswers string) (resp gptmodels.GenVacancyDescResponse, err error)
 }
 
 type impl struct {
@@ -48,6 +49,23 @@ const (
 	ApplicantSurveyPromt5   = "1. Сгенерировать 5 вопросов для оценки соответствия."
 	ApplicantSurveyPromt6   = "2. Формат: { \"questions\": [ { \"question_id\": \"\", \"question_text\": \"\", \"question_type\": \"\", \"answers\": [], \"weight\": <число>, \"comment\": \"\" } ] }."
 	ApplicantSurveyPromt7   = "3. Веса соответствуют анкете HR."
+
+	ApplicantScoreSysPromt = "Ты — нейросеть, помогаешь HR оценивать кандидатов."
+	ApplicantScorePromt1   = "Вакансия: %v"
+	ApplicantScorePromt2   = "Кандидат: %v"
+	ApplicantScorePromt3   = "Приоритеты HR: %v"
+	ApplicantScorePromt4   = "Ответы кандидата: %v"
+	ApplicantScorePromt5   = `Алгоритмическая оценка:"
+- c1: 30 баллов (вес 30)
+- c2: 10 баллов (вес 20)
+- c3: 30 баллов (вес 30)
+- c4: 15 баллов (вес 15)
+- c5: 15 баллов (вес 15)
+Итог: 90 баллов
+Нужно:
+1. Сгенерировать комментарий для каждого вопроса, объясняющий оценку, с учётом приоритетов HR и данных кандидата.
+2. Сгенерировать итоговый комментарий, суммирующий соответствие кандидата вакансии.
+3. Формат: {"details": [ { "question_id": "", "score": <число>, "comment": "<текст>" } ], "comment": "<итоговый текст>" }`
 )
 
 func (i impl) GenerateVacancyDescription(spaceID, text string) (resp gptmodels.GenVacancyDescResponse, err error) {
@@ -144,6 +162,28 @@ func (i impl) GenerateApplicantSurvey(spaceID, vacancyInfo, applicantInfo, hrSur
 			WithField("space_id", spaceID).
 			WithError(err).
 			Error("ошибка перегенерации вопросов для HR анкеты через YandexGPT")
+		return resp, err
+	}
+	return resp, nil
+}
+
+func (i impl) ScoreApplicant(spaceID, vacancyInfo, applicantInfo, hrSurvey, applicantAnswers string) (resp gptmodels.GenVacancyDescResponse, err error) {
+	userPromt := fmt.Sprintf("%v\r\n%v\r\n%v\r\n%v\r\n%v",
+		fmt.Sprintf(ApplicantScorePromt1, vacancyInfo),
+		fmt.Sprintf(ApplicantScorePromt2, applicantInfo),
+		fmt.Sprintf(ApplicantScorePromt3, hrSurvey),
+		fmt.Sprintf(ApplicantScorePromt4, applicantAnswers),
+		ApplicantScorePromt5,
+	)
+
+	resp.Description, err = yagptclient.
+		NewClient(config.Conf.YandexGPT.IAMToken, config.Conf.YandexGPT.CatalogID).
+		GenerateByPromtAndText(ApplicantScoreSysPromt, userPromt)
+	if err != nil {
+		log.
+			WithField("space_id", spaceID).
+			WithError(err).
+			Error("ошибка оценки  вопросов для HR анкеты через YandexGPT")
 		return resp, err
 	}
 	return resp, nil

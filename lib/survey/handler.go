@@ -2,17 +2,21 @@ package survey
 
 import (
 	"encoding/json"
+	"fmt"
 	"hr-tools-backend/db"
+	applicanthistoryhandler "hr-tools-backend/lib/applicant-history"
 	applicantstore "hr-tools-backend/lib/applicant/store"
 	gpthandler "hr-tools-backend/lib/gpt"
 	applicantsurveystore "hr-tools-backend/lib/survey/applicant-survey-store"
 	vacancysurveystore "hr-tools-backend/lib/survey/vacancy-survey-store"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
+	"hr-tools-backend/models"
 	surveyapimodels "hr-tools-backend/models/api/survey"
 	dbmodels "hr-tools-backend/models/db"
 	"sort"
 
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 type Provider interface {
@@ -20,6 +24,9 @@ type Provider interface {
 	GetHRSurvey(spaceID, vacancyID string) (*surveyapimodels.HRSurveyView, error)
 	GetApplicantSurvey(spaceID, vacancyID, applicantID string) (*surveyapimodels.ApplicantSurveyView, error)
 	GenApplicantSurvey(spaceID, vacancyID, applicantID string) (ok bool, err error)
+	GetPublicApplicantSurvey(id string) (*surveyapimodels.ApplicantSurveyView, error)
+	AnswerPublicApplicantSurvey(id string, answers []surveyapimodels.ApplicantSurveyAnswer) (hMsg string, err error)
+	AIScore(applicantSurveyRec dbmodels.ApplicantSurvey) (ok bool, err error)
 }
 
 var Instance Provider
@@ -185,10 +192,156 @@ func (i impl) GenApplicantSurvey(spaceID, vacancyID, applicantID string) (ok boo
 		ApplicantID:     applicantID,
 		Survey:          dbmodels.ApplicantSurveyQuestions{Questions: surveyData.Questions},
 		IsFilledOut:     false,
+		HrThreshold:     vacancyRec.HRSurvey.Survey.GetThreshold(),
 	}
 	_, err = i.aSurveyStore.Save(rec)
 	if err != nil {
 		return false, errors.Wrap(err, "ошибка сохранения анкеты")
+	}
+	return true, nil
+}
+
+func (i impl) GetPublicApplicantSurvey(id string) (*surveyapimodels.ApplicantSurveyView, error) {
+	rec, err := i.aSurveyStore.GetByID(id)
+	if err != nil {
+		return nil, errors.Wrap(err, "ошибка получения анкеты кандидата")
+	}
+	if rec == nil {
+		return nil, errors.New("анкета не найдена")
+	}
+
+	result := surveyapimodels.ApplicantSurveyView{
+		ApplicantSurvey: surveyapimodels.ApplicantSurvey{
+			Questions: rec.Survey.Questions,
+		},
+		IsFilledOut: rec.IsFilledOut,
+	}
+	return &result, nil
+}
+
+func (i impl) AnswerPublicApplicantSurvey(id string, answers []surveyapimodels.ApplicantSurveyAnswer) (hMsg string, err error) {
+	rec, err := i.aSurveyStore.GetByID(id)
+	if err != nil {
+		return "", errors.Wrap(err, "ошибка получения анкеты кандидата")
+	}
+	if rec == nil {
+		return "анкета не найдена", nil
+	}
+	if rec.IsFilledOut {
+		return "анкета уже заполнена", nil
+	}
+
+	answersMap := map[string]string{}
+	for _, answer := range answers {
+		answersMap[answer.QuestionID] = answer.Answer
+	}
+	totalAnswers := 0
+	for k, question := range rec.Survey.Questions {
+		selected := answersMap[question.QuestionID]
+		if selected == "" {
+			continue
+		}
+		if question.QuestionType == "single_choice" {
+			found := false
+			for _, answer := range question.Answers {
+				if selected == answer {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return fmt.Sprintf("для вопроса {%v} необходимо указать ответ из списка", question.QuestionText), nil
+			}
+		}
+		totalAnswers++
+		rec.Survey.Questions[k].Selected = answersMap[question.QuestionID]
+	}
+	if totalAnswers == len(rec.Survey.Questions) {
+		rec.IsFilledOut = true
+	}
+	_, err = i.aSurveyStore.Save(*rec)
+	if err != nil {
+		return "", errors.Wrap(err, "ошибка сохранения ответов в анкету кандидата")
+	}
+	return "", nil
+}
+
+func (i impl) AIScore(applicantSurveyRec dbmodels.ApplicantSurvey) (ok bool, err error) {
+	applicant, err := i.applicantStore.GetByID(applicantSurveyRec.SpaceID, applicantSurveyRec.ApplicantID)
+	if err != nil {
+		return false, errors.Wrap(err, "ошибка получения данных кандидата")
+	}
+	if applicant == nil {
+		return false, nil
+	}
+	if applicant.ApplicantSurvey == nil {
+		return false, nil
+	}
+
+	vacancy, err := i.vacancyStore.GetByID(applicantSurveyRec.SpaceID, applicant.VacancyID)
+	if err != nil {
+		return false, errors.Wrap(err, "ошибка получения вакансии")
+	}
+	if vacancy == nil || vacancy.HRSurvey == nil {
+		return false, nil
+	}
+
+	vacancyInfo, err := surveyapimodels.GetVacancyDataContent(*vacancy)
+	if err != nil {
+		return false, err
+	}
+
+	applicantInfo, err := surveyapimodels.GetApplicantDataContent(applicant.Applicant)
+	if err != nil {
+		return false, err
+	}
+
+	hrSurvey, err := surveyapimodels.GetHRDataContent(*vacancy.HRSurvey)
+	if err != nil {
+		return false, err
+	}
+	applicantAnswers, err := surveyapimodels.GetApplicantAnswersContent(applicantSurveyRec)
+	surveyResp, err := gpthandler.Instance.ScoreApplicant(vacancy.SpaceID, vacancyInfo, applicantInfo, hrSurvey, applicantAnswers)
+	if err != nil {
+		return false, errors.Wrap(err, "ошибка вызова ИИ при оценке кандидата")
+	}
+	applicantScore := dbmodels.ScoreAI{}
+	err = json.Unmarshal([]byte(surveyResp.Description), &applicantScore)
+	if err != nil {
+		return false, errors.Wrapf(err, "ошибка декодирования json в структуру оценки кандидата, json: %v", surveyResp.Description)
+	}
+
+	for _, score := range applicantScore.Details {
+		applicantScore.Score += score.Score
+	}
+	err = db.DB.Transaction(func(tx *gorm.DB) error {
+		aSurveyStore := applicantsurveystore.NewInstance(tx)
+		applicantStore := applicantstore.NewInstance(tx)
+
+		applicantSurveyRec.ScoreAI = applicantScore
+		applicantSurveyRec.IsScored = true
+		_, err = aSurveyStore.Save(applicantSurveyRec)
+		if err != nil {
+			return errors.Wrap(err, "ошибка сохранения анкеты с оценкой")
+		}
+
+		if applicantScore.Score < applicantSurveyRec.HrThreshold {
+			updMap := map[string]interface{}{
+				"status": models.ApplicantStatusArchive,
+			}
+			err = applicantStore.Update(applicant.ID, updMap)
+			if err != nil {
+				return errors.Wrap(err, "ошибка изменения статуса кандидата после оценки")
+			}
+			//добавление в историю по кандидату
+			applicantHistory := applicanthistoryhandler.NewTxHandler(tx)
+			changes := applicanthistoryhandler.GetArchiveChange(fmt.Sprintf("не прошел адаптивный фильтр, оценка %v от проходной %v", applicantScore.Score, applicantSurveyRec.HrThreshold))
+			applicantHistory.Save(applicant.SpaceID, applicant.ID, vacancy.ID, "", dbmodels.HistoryTypeArchive, changes)
+		}
+		return nil
+	})
+	if err != nil {
+		return false, err
 	}
 	return true, nil
 }

@@ -188,3 +188,31 @@ type ApplicantSurveyView struct {
 type ApplicantSurvey struct {
 	Questions []dbmodels.ApplicantSurveyQuestion `json:"questions"`
 }
+
+type ApplicantSurveyResponses struct {
+	Responses []ApplicantSurveyAnswer `json:"responses"`
+}
+
+type ApplicantSurveyAnswer struct {
+	QuestionID string `json:"question_id"` // Идентификатор вопроса
+	Answer     string `json:"answer"`      // Ответ кандидата
+}
+
+func GetApplicantAnswersContent(rec dbmodels.ApplicantSurvey) (string, error) {
+	result := ApplicantSurveyResponses{
+		Responses: make([]ApplicantSurveyAnswer, 0, len(rec.Survey.Questions)),
+	}
+
+	for _, question := range rec.Survey.Questions {
+		result.Responses = append(result.Responses, ApplicantSurveyAnswer{
+			QuestionID: question.QuestionID,
+			Answer:     question.Selected,
+		})
+	}
+
+	body, err := json.Marshal(result)
+	if err != nil {
+		return "", errors.Wrap(err, "ошибка десериализации структуры опросника HR")
+	}
+	return string(body), nil
+}

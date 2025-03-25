@@ -12,10 +12,11 @@ import (
 	apiv1 "hr-tools-backend/controllers/v1"
 	"hr-tools-backend/controllers/v1/dict"
 	"hr-tools-backend/controllers/v1/external"
+	publicapi "hr-tools-backend/controllers/v1/public"
 	"hr-tools-backend/fiberlog"
 	"hr-tools-backend/initializers"
-	"hr-tools-backend/middleware"
 	"hr-tools-backend/lib/ws"
+	"hr-tools-backend/middleware"
 	"os"
 	"os/signal"
 	"sync"
@@ -46,14 +47,13 @@ func main() {
 	app.Mount("/ws", wsApp)
 	ws.InitWs(wsApp)
 
-
 	//api
 	apiV1 := fiber.New()
 	apiV1.Use(fiberlog.New(*initializers.LoggerConfig))
 	app.Mount("/api/v1", apiV1)
 	apiV1.Use(cors.New(cors.Config{
-		AllowHeaders: "Origin, Content-Type, Accept, Authorization, Content-Disposition",
-		AllowMethods: "GET, POST, PATCH, DELETE, PUT",
+		AllowHeaders:  "Origin, Content-Type, Accept, Authorization, Content-Disposition",
+		AllowMethods:  "GET, POST, PATCH, DELETE, PUT",
 		ExposeHeaders: "Content-Disposition",
 	}))
 	apiv1.InitRegRouters(apiV1)
@@ -99,6 +99,10 @@ func main() {
 	apiV1.Mount("/admin_panel", adminPanel)
 	//admin.Use(middleware.SuperAdminRoleRequired())
 	apiv1.InitAdminApiRouters(adminPanel)
+
+	public := fiber.New()
+	apiV1.Mount("/public", public)
+	publicapi.InitPublicSurveyApiRouters(public)
 
 	app.Hooks().OnShutdown()
 
