@@ -13,7 +13,7 @@ type TemplateData struct {
 	SelfName            string
 	CompanyDirectorName string
 	CompanyAddress      string
-	CompanyContact        string
+	CompanyContact      string
 	Files               TemplateFiles
 }
 
@@ -22,8 +22,20 @@ type TemplateFiles struct {
 	Stamp *File
 	Sign  *File
 }
+
 type File struct {
 	FileName    string
 	ContentType string
 	Body        []byte
+}
+
+type SalesTemplateData struct {
+	OrganizationName string
+	Inn              string
+	Kpp              string
+	OGRN             string
+	DirectorName     string
+	UserFIO          string
+	UserPhoneNumber  string
+	TextRequest      string
 }

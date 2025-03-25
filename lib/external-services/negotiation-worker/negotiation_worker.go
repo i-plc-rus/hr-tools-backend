@@ -77,7 +77,6 @@ func (i impl) handle(ctx context.Context, integrationName string, jobHandler Neg
 		}
 		logger = logger.WithField("space_id", spaceID)
 		if !jobHandler.CheckConnected(spaceID) {
-			logger.Info("Спейс не подключен к интеграции")
 			continue
 		}
 
