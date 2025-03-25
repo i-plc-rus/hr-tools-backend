@@ -299,7 +299,6 @@ func (i impl) UpdateApplicant(spaceID string, id, userID string, data applicanta
 		"SpaceID":         spaceID,
 		"VacancyID":       data.VacancyID,
 		"Source":          data.Source,
-		"Status":          models.ApplicantStatusInProcess,
 		"FirstName":       data.FirstName,
 		"LastName":        data.LastName,
 		"MiddleName":      data.MiddleName,
@@ -324,6 +323,9 @@ func (i impl) UpdateApplicant(spaceID string, id, userID string, data applicanta
 	}
 	if rec.Status == models.ApplicantStatusArchive {
 		return errors.Errorf("обновление данных кандидата в статусе '%v' - недоступно", models.ApplicantStatusArchive)
+	}
+	if rec.Status == "" {
+		updMap["Status"] = models.ApplicantStatusInProcess
 	}
 	//сменили вакансию, ищем такой же шаг
 	if rec.VacancyID != data.VacancyID {
