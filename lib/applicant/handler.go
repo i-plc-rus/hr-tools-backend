@@ -771,7 +771,7 @@ func (i impl) сhangeStage(tx *gorm.DB, spaceID, userID, userName string, applic
 		return "кандидат не найден", nil
 	}
 	if applicantRec.Status != models.ApplicantStatusInProcess {
-		return fmt.Sprintf("перевода по этапам возможен только на статусе '%v'", models.ApplicantStatusInProcess), nil
+		return fmt.Sprintf("перевод по этапам возможен только на статусе '%v'", models.ApplicantStatusInProcess), nil
 	}
 	stageList, err := selectionStageStore.List(spaceID, applicantRec.VacancyID)
 	if err != nil {
