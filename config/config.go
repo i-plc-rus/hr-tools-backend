@@ -80,6 +80,9 @@ type Configuration struct {
 		Dashboards      string `default:"" env:"SUPERSET_DASHBOARDS"`
 		DashboardParams models.DashboardParams
 	}
+	UIParams struct {
+		SurveyPath string `default:"https://s.hr-tools.pro/public/survey/" env:"PUBLIC_SURVEY_UI_URL"`
+	}
 }
 
 func configFiles() []string {
