@@ -67,7 +67,8 @@ func (c *spaceUserController) CreateUser(ctx *fiber.Ctx) error {
 	if err := payload.Validate(); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
-	id, hMsg, err := spaceusershander.Instance.CreateUser(payload)
+	spaceID := middleware.GetUserSpace(ctx)
+	id, hMsg, err := spaceusershander.Instance.CreateUser(payload, spaceID)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка создания пользователя")
 	}
