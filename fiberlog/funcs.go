@@ -63,6 +63,9 @@ var (
 		if contentType != "" {
 			return ""
 		}
+		if largeReqestIgnoreMap[c.Path()] {
+			return ""
+		}
 		return string(c.Response().Body())
 	}
 	FuncTagReqHeaders FuncTag = func(c *fiber.Ctx, d *data) interface{} {
@@ -205,4 +208,10 @@ func getFuncTagMap(cfg Config, d *data) map[string]FuncTag {
 		}
 	}
 	return m
+}
+
+var largeReqestIgnoreMap = map[string]bool{}
+
+func init() {
+	largeReqestIgnoreMap["/api/v1/dict/city/find"] = true
 }

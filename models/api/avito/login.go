@@ -31,3 +31,7 @@ type SelfData struct {
 	ID    int64  `json:"id"`
 	Name  string `json:"name"`
 }
+
+func (t TokenData) IsExpired() bool {
+	return time.Now().After(t.ExpiresAt)
+}

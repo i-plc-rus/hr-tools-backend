@@ -11,8 +11,8 @@ type CreateUser struct {
 }
 
 type UpdateUser struct {
-	Password string `json:"password"`
-	SpaceUserCommonData
+	Password *string `json:"password"`
+	SpaceUserUpdateData
 }
 
 type SpaceUser struct {
@@ -35,13 +35,53 @@ type SpaceUserCommonData struct {
 	JobTitleID  string `json:"job_title_id"` // Идентификатор должности
 }
 
-func (r SpaceUserCommonData) Validate() error {
-	//TODO: add data validators
+type SpaceUserUpdateData struct {
+	SpaceID     string  `json:"space_id"`
+	Email       string  `json:"email"` // Email пользователя
+	FirstName   string  `json:"first_name"`
+	LastName    string  `json:"last_name"`
+	PhoneNumber string  `json:"phone_number"`
+	IsAdmin     *bool   `json:"is_admin"`
+	Role        string  `json:"role"`
+	TextSign    *string `json:"text_sign"`    // Текст подписи
+	JobTitleID  *string `json:"job_title_id"` // Идентификатор должности
+}
+
+func (r SpaceUserUpdateData) Validate() error {
 	if r.Email == "" {
 		return errors.New("не указан емайл")
 	}
-	if r.FirstName == "" && r.LastName == "" {
-		return errors.New("не указаны имя и фамилия")
+	if r.PhoneNumber == "" {
+		return errors.New("не указан телефон")
+	}
+	if r.FirstName == "" {
+		return errors.New("не указано имя")
+	}
+	if r.LastName == "" {
+		return errors.New("не указана фамилия")
+	}
+	return nil
+}
+
+func (r CreateUser) Validate() error {
+	if r.Password == "" {
+		return errors.New("не указан пароль")
+	}
+	return r.SpaceUserCommonData.Validate()
+}
+
+func (r SpaceUserCommonData) Validate() error {
+	if r.Email == "" {
+		return errors.New("не указан емайл")
+	}
+	if r.PhoneNumber == "" {
+		return errors.New("не указан телефон")
+	}
+	if r.FirstName == "" {
+		return errors.New("не указано имя")
+	}
+	if r.LastName == "" {
+		return errors.New("не указана фамилия")
 	}
 	return nil
 }

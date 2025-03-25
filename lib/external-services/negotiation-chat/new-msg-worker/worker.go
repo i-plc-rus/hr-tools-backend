@@ -75,7 +75,7 @@ func (i impl) handle(ctx context.Context, integrationName string, provider exter
 		return
 	}
 	for _, applicant := range list {
-		if !provider.CheckConnected(applicant.SpaceID) {
+		if !provider.CheckConnected(ctx, applicant.SpaceID) {
 			continue
 		}
 		msg, err := provider.GetLastInMessage(ctx, applicant)

@@ -80,6 +80,9 @@ type Configuration struct {
 		Dashboards      string `default:"" env:"SUPERSET_DASHBOARDS"`
 		DashboardParams models.DashboardParams
 	}
+	Sales struct {
+		Email string `default:"sales@hr.tools.pro" env:"SALES_EMAIL"`
+	}
 	UIParams struct {
 		SurveyPath string `default:"https://s.hr-tools.pro/public/survey/" env:"PUBLIC_SURVEY_UI_URL"`
 	}
