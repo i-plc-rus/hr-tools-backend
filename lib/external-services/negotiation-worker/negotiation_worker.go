@@ -14,7 +14,7 @@ import (
 )
 
 type NegotiationCheckJob interface {
-	CheckConnected(spaceID string) bool
+	CheckConnected(ctx context.Context, spaceID string) bool
 	GetCheckList(ctx context.Context, spaceID string, status models.VacancyPubStatus) ([]dbmodels.Vacancy, error)
 	HandleNegotiations(ctx context.Context, data dbmodels.Vacancy) error
 }
@@ -76,7 +76,7 @@ func (i impl) handle(ctx context.Context, integrationName string, jobHandler Neg
 			return
 		}
 		logger = logger.WithField("space_id", spaceID)
-		if !jobHandler.CheckConnected(spaceID) {
+		if !jobHandler.CheckConnected(ctx, spaceID) {
 			logger.Info("Спейс не подключен к интеграции")
 			continue
 		}

@@ -43,7 +43,7 @@ func InitHHApiRouters(app *fiber.App) {
 // @router /api/v1/space/ext/hh/check_connected [get]
 func (c *hhApiController) isConnect(ctx *fiber.Ctx) error {
 	spaceID := middleware.GetUserSpace(ctx)
-	connected := c.handler.CheckConnected(spaceID)
+	connected := c.handler.CheckConnected(ctx.Context(), spaceID)
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(connected))
 }
 

@@ -54,9 +54,9 @@ func (i impl) IsVailable(spaceID, applicantID string) (negotiationapimodels.Mess
 		if applicant.ChatID == "" {
 			return result, nil
 		}
-		result.IsAvailable = avitohandler.Instance.CheckConnected(spaceID)
+		result.IsAvailable = avitohandler.Instance.CheckConnected(context.TODO(), spaceID)
 	case models.ApplicantSourceHh:
-		result.IsAvailable = hhhandler.Instance.CheckConnected(spaceID)
+		result.IsAvailable = hhhandler.Instance.CheckConnected(context.TODO(), spaceID)
 	}
 	return result, nil
 }
@@ -90,7 +90,7 @@ func (i impl) GetMessages(spaceID, userID string, req negotiationapimodels.Messa
 		return nil, errors.New("кандидат не найден")
 	}
 
-	user, err:= i.userStore.GetByID(userID)
+	user, err := i.userStore.GetByID(userID)
 	if err != nil {
 		return nil, err
 	}
