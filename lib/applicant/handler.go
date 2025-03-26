@@ -30,7 +30,7 @@ import (
 type Provider interface {
 	ListOfNegotiation(spaceID string, filter dbmodels.NegotiationFilter) (list []negotiationapimodels.NegotiationView, err error)
 	UpdateComment(spaceID, id, userID string, comment string) error
-	UpdateStatus(spaceID, id, userID string, status models.NegotiationStatus) error
+	UpdateStatus(spaceID, id, userID string, status models.NegotiationStatus) (hMsg string, err error)
 	GetByID(spaceID, id string) (negotiationapimodels.NegotiationView, error)
 	CreateApplicant(spaceID, userID string, applicant applicantapimodels.ApplicantData) (string, error)
 	GetApplicant(spaceID string, id string) (applicantapimodels.ApplicantViewExt, error)
@@ -128,17 +128,17 @@ func (i impl) UpdateComment(spaceID, id, userID string, comment string) error {
 	return nil
 }
 
-func (i impl) UpdateStatus(spaceID, id, userID string, status models.NegotiationStatus) error {
+func (i impl) UpdateStatus(spaceID, id, userID string, status models.NegotiationStatus) (hMsg string, err error) {
 	rec, err := i.store.GetByID(spaceID, id)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if rec == nil {
-		return errors.New("запись не найдена")
+		return "", errors.New("запись не найдена")
 	}
-	ok, err := rec.IsAllowStatusChange(status)
-	if err != nil || !ok {
-		return err
+	msg, ok := rec.IsAllowStatusChange(status)
+	if msg != "" || !ok {
+		return msg, nil
 	}
 	changeMsg := fmt.Sprintf("Перевод отклика кандидата на статус %v", status)
 	updMap := map[string]interface{}{
@@ -150,7 +150,7 @@ func (i impl) UpdateStatus(spaceID, id, userID string, status models.Negotiation
 		updMap["status"] = models.ApplicantStatusInProcess
 		selectionStages, err := i.selectionStageStore.List(rec.SpaceID, rec.VacancyID)
 		if err != nil {
-			return errors.Wrap(err, "ошибка получения списка этапов подбора")
+			return "", errors.Wrap(err, "ошибка получения списка этапов подбора")
 		}
 		for _, stage := range selectionStages {
 			if stage.Name == dbmodels.AddedStage {
@@ -166,11 +166,11 @@ func (i impl) UpdateStatus(spaceID, id, userID string, status models.Negotiation
 	}
 	err = i.store.Update(id, updMap)
 	if err != nil {
-		return errors.Wrap(err, "ошибка обновления кандидата")
+		return "", errors.Wrap(err, "ошибка обновления кандидата")
 	}
 	changes := applicanthistoryhandler.GetUpdateChanges(changeMsg, rec.Applicant, updMap)
 	i.applicantHistory.Save(rec.SpaceID, id, rec.VacancyID, userID, dbmodels.HistoryTypeUpdate, changes)
-	return nil
+	return "", nil
 }
 
 func (i impl) GetByID(spaceID, id string) (negotiationapimodels.NegotiationView, error) {
