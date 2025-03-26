@@ -71,7 +71,7 @@ func InitAllServices(ctx context.Context) {
 	vacancyhandler.NewHandler()
 	vacancyreqhandler.NewHandler()
 	spacesettingshandler.NewHandler()
-	gpthandler.NewHandler()
+	gpthandler.NewHandler(false)
 	hhhandler.NewHandler()
 	avitohandler.NewHandler()
 	applicant.NewHandler()

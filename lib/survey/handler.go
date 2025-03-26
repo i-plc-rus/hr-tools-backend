@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hr-tools-backend/db"
+	"hr-tools-backend/lib/applicant"
 	applicanthistoryhandler "hr-tools-backend/lib/applicant-history"
 	applicantstore "hr-tools-backend/lib/applicant/store"
 	gpthandler "hr-tools-backend/lib/gpt"
@@ -16,6 +17,7 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -267,18 +269,18 @@ func (i impl) AnswerPublicApplicantSurvey(id string, answers []surveyapimodels.A
 }
 
 func (i impl) AIScore(applicantSurveyRec dbmodels.ApplicantSurvey) (ok bool, err error) {
-	applicant, err := i.applicantStore.GetByID(applicantSurveyRec.SpaceID, applicantSurveyRec.ApplicantID)
+	applicantRec, err := i.applicantStore.GetByID(applicantSurveyRec.SpaceID, applicantSurveyRec.ApplicantID)
 	if err != nil {
 		return false, errors.Wrap(err, "ошибка получения данных кандидата")
 	}
-	if applicant == nil {
+	if applicantRec == nil {
 		return false, nil
 	}
-	if applicant.ApplicantSurvey == nil {
+	if applicantRec.ApplicantSurvey == nil {
 		return false, nil
 	}
 
-	vacancy, err := i.vacancyStore.GetByID(applicantSurveyRec.SpaceID, applicant.VacancyID)
+	vacancy, err := i.vacancyStore.GetByID(applicantSurveyRec.SpaceID, applicantRec.VacancyID)
 	if err != nil {
 		return false, errors.Wrap(err, "ошибка получения вакансии")
 	}
@@ -291,7 +293,7 @@ func (i impl) AIScore(applicantSurveyRec dbmodels.ApplicantSurvey) (ok bool, err
 		return false, err
 	}
 
-	applicantInfo, err := surveyapimodels.GetApplicantDataContent(applicant.Applicant)
+	applicantInfo, err := surveyapimodels.GetApplicantDataContent(applicantRec.Applicant)
 	if err != nil {
 		return false, err
 	}
@@ -301,7 +303,7 @@ func (i impl) AIScore(applicantSurveyRec dbmodels.ApplicantSurvey) (ok bool, err
 		return false, err
 	}
 	applicantAnswers, err := surveyapimodels.GetApplicantAnswersContent(applicantSurveyRec)
-	surveyResp, err := gpthandler.Instance.ScoreApplicant(vacancy.SpaceID, vacancyInfo, applicantInfo, hrSurvey, applicantAnswers)
+	surveyResp, err := gpthandler.Instance.ScoreApplicant(vacancy.SpaceID, vacancy.ID, vacancyInfo, applicantInfo, hrSurvey, applicantAnswers)
 	if err != nil {
 		return false, errors.Wrap(err, "ошибка вызова ИИ при оценке кандидата")
 	}
@@ -316,27 +318,30 @@ func (i impl) AIScore(applicantSurveyRec dbmodels.ApplicantSurvey) (ok bool, err
 	}
 	err = db.DB.Transaction(func(tx *gorm.DB) error {
 		aSurveyStore := applicantsurveystore.NewInstance(tx)
-		applicantStore := applicantstore.NewInstance(tx)
-
 		applicantSurveyRec.ScoreAI = applicantScore
 		applicantSurveyRec.IsScored = true
 		_, err = aSurveyStore.Save(applicantSurveyRec)
 		if err != nil {
 			return errors.Wrap(err, "ошибка сохранения анкеты с оценкой")
 		}
+		applicantHistory := applicanthistoryhandler.NewTxHandler(tx)
+		changes := dbmodels.ApplicantChanges{
+			Description: fmt.Sprintf("Произведена оценка кандидата системой ИИ, оценка  %v/%v", applicantScore.Score, applicantSurveyRec.HrThreshold),
+		}
+		applicantHistory.Save(applicantRec.SpaceID, applicantRec.ID, vacancy.ID, "", dbmodels.HistoryAIScore, changes)
 
+		//для ошибки изменения статуса, ошибку только логируем, чтоб оценка сохранилась и повторно не выполнялась
 		if applicantScore.Score < applicantSurveyRec.HrThreshold {
-			updMap := map[string]interface{}{
-				"status": models.ApplicantStatusArchive,
-			}
-			err = applicantStore.Update(applicant.ID, updMap)
-			if err != nil {
-				return errors.Wrap(err, "ошибка изменения статуса кандидата после оценки")
-			}
-			//добавление в историю по кандидату
-			applicantHistory := applicanthistoryhandler.NewTxHandler(tx)
-			changes := applicanthistoryhandler.GetArchiveChange(fmt.Sprintf("не прошел адаптивный фильтр, оценка %v от проходной %v", applicantScore.Score, applicantSurveyRec.HrThreshold))
-			applicantHistory.Save(applicant.SpaceID, applicant.ID, vacancy.ID, "", dbmodels.HistoryTypeArchive, changes)
+			err = applicant.Instance.UpdateStatus(applicantRec.SpaceID, applicantRec.ID, "", models.NegotiationStatusRejected)
+		} else {
+			err = applicant.Instance.UpdateStatus(applicantRec.SpaceID, applicantRec.ID, "", models.NegotiationStatusAccepted)
+		}
+		if err != nil {
+			log.
+				WithError(err).
+				WithField("space_id", applicantRec.SpaceID).
+				WithField("applicant_id", applicantRec.ID).
+				Error("ошибка перевода кандидата после оценкии системой ИИ")
 		}
 		return nil
 	})
@@ -351,7 +356,7 @@ func (i impl) generateSurvey(vacancyRec dbmodels.Vacancy) (*surveyapimodels.HRSu
 	if err != nil {
 		return nil, err
 	}
-	surveyResp, err := gpthandler.Instance.GenerateHRSurvey(vacancyRec.SpaceID, content)
+	surveyResp, err := gpthandler.Instance.GenerateHRSurvey(vacancyRec.SpaceID, vacancyRec.ID, content)
 	if err != nil {
 		return nil, errors.Wrap(err, "ошибка вызова ИИ при геренации анкеты")
 	}
@@ -372,7 +377,7 @@ func (i impl) regenerateSurvey(vacancyRec dbmodels.Vacancy, questions []dbmodels
 	if err != nil {
 		return nil, err
 	}
-	surveyResp, err := gpthandler.Instance.ReGenerateHRSurvey(vacancyRec.SpaceID, content, questionsContent)
+	surveyResp, err := gpthandler.Instance.ReGenerateHRSurvey(vacancyRec.SpaceID, vacancyRec.ID, content, questionsContent)
 	if err != nil {
 		return nil, errors.Wrap(err, "ошибка вызова ИИ при перегеренации анкеты")
 	}
@@ -443,7 +448,7 @@ func (i impl) generateApplicantSurvey(vacancyRec dbmodels.Vacancy, applicantRec 
 		return nil, err
 	}
 
-	surveyResp, err := gpthandler.Instance.GenerateApplicantSurvey(vacancyRec.SpaceID, vacancyInfo, applicantInfo, hrSurvey)
+	surveyResp, err := gpthandler.Instance.GenerateApplicantSurvey(vacancyRec.SpaceID, vacancyRec.ID, vacancyInfo, applicantInfo, hrSurvey)
 	if err != nil {
 		return nil, errors.Wrap(err, "ошибка вызова ИИ при геренации анкеты для кандидата")
 	}

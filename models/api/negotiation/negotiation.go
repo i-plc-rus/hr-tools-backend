@@ -2,7 +2,6 @@ package negotiationapimodels
 
 import (
 	"fmt"
-	"hr-tools-backend/config"
 	"hr-tools-backend/models"
 	dbmodels "hr-tools-backend/models/db"
 	"strings"
@@ -30,7 +29,6 @@ type NegotiationView struct {
 	Gender            models.GenderType        `json:"gender"`                   // Пол кандидата
 	Relocation        models.RelocationType    `json:"relocation"`               // Готовность к переезду
 	Params            dbmodels.ApplicantParams `json:"params"`
-	SurveyUrl         string                   `json:"survey_url"` // Ссылка на анкету для кандидата
 }
 
 func NegotiationConvertExt(rec dbmodels.ApplicantExt) NegotiationView {
@@ -88,9 +86,6 @@ func NegotiationConvert(rec dbmodels.Applicant) NegotiationView {
 			result.StageTime += " "
 		}
 		result.StageTime = result.StageTime + fmt.Sprintf("%v мин", minutes)
-	}
-	if rec.ApplicantSurvey != nil {
-		result.SurveyUrl = config.Conf.UIParams.SurveyPath + rec.ApplicantSurvey.ID
 	}
 
 	return result
