@@ -15,6 +15,7 @@ import (
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	"hr-tools-backend/models"
 	dbmodels "hr-tools-backend/models/db"
+	"runtime/debug"
 	"time"
 )
 
@@ -50,6 +51,13 @@ func (i impl) getLogger(integrationName string) *log.Entry {
 }
 
 func (i impl) run(ctx context.Context, integrationName string, provider externalservices.JobSiteProvider) {
+	defer func() {
+		if r := recover(); r != nil {
+			i.getLogger(integrationName).
+				WithField("panic_stack", string(debug.Stack())).
+				Errorf("panic: (%v)", r)
+		}
+	}()
 	period := time.Second
 	logger := i.getLogger(integrationName)
 	for {
@@ -93,10 +101,10 @@ func (i impl) handle(ctx context.Context, integrationName string, provider exter
 		b, ok, err := i.extStore.Get(applicant.SpaceID, getChatKey(applicant.ID))
 		if err != nil {
 			logger.WithError(err).
-			WithField("space_id", applicant.SpaceID).
-			WithField("vacancy_id", applicant.VacancyID).
-			WithField("applicant_id", applicant.ID).
-			Warn("не удалось получить дату последнего обновления")
+				WithField("space_id", applicant.SpaceID).
+				WithField("vacancy_id", applicant.VacancyID).
+				WithField("applicant_id", applicant.ID).
+				Warn("не удалось получить дату последнего обновления")
 		} else if ok {
 			lastMsgTime := time.Unix(int64(binary.LittleEndian.Uint64(b)), 0)
 			if !msg.MessageDateTime.After(lastMsgTime) {

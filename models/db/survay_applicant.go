@@ -11,6 +11,7 @@ type ApplicantSurvey struct {
 	ApplicantID     string                   `gorm:"type:varchar(36);index"`
 	Survey          ApplicantSurveyQuestions `gorm:"type:jsonb"`
 	ScoreAI         ScoreAI                  `gorm:"type:jsonb"`
+	IsSent          *bool                    // Анкета отправлена кандидату
 	IsFilledOut     bool                     // Анкета заполнена кандидатом и может использоваться для оценки
 	IsScored        bool                     // Анкета получила оценку от нейросети
 	HrThreshold     int                      // Порог адаптивного фильтра

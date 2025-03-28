@@ -2,12 +2,12 @@ package applicantsurveyscoreworker
 
 import (
 	"context"
+	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
 	"hr-tools-backend/lib/survey"
 	applicantsurveystore "hr-tools-backend/lib/survey/applicant-survey-store"
+	"runtime/debug"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // оценка кандидата
@@ -35,6 +35,13 @@ func (i impl) getLogger() *log.Entry {
 }
 
 func (i impl) run(ctx context.Context) {
+	defer func() {
+		if r := recover(); r != nil {
+			i.getLogger().
+				WithField("panic_stack", string(debug.Stack())).
+				Errorf("panic: (%v)", r)
+		}
+	}()
 	period := 5 * time.Second
 	logger := i.getLogger()
 	for {
