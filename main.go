@@ -6,9 +6,7 @@ import (
 	swaggermiddleware "github.com/go-openapi/runtime/middleware"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	fiberRecover "github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/markbates/pkger"
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/config"
 	apiv1 "hr-tools-backend/controllers/v1"
@@ -49,9 +47,7 @@ func main() {
 
 	app.Use(swagger.New(ops, swaggerCfg))
 
-	app.Use("/static", filesystem.New(filesystem.Config{
-		Root: pkger.Dir("/static/static_web"),
-	}))
+	app.Static("/static", "./static/static_web") 
 
 	wsApp := fiber.New(fiber.Config{
 		BodyLimit: 10 * 1024 * 1024, // limit of 10MB
