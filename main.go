@@ -40,11 +40,11 @@ func main() {
 		FilePath: "./docs/swagger.json",
 	}
 	ops := swaggermiddleware.SwaggerUIOpts{
-		SwaggerURL:       "/static/swagger-ui-bundle.js",
-		SwaggerPresetURL: "/static/swagger-ui-standalone-preset.js",
-		SwaggerStylesURL: "/static/swagger-ui.css",
-		Favicon16:        "/static/favicon-16x16.png",
-		Favicon32:        "/static/favicon-32x32.png",
+		SwaggerURL:       "./static/swagger-ui-bundle.js",
+		SwaggerPresetURL: "./static/swagger-ui-standalone-preset.js",
+		SwaggerStylesURL: "./static/swagger-ui.css",
+		Favicon16:        "./static/favicon-16x16.png",
+		Favicon32:        "./static/favicon-32x32.png",
 	}
 
 	app.Use(swagger.New(ops, swaggerCfg))
