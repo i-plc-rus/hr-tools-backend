@@ -551,13 +551,15 @@ func (i *impl) fillAreas(areas []hhapimodels.Area) {
 func (i *impl) getArea(ctx context.Context, city *dbmodels.City) (hhapimodels.DictItem, error) {
 	if len(i.cityMap) == 0 {
 		areas, err := i.client.GetAreas(ctx)
+		if err != nil {
+			return hhapimodels.DictItem{}, err
+		}
 		for _, area := range areas {
 			if area.Name == "Россия" {
 				i.fillAreas(area.Areas)
 				break
 			}
 		}
-		return hhapimodels.DictItem{}, err
 	}
 	id, ok := i.cityMap[city.City]
 	if ok {
