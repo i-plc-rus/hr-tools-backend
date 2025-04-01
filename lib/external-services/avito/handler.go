@@ -658,7 +658,7 @@ func (i *impl) CheckIsModerationDone(ctx context.Context, spaceID string, list [
 		vacancyMap[rec.AvitoPublishID] = rec
 	}
 	req := avitoapimodels.StatusRequest{
-		IDs: nil,
+		IDs: ids,
 	}
 	logger := i.getLogger(spaceID, "")
 	statusResp, err := i.client.VacancyStatus(ctx, accessToken, req)
@@ -680,12 +680,28 @@ func (i *impl) CheckIsModerationDone(ctx context.Context, spaceID string, list [
 		if newStatus == rec.AvitoStatus {
 			continue
 		}
+		body, _ := json.Marshal(status)
+		logger := logger.
+			WithField("status_response", string(body)).
+			WithField("vacancy_id", rec.ID).
+			WithField("avito_status", newStatus)
+
+		reasons := fmt.Sprintf("%+v", status.Vacancy.Reasons)
+		if !status.IsModerationStart() {
+			errorReason, ok := status.GetError()
+			if !ok {
+				logger.Info("Модерация вакансии еще не началась")
+				continue
+			}
+			reasons = errorReason
+		}
 		updMap := map[string]interface{}{
 			"avito_id":      status.Vacancy.ID,
 			"avito_uri":     status.Vacancy.Url,
-			"avito_reasons": fmt.Sprintf("%+v", status.Vacancy.Reasons),
+			"avito_reasons": reasons,
 			"avito_status":  newStatus,
 		}
+		logger.Info("Изменен статус публикации")
 		err = i.vacancyStore.Update(spaceID, rec.ID, updMap)
 		if err != nil {
 			logger.

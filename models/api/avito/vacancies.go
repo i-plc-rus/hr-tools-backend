@@ -1,14 +1,11 @@
 package avitoapimodels
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	"hr-tools-backend/models"
+	"strings"
 )
-
-type VacancyStatusInfo struct {
-	Status string `json:"url"`
-	Url    string `json:"url"`
-}
 
 type VacancyAttach struct {
 	ID int `json:"id"` // идентификатор вакансии в виде: 3364561973
@@ -65,7 +62,7 @@ type StatusResponse []StatusItem
 
 type StatusItem struct {
 	ID         string        `json:"id"`
-	LastAction interface{}   `json:"last_action"`
+	LastAction LastAction    `json:"last_action"`
 	Vacancy    VacancyStatus `json:"vacancy"`
 }
 
@@ -77,16 +74,39 @@ type VacancyStatus struct {
 	Reasons          interface{} `json:"reasons"`
 }
 
+type LastAction struct {
+	Error  LastActionError `json:"error"`
+	Status string          `json:"status"`
+}
+
+type LastActionError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+func (s StatusItem) IsModerationStart() bool {
+	return s.Vacancy.ModerationStatus != ""
+}
+
+func (s StatusItem) GetError() (string, bool) {
+	if strings.ToLower(s.LastAction.Status) != "error" {
+		return "", false
+	}
+	return fmt.Sprintf("(%v) %v", s.LastAction.Error.Code, s.LastAction.Error.Message), true
+}
+
 func (v VacancyStatus) GetPubStatus() models.VacancyPubStatus {
-	switch v.Status {
-	case "closed", "expired", "archived":
-		return models.VacancyPubStatusClosed
-	case "created", "new":
+	switch v.ModerationStatus {
+	case "in_progress":
 		return models.VacancyPubStatusModeration
-	case "blocked", "rejected":
+	case "allowed":
+		return models.VacancyPubStatusPublished
+	case "blocked":
+		return models.VacancyPubStatusRejected
+	case "rejected":
 		return models.VacancyPubStatusRejected
 	default:
-		return models.VacancyPubStatusPublished
+		return models.VacancyPubStatusNone
 	}
 }
 
