@@ -2,7 +2,6 @@ package webhooksapi
 
 import (
 	"context"
-	"encoding/json"
 	"hr-tools-backend/lib/whatsup"
 	"net/http"
 
@@ -52,15 +51,7 @@ func InitwhatsAppWebhookApiRouters(app *fiber.App) {
 // @Failure 500
 // @router /api/v1/webhooks/whatsapp/business [post]
 func HandleBusinessNotification(ctx context.Context, notification *business.Notification) *webhooks.Response {
-	for _, entity := range notification.Entry {
-		logger := log.WithField("business_account_id", entity.ID)
-		body, err := json.Marshal(notification)
-		if err == nil {
-			logger = logger.
-				WithField("request_body", string(body))
-		}
-		logger.Info("Получен вебхук whatsApp business API")
-	}
+	log.Infof("Получен вебхук whatsApp business API: %+v\n", notification)
 	return &webhooks.Response{StatusCode: http.StatusOK}
 }
 
@@ -73,14 +64,8 @@ func HandleBusinessNotification(ctx context.Context, notification *business.Noti
 // @Failure 500
 // @router /api/v1/webhooks/whatsapp/messages [post]
 func HandleMessageNotification(ctx context.Context, notification *message.Notification) *webhooks.Response {
+	log.Infof("Получен вебхук whatsApp messages API: %+v\n", notification)
 	for _, entity := range notification.Entry {
-		logger := log.WithField("business_account_id", entity.ID)
-		body, err := json.Marshal(notification)
-		if err == nil {
-			logger = logger.
-				WithField("request_body", string(body))
-		}
-		logger.Info("Получен вебхук whatsApp messages API")
 		whatsup.Instance.HandleWebHook(ctx, entity)
 	}
 	return &webhooks.Response{StatusCode: http.StatusOK}
