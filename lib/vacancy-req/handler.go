@@ -33,7 +33,7 @@ type Provider interface {
 	ChangeStatus(spaceID, id, userID string, status models.VRStatus) (hMsh string, err error)
 	Approve(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) (hMsh string, err error)
 	Reject(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) (hMsh string, err error)
-	CreateVacancy(spaceID, id, userID string) error
+	CreateVacancy(spaceID, id, userID string) (hMsh string, err error)
 	ToPin(id, userID string, isSet bool) error
 	ToFavorite(id, userID string, isSet bool) error
 }
@@ -484,22 +484,22 @@ func (i impl) publish(spaceID, id, userID string) error {
 	return nil
 }
 
-func (i impl) CreateVacancy(spaceID, id, userID string) error {
+func (i impl) CreateVacancy(spaceID, id, userID string) (hMsh string, err error) {
 	rec, err := i.getRec(spaceID, id)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if rec.Status != models.VRStatusAccepted {
-		return errors.New("для создания вакансии, необходимо согласовать заявку")
+		return "для создания вакансии, необходимо согласовать заявку", nil
 	}
 	exist, err := i.checkVacancyExist(spaceID, id, userID)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if exist {
-		return errors.New("вакансии уже создана")
+		return "вакансии уже создана", nil
 	}
-	return i.publish(spaceID, id, userID)
+	return "", i.publish(spaceID, id, userID)
 }
 
 func (i impl) ToPin(id, userID string, isSet bool) error {
