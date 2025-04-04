@@ -680,12 +680,16 @@ func (i *impl) CheckIsModerationDone(ctx context.Context, spaceID string, list [
 		if newStatus == rec.AvitoStatus {
 			continue
 		}
-		body, _ := json.Marshal(status)
 		logger := logger.
-			WithField("status_response", string(body)).
 			WithField("vacancy_id", rec.ID).
 			WithField("avito_status", newStatus)
-
+		body, err := json.Marshal(status)
+		if err != nil {
+			logger.WithError(err).Warn("ошибка сериализации структуры StatusItem")
+		} else {
+			logger = logger.
+				WithField("status_response", string(body))
+		}
 		reasons := fmt.Sprintf("%+v", status.Vacancy.Reasons)
 		if !status.IsModerationStart() {
 			errorReason, ok := status.GetError()
