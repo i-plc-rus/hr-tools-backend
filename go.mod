@@ -16,6 +16,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sheeiavellie/go-yandexgpt v0.1.0
 	github.com/sirupsen/logrus v1.9.0
+	github.com/stretchr/testify v1.9.0
 	github.com/swaggo/swag v1.16.3
 	github.com/xuri/excelize/v2 v2.9.0
 	gorm.io/driver/postgres v1.5.9
@@ -23,8 +24,9 @@ require (
 )
 
 require (
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fasthttp/websocket v1.5.8 // indirect
-	github.com/gobuffalo/here v0.6.0 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/savsgio/gotils v0.0.0-20240303185622-093b76447511 // indirect
 	golang.org/x/image v0.21.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
@@ -62,7 +64,6 @@ require (
 	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
-	github.com/markbates/pkger v0.17.1
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
