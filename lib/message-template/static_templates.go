@@ -10,6 +10,11 @@ import (
 	"strings"
 )
 
+const(
+	licenceRenewTitle = "Продление лицензии"
+	survaySuggestTitle = "Пройти тестирование"
+)
+
 func BuildLicenceRenewMsg(text string, user dbmodels.SpaceUser, space dbmodels.Space) (string, error) {
 	tpl, err := getTemplate("static/sales_licence_renew.html", true)
 	if err != nil {
@@ -35,7 +40,7 @@ func BuildLicenceRenewMsg(text string, user dbmodels.SpaceUser, space dbmodels.S
 }
 
 func GetLicenceRenewTitle() string {
-	return "Продление лицензии"
+	return licenceRenewTitle
 }
 
 func GetSurvaySuggestMessage(companyName, link string, isHtml bool) (msg string, err error) {
@@ -63,7 +68,7 @@ func GetSurvaySuggestMessage(companyName, link string, isHtml bool) (msg string,
 }
 
 func GetSurvaySuggestTitle() string {
-	return "Пройти тестирование,"
+	return survaySuggestTitle
 }
 
 func getTemplate(filePath string, isHtml bool) (*template.Template, error) {
