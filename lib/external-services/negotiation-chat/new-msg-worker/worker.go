@@ -74,8 +74,14 @@ func (i impl) handle(ctx context.Context, integrationName string, provider exter
 		logger.WithError(err).Error("ошибка получения списка активных кандидатов")
 		return
 	}
+	connectedMap := make(map[string]bool, len(list))
 	for _, applicant := range list {
-		if !provider.CheckConnected(applicant.SpaceID) {
+		isConnected, ok := connectedMap[applicant.SpaceID]
+		if !ok {
+			isConnected = provider.CheckConnected(ctx, applicant.SpaceID)
+			connectedMap[applicant.SpaceID] = isConnected
+		}
+		if !isConnected {
 			continue
 		}
 		msg, err := provider.GetLastInMessage(ctx, applicant)
@@ -93,10 +99,10 @@ func (i impl) handle(ctx context.Context, integrationName string, provider exter
 		b, ok, err := i.extStore.Get(applicant.SpaceID, getChatKey(applicant.ID))
 		if err != nil {
 			logger.WithError(err).
-			WithField("space_id", applicant.SpaceID).
-			WithField("vacancy_id", applicant.VacancyID).
-			WithField("applicant_id", applicant.ID).
-			Warn("не удалось получить дату последнего обновления")
+				WithField("space_id", applicant.SpaceID).
+				WithField("vacancy_id", applicant.VacancyID).
+				WithField("applicant_id", applicant.ID).
+				Warn("не удалось получить дату последнего обновления")
 		} else if ok {
 			lastMsgTime := time.Unix(int64(binary.LittleEndian.Uint64(b)), 0)
 			if !msg.MessageDateTime.After(lastMsgTime) {

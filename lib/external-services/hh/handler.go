@@ -33,7 +33,6 @@ var Instance externalservices.JobSiteProvider
 
 func NewHandler() {
 	Instance = &impl{
-		//client:             hhclient.Instance,
 		client:             hhclient.Instance,
 		extStore:           extservicestore.NewInstance(db.DB),
 		spaceUserStore:     spaceusersstore.NewInstance(db.DB),
@@ -44,6 +43,8 @@ func NewHandler() {
 		cityMap:            map[string]string{},
 		filesStorage:       filestorage.Instance,
 		applicantHistory:   applicanthistoryhandler.Instance,
+		refreshMap:         map[string]hhapimodels.ResponseToken{},
+		refreshMx:          sync.Mutex{},
 	}
 }
 
@@ -58,6 +59,8 @@ type impl struct {
 	cityMap            map[string]string
 	filesStorage       filestorage.Provider
 	applicantHistory   applicanthistoryhandler.Provider
+	refreshMap         map[string]hhapimodels.ResponseToken
+	refreshMx          sync.Mutex
 }
 
 const (
@@ -113,35 +116,23 @@ func (i *impl) RequestToken(spaceID, code string) {
 		logger.WithError(err).Error("ошибка получения токена HH")
 		return
 	}
-	err = i.storeToken(spaceID, *token, time.Now(), true)
+	_, err = i.storeToken(spaceID, *token, time.Now(), true)
 	if err != nil {
 		logger.Error(err)
 	}
 }
 
-func (i *impl) CheckConnected(spaceID string) bool {
+func (i *impl) CheckConnected(ctx context.Context, spaceID string) bool {
 	logger := i.getLogger(spaceID, "")
-	_, ok := i.tokenMap.Load(spaceID)
-	if ok {
-		return true
-	}
-	rec, err := i.extStore.GetRec(spaceID, TokenCode)
+	accessToken, hMsg, err := i.getToken(ctx, spaceID)
 	if err != nil {
-		logger.WithError(err).Error("ошибка загрузки токена из бд")
+		logger.WithError(err).Error("ошибка получения токена hh")
 		return false
 	}
-	if rec == nil {
+	if hMsg != "" || accessToken == "" {
 		return false
 	}
-	data := rec.Value
-	token := hhapimodels.ResponseToken{}
-	err = json.Unmarshal(data, &token)
-	if err != nil {
-		logger.WithError(err).Error("ошибка сериализации токена из бд")
-		return false
-	}
-	i.storeToken(spaceID, token, rec.UpdatedAt, false)
-	return true
+	return i.checkToken(spaceID, accessToken)
 }
 
 func (i *impl) VacancyPublish(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error) {
@@ -560,13 +551,15 @@ func (i *impl) fillAreas(areas []hhapimodels.Area) {
 func (i *impl) getArea(ctx context.Context, city *dbmodels.City) (hhapimodels.DictItem, error) {
 	if len(i.cityMap) == 0 {
 		areas, err := i.client.GetAreas(ctx)
+		if err != nil {
+			return hhapimodels.DictItem{}, err
+		}
 		for _, area := range areas {
 			if area.Name == "Россия" {
 				i.fillAreas(area.Areas)
 				break
 			}
 		}
-		return hhapimodels.DictItem{}, err
 	}
 	id, ok := i.cityMap[city.City]
 	if ok {
@@ -585,7 +578,7 @@ func (i *impl) getArea(ctx context.Context, city *dbmodels.City) (hhapimodels.Di
 	return hhapimodels.DictItem{}, errors.New("город публикации не найден в справочнике")
 }
 
-func (i *impl) storeToken(spaceID string, token hhapimodels.ResponseToken, requestTime time.Time, inDb bool) error {
+func (i *impl) storeToken(spaceID string, token hhapimodels.ResponseToken, requestTime time.Time, inDb bool) (hhapimodels.TokenData, error) {
 	tokenData := hhapimodels.TokenData{
 		ResponseToken: token,
 		ExpiresAt:     requestTime.Add(time.Duration(token.ExpiresIN) * time.Second),
@@ -595,41 +588,45 @@ func (i *impl) storeToken(spaceID string, token hhapimodels.ResponseToken, reque
 		data, err := json.Marshal(token)
 		err = i.extStore.Set(spaceID, TokenCode, data)
 		if err != nil {
-			return errors.Wrap(err, "ошибка сохранения токена HH в бд")
+			return tokenData, errors.Wrap(err, "ошибка сохранения токена HH в бд")
 		}
 	}
-	return nil
+	return tokenData, nil
 }
 
-func (i *impl) getToken(ctx context.Context, spaceID string) (token, hMsg string, err error) {
-	if !i.CheckConnected(spaceID) {
-		return "", "HeadHunter не подключен", nil
+func (i *impl) getToken(ctx context.Context, spaceID string) (accessToken, hMsg string, err error) {
+	tokenData, ok, err := i.getTokenFromStorage(spaceID)
+	if err != nil {
+		return "", "", err
 	}
-	value, ok := i.tokenMap.Load(spaceID)
 	if !ok {
 		return "", "HeadHunter не подключен", nil
 	}
-	tokenData := value.(hhapimodels.TokenData)
-	if time.Now().After(tokenData.ExpiresAt.Add(time.Second * time.Duration(tokenData.ExpiresIN))) {
-		body, _ := json.Marshal(tokenData)
-		logger := i.getLogger(spaceID, "").
-			WithField("token_data", string(body))
-		logger.Info("время жизни токена истекло, запрашиваем новый")
-
-		req := hhapimodels.RefreshToken{
-			RefreshToken: tokenData.RefreshToken,
-		}
-		tokenResp, err := i.client.RefreshToken(ctx, req)
-		if err != nil {
-			return "", "", errors.Wrap(err, "ошибка получения токена для HeadHunter")
-		}
-		err = i.storeToken(spaceID, *tokenResp, time.Now(), true)
-		if err != nil {
-			tokenRespBody, _ := json.Marshal(tokenResp)
-			return "", "", errors.Wrapf(err, "ошибка сохранения токена для HeadHunter, ответ: %v", string(tokenRespBody))
-		}
+	if !tokenData.IsExpired() {
+		return tokenData.AccessToken, "", nil
 	}
-	return tokenData.AccessToken, "", nil
+	body, _ := json.Marshal(tokenData)
+	logger := i.getLogger(spaceID, "").
+		WithField("token_data", string(body))
+	logger.Info("время жизни токена HH истекло, запрашиваем новый")
+
+	tokenResp, refreshed, err := i.refresh(ctx, tokenData.RefreshToken)
+	if err != nil {
+		return "", "", err
+	}
+	if !refreshed {
+		return tokenResp.AccessToken, "", nil
+	}
+	tokenData, err = i.storeToken(spaceID, tokenResp, time.Now(), true)
+	if err != nil {
+		tokenRespBody, _ := json.Marshal(tokenResp)
+		logger.
+			WithError(err).
+			WithField("refresh_token_data", string(tokenRespBody)).
+			Error("ошибка сохранения обновленного токена HH")
+		return "", "", errors.Wrap(err, "ошибка сохранения обновленного токена")
+	}
+	return tokenResp.AccessToken, "", nil
 }
 
 func (i *impl) fillVacancyData(ctx context.Context, rec *dbmodels.Vacancy) (req *hhapimodels.VacancyPubRequest, hMsg string) {
@@ -761,4 +758,66 @@ func (i *impl) sendNotification(rec dbmodels.Vacancy, data models.NotificationDa
 		}
 		pushhandler.Instance.SendNotification(teamMember.ID, data)
 	}
+}
+
+func (i *impl) refresh(ctx context.Context, refreshToken string) (resp hhapimodels.ResponseToken, refreshed bool, err error) {
+	i.refreshMx.Lock()
+	defer i.refreshMx.Unlock()
+	data, ok := i.refreshMap[refreshToken]
+	if ok {
+		return data, false, nil
+	}
+	req := hhapimodels.RefreshToken{
+		RefreshToken: refreshToken,
+	}
+	tokenResp, err := i.client.RefreshToken(ctx, req)
+	if err != nil {
+		return hhapimodels.ResponseToken{}, false, errors.Wrap(err, "ошибка получения токена для HeadHunter")
+	}
+	i.refreshMap[refreshToken] = *tokenResp
+	return *tokenResp, true, nil
+}
+
+func (i *impl) getTokenFromStorage(spaceID string) (hhapimodels.TokenData, bool, error) {
+	logger := i.getLogger(spaceID, "")
+	value, ok := i.tokenMap.Load(spaceID)
+	if ok {
+		tokenData := value.(hhapimodels.TokenData)
+		return tokenData, true, nil
+	}
+	rec, err := i.extStore.GetRec(spaceID, TokenCode)
+	if err != nil {
+		return hhapimodels.TokenData{}, false, errors.Wrap(err, "ошибка загрузки токена из бд")
+	}
+	if rec == nil {
+		return hhapimodels.TokenData{}, false, nil
+	}
+	data := rec.Value
+	token := hhapimodels.ResponseToken{}
+	err = json.Unmarshal(data, &token)
+	if err != nil {
+		return hhapimodels.TokenData{}, false, errors.Wrap(err, "ошибка сериализации токена из бд")
+	}
+	tokenData, err := i.storeToken(spaceID, token, rec.UpdatedAt, false)
+	if err != nil {
+		logger.WithError(err).Error("ошибка сохранения токена")
+	}
+	return tokenData, true, nil
+}
+
+func (i *impl) checkToken(spaceID string, accessToken string) (valid bool) {
+	logger := i.getLogger(spaceID, "")
+	if accessToken == "" {
+		logger.Error("checkToken: отсутсвует токен HH")
+		return false
+	}
+	_, err := i.client.Me(context.TODO(), accessToken)
+	if err != nil {
+		logger.
+			WithField("accessToken", accessToken).
+			WithError(err).
+			Error("ошибка получения информации о токене HH")
+		return false
+	}
+	return true
 }

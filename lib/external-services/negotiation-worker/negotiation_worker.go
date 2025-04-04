@@ -14,7 +14,7 @@ import (
 )
 
 type NegotiationCheckJob interface {
-	CheckConnected(spaceID string) bool
+	CheckConnected(ctx context.Context, spaceID string) bool
 	GetCheckList(ctx context.Context, spaceID string, status models.VacancyPubStatus) ([]dbmodels.Vacancy, error)
 	HandleNegotiations(ctx context.Context, data dbmodels.Vacancy) error
 }
@@ -71,16 +71,22 @@ func (i impl) handle(ctx context.Context, integrationName string, jobHandler Neg
 		logger.WithError(err).Error("ошибка получения списка активных спейсов")
 		return
 	}
+	connectedMap := make(map[string]bool, len(ids))
 	for _, spaceID := range ids {
 		if helpers.IsContextDone(ctx) {
 			return
 		}
-		logger = logger.WithField("space_id", spaceID)
-		if !jobHandler.CheckConnected(spaceID) {
-			logger.Info("Спейс не подключен к интеграции")
+		isConnected, ok := connectedMap[spaceID]
+		if !ok {
+			isConnected = jobHandler.CheckConnected(ctx, spaceID)
+			connectedMap[spaceID] = isConnected
+		}
+		if !isConnected {
 			continue
 		}
 
+		logger = logger.WithField("space_id", spaceID)
+		
 		list, err := jobHandler.GetCheckList(ctx, spaceID, models.VacancyPubStatusPublished)
 		if err != nil {
 			logger.

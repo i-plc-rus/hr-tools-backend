@@ -49,6 +49,7 @@ type Vacancy struct {
 	Schedule        models.Schedule   `gorm:"type:varchar(255)"` // Режим работы
 	SelectionStages []SelectionStage
 	VacancyTeam     []VacancyTeam
+	HRSurvey        *HRSurvey
 }
 
 type HhData struct {

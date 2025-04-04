@@ -29,6 +29,7 @@ func InitSpaceUserRouters(app *fiber.App) {
 			usersIDRoute.Delete("", controller.DeleteUser)
 			usersIDRoute.Put("", controller.UpdateUser)
 			usersIDRoute.Get("", controller.GetUserByID)
+			usersIDRoute.Get("photo", controller.getGetUserPhoto)     // скачать фото
 		})
 
 	})
@@ -66,7 +67,8 @@ func (c *spaceUserController) CreateUser(ctx *fiber.Ctx) error {
 	if err := payload.Validate(); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
-	id, hMsg, err := spaceusershander.Instance.CreateUser(payload)
+	spaceID := middleware.GetUserSpace(ctx)
+	id, hMsg, err := spaceusershander.Instance.CreateUser(payload, spaceID)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка создания пользователя")
 	}
@@ -177,6 +179,36 @@ func (c *spaceUserController) GetUserByID(ctx *fiber.Ctx) error {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения данных пользователя")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(user))
+}
+
+// @Summary Скачать фото
+// @Tags Пользователи space
+// @Description Скачать фото
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param 	id 					path 		string  true 	"space user ID"
+// @Success 200
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/users/{id}/photo [get]
+func (c *spaceUserController) getGetUserPhoto(ctx *fiber.Ctx) error {
+	userID, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	body, file, err := filestorage.Instance.GetFileByType(ctx.UserContext(), spaceID, userID, dbmodels.UserProfilePhoto)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения данных фото профиля")
+	}
+	if file != nil && file.ContentType != "" {
+		ctx.Set(fiber.HeaderContentType, file.ContentType)
+		ctx.Set(fiber.HeaderContentDisposition, `inline; filename="`+file.Name+`"`)
+	} else {
+		ctx.Set(fiber.HeaderContentDisposition, `inline;`)
+	}
+	return ctx.Send(body)
 }
 
 // @Summary Получить профиль пользователя
@@ -310,6 +342,8 @@ func (c *spaceUserController) getPhoto(ctx *fiber.Ctx) error {
 	if file != nil && file.ContentType != "" {
 		ctx.Set(fiber.HeaderContentType, file.ContentType)
 		ctx.Set(fiber.HeaderContentDisposition, `inline; filename="`+file.Name+`"`)
+	} else {
+		ctx.Set(fiber.HeaderContentDisposition, `inline;`)
 	}
 	return ctx.Send(body)
 }

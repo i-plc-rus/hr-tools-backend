@@ -14,7 +14,7 @@ import (
 )
 
 type StatusCheckJob interface {
-	CheckConnected(spaceID string) bool
+	CheckConnected(ctx context.Context, spaceID string) bool
 	GetCheckList(ctx context.Context, spaceID string, status models.VacancyPubStatus) ([]dbmodels.Vacancy, error)
 	CheckIsModerationDone(ctx context.Context, spaceID string, list []dbmodels.Vacancy) error
 	CheckIsActivePublications(ctx context.Context, spaceID string, list []dbmodels.Vacancy) error
@@ -72,16 +72,22 @@ func (i impl) handle(ctx context.Context, integrationName string, jobHandler Sta
 		logger.WithError(err).Error("ошибка получения списка активных спейсов")
 		return
 	}
+	connectedMap := make(map[string]bool, len(ids))
 	for _, spaceID := range ids {
 		if helpers.IsContextDone(ctx) {
 			return
 		}
-		logger = logger.WithField("space_id", spaceID)
-		if !jobHandler.CheckConnected(spaceID) {
-			logger.Debug("Спейс не подключен к интеграции")
+		isConnected, ok := connectedMap[spaceID]
+		if !ok {
+			isConnected = jobHandler.CheckConnected(ctx, spaceID)
+			connectedMap[spaceID] = isConnected
+		}
+		if !isConnected {
 			continue
 		}
 
+		logger = logger.WithField("space_id", spaceID)
+		
 		list, err := jobHandler.GetCheckList(ctx, spaceID, models.VacancyPubStatusModeration)
 		if err != nil {
 			logger.

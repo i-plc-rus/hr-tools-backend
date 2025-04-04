@@ -88,6 +88,7 @@ type VacancyRequestView struct {
 	ApprovalStageIsLast  bool                `json:"approval_stage_is_last"`
 	Pinned               bool                `json:"pinned"`
 	Favorite             bool                `json:"favorite"`
+	OpenVacancies        int                 `json:"open_vacancies"` // кол-во вакансий открытых по заявке
 }
 
 func VacancyRequestConvert(rec dbmodels.VacancyRequest) VacancyRequestView {
@@ -157,6 +158,7 @@ func VacancyRequestConvert(rec dbmodels.VacancyRequest) VacancyRequestView {
 		result.ApprovalStageIsLast = isLast
 	}
 	result.ApprovalStages = approvalStages
+	result.OpenVacancies = len(rec.Vacancies)
 	return result
 }
 

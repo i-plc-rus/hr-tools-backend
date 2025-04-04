@@ -27,6 +27,7 @@ func InitSpaceProfileRouters(app *fiber.App) {
 		route.Put("", controller.updateProfile)
 		route.Post("photo", controller.uploadPhoto)
 		route.Get("photo", controller.getPhoto)
+		route.Put("send_license_request", controller.sendLicenseRequest)
 	})
 }
 
@@ -132,6 +133,39 @@ func (c *spaceProfileApiController) getPhoto(ctx *fiber.Ctx) error {
 	if file != nil && file.ContentType != "" {
 		ctx.Set(fiber.HeaderContentType, file.ContentType)
 		ctx.Set(fiber.HeaderContentDisposition, `inline; filename="`+file.Name+`"`)
+	} else {
+		ctx.Set(fiber.HeaderContentDisposition, `inline;`)
 	}
 	return ctx.Send(body)
+}
+
+// @Summary Отправка заявки на связь с отделом продаж
+// @Tags Профиль организации
+// @Param   Authorization		header		  string	true	"Authorization token"
+// @Param	body body	 spaceapimodels.SalesRequest	true	"request body"
+// @Description Отправка заявки на связь с отделом продаж
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/profile/send_license_request [put]
+func (c *spaceProfileApiController) sendLicenseRequest(ctx *fiber.Ctx) error {
+	var payload spaceapimodels.SalesRequest
+	if err := c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	if err := payload.Validate(); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	spaceID := middleware.GetUserSpace(ctx)
+	userID := middleware.GetUserID(ctx)
+
+	hMsg, err := spacehandler.Instance.SendLicenseRequest(spaceID, userID, payload.Text)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка отправки заявки на связь с отделом продаж")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }

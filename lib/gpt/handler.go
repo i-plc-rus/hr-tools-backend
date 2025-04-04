@@ -2,6 +2,7 @@ package gpthandler
 
 import (
 	"errors"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/config"
 	"hr-tools-backend/db"
@@ -13,6 +14,8 @@ import (
 
 type Provider interface {
 	GenerateVacancyDescription(spaceID, text string) (resp gptmodels.GenVacancyDescResponse, err error)
+	GenerateHRSurvey(spaceID, vacancyInfo string) (resp gptmodels.GenVacancyDescResponse, err error)
+	ReGenerateHRSurvey(spaceID, vacancyInfo, questions string) (resp gptmodels.GenVacancyDescResponse, err error)
 }
 
 type impl struct {
@@ -26,6 +29,17 @@ func NewHandler() {
 		spaceSettingsStore: spacesettingsstore.NewInstance(db.DB),
 	}
 }
+
+const (
+	HrSurveySysPromt    = "Ты — нейросеть, помогаешь HR-специалистам формировать опрос для оценки кандидатов."
+	HrSurveyPromt1      = "У нас есть вакансия: %v \r\nНужно:"
+	HrSurveyPromt2Gen   = "1. Сгенерировать 5 вопросов (3 с одиночным выбором, 2 со свободным ответом) по ключевым аспектам: опыт, навыки, soft skills."
+	HrSurveyPromt2ReGen = "1. Вопросы: %v не подошли. Сгенерируй новые вопросы с аналогичными типами."
+	HrSurveyPromt3      = "2. Формат ответа – JSON со структурой: { \"questions\": [ { \"question_id\": \"qX\", \"question_text\": \"...\", \"question_type\": \"single_choice\"/\"free_text\", \"answers\": [ \"value\": \"...\" ], \"comment\": \"...\" } ] }."
+	HrSurveyPromt4      = "3. Каждый вопрос должен сопровождаться кратким комментарием."
+	HrSurveyPromt5      = "4. Варианты ответов для одиночного выбора: \"Обязательно\", \"Желательно\", \"Не требуется\" + \"Не подходит\" (для перегенерации)."
+	HrSurveyPromt6      = "5. Свободные ответы включают опцию \"Не подходит\"."
+)
 
 func (i impl) GenerateVacancyDescription(spaceID, text string) (resp gptmodels.GenVacancyDescResponse, err error) {
 	promt, err := i.spaceSettingsStore.GetValueByCode(spaceID, models.YandexGPTPromtSetting)
@@ -44,13 +58,59 @@ func (i impl) GenerateVacancyDescription(spaceID, text string) (resp gptmodels.G
 	}
 	//promt := "Ты - рекрутер компании Рога и Копыта. В компании придерживаемся свободного стиля, используем эмодзи в текстах вакансии"
 	resp.Description, err = yagptclient.
-		NewClient(config.Conf.YandexGPT.IAMToken, config.Conf.YandexGPT.CatalogID, promt).
-		GenerateVacancyDescription(text)
+		NewClient(config.Conf.YandexGPT.IAMToken, config.Conf.YandexGPT.CatalogID).
+		GenerateByPromtAndText(promt, fmt.Sprintf("Сгенерируй описание для вакансии имея эти вводные данные: %s", text))
 	if err != nil {
 		log.
 			WithField("space_id", spaceID).
 			WithError(err).
 			Error("ошибка генерации описания через YandexGPT")
+		return resp, err
+	}
+	return resp, nil
+}
+
+func (i impl) GenerateHRSurvey(spaceID, vacancyInfo string) (resp gptmodels.GenVacancyDescResponse, err error) {
+	userPromt := fmt.Sprintf("%v\r\n%v\r\n%v\r\n%v\r\n%v\r\n%v",
+		fmt.Sprintf(HrSurveyPromt1, vacancyInfo),
+		HrSurveyPromt2Gen,
+		HrSurveyPromt3,
+		HrSurveyPromt4,
+		HrSurveyPromt5,
+		HrSurveyPromt6,
+	)
+
+	resp.Description, err = yagptclient.
+		NewClient(config.Conf.YandexGPT.IAMToken, config.Conf.YandexGPT.CatalogID).
+		GenerateByPromtAndText(HrSurveySysPromt, userPromt)
+	if err != nil {
+		log.
+			WithField("space_id", spaceID).
+			WithError(err).
+			Error("ошибка генерации HR анкеты через YandexGPT")
+		return resp, err
+	}
+	return resp, nil
+}
+
+func (i impl) ReGenerateHRSurvey(spaceID, vacancyInfo, questions string) (resp gptmodels.GenVacancyDescResponse, err error) {
+	userPromt := fmt.Sprintf("%v\n%v\n%v\n%v\n%v\n%v",
+		fmt.Sprintf(HrSurveyPromt1, vacancyInfo),
+		fmt.Sprintf(HrSurveyPromt2ReGen, questions),
+		HrSurveyPromt3,
+		HrSurveyPromt4,
+		HrSurveyPromt5,
+		HrSurveyPromt6,
+	)
+
+	resp.Description, err = yagptclient.
+		NewClient(config.Conf.YandexGPT.IAMToken, config.Conf.YandexGPT.CatalogID).
+		GenerateByPromtAndText(HrSurveySysPromt, userPromt)
+	if err != nil {
+		log.
+			WithField("space_id", spaceID).
+			WithError(err).
+			Error("ошибка перегенерации вопросов для HR анкеты через YandexGPT")
 		return resp, err
 	}
 	return resp, nil

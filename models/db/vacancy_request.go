@@ -43,6 +43,7 @@ type VacancyRequest struct {
 	Schedule        models.Schedule   `gorm:"type:varchar(255)"` // Режим работы
 	Favorite        bool
 	Pinned          bool
+	Vacancies       []Vacancy
 }
 
 func (v *VacancyRequest) AfterDelete(tx *gorm.DB) (err error) {

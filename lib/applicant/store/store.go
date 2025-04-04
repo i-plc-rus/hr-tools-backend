@@ -105,7 +105,7 @@ func (i impl) ListOfNegotiation(spaceID string, filter dbmodels.NegotiationFilte
 		Model(dbmodels.Applicant{}).
 		Where("space_id = ?", spaceID).
 		Where("vacancy_id = ?", filter.VacancyID).
-		Where("negotiation_id is not null").
+		Where("(negotiation_id is not null and negotiation_id <> '')").
 		Where("status != ?", models.ApplicantStatusArchive)
 	i.addNegotiationFilter(tx, filter)
 	err = tx.Preload(clause.Associations).Find(&list).Error
@@ -352,9 +352,9 @@ func (i impl) addApplicantFilter(tx *gorm.DB, filter applicantapimodels.Applican
 		exp := *filter.AddedType
 		switch exp {
 		case models.AddedTypeAdded:
-			tx.Where("negotiation_id is null")
+			tx.Where("(negotiation_id is null or negotiation_id = '')")
 		case models.AddedTypeNegotiation:
-			tx.Where("negotiation_id is not null")
+			tx.Where("(negotiation_id is not null and negotiation_id <> '')")
 		}
 	}
 	if filter.Schedule != "" {

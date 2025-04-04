@@ -73,8 +73,14 @@ func NegotiationConvert(rec dbmodels.Applicant) NegotiationView {
 	if !rec.NegotiationAcceptDate.IsZero() {
 		toTime = rec.NegotiationAcceptDate
 	}
-	//TODO получение времени на шаге из истории действий
-	sec := toTime.Unix() - rec.NegotiationDate.Unix()
+
+	var negotiationDate int64
+	if rec.NegotiationDate.IsZero() {
+		negotiationDate = rec.CreatedAt.Unix()
+	} else {
+		negotiationDate = rec.NegotiationDate.Unix()
+	}
+	sec := toTime.Unix() - negotiationDate
 	minutes := sec / 60
 	hours := minutes / 60
 	minutes = minutes - hours*60

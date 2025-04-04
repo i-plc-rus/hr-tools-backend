@@ -305,6 +305,8 @@ func (c *applicantApiController) GetResume(ctx *fiber.Ctx) error {
 	if file != nil && file.ContentType != "" {
 		ctx.Set(fiber.HeaderContentType, file.ContentType)
 		ctx.Set(fiber.HeaderContentDisposition, `inline; filename="`+file.Name+`"`)
+	} else {
+		ctx.Set(fiber.HeaderContentDisposition, `inline;`)
 	}
 	return ctx.Send(body)
 }
@@ -333,6 +335,8 @@ func (c *applicantApiController) getPhoto(ctx *fiber.Ctx) error {
 	if file != nil && file.ContentType != "" {
 		ctx.Set(fiber.HeaderContentType, file.ContentType)
 		ctx.Set(fiber.HeaderContentDisposition, `inline; filename="`+file.Name+`"`)
+	} else {
+		ctx.Set(fiber.HeaderContentDisposition, `inline;`)
 	}
 	return ctx.Send(body)
 }
@@ -617,9 +621,12 @@ func (c *applicantApiController) changeStage(ctx *fiber.Ctx) error {
 	}
 	spaceID := middleware.GetUserSpace(ctx)
 	userID := middleware.GetUserID(ctx)
-	err = applicant.Instance.ChangeStage(spaceID, userID, id, stageID)
+	hMsg, err := applicant.Instance.ChangeStage(spaceID, userID, id, stageID)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка перевода кандидата на другой этап подбора")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }

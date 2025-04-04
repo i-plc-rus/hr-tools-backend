@@ -3,7 +3,10 @@ package spacesettingshandler
 import (
 	"hr-tools-backend/db"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
+	"hr-tools-backend/models"
 	spaceapimodels "hr-tools-backend/models/api/space"
+
+	"github.com/pkg/errors"
 )
 
 type Provider interface {
@@ -24,7 +27,14 @@ type impl struct {
 }
 
 func (i impl) UpdateSettingValue(spaceID, settingCode, settingValue string) error {
-	err := i.spaceSettingsStore.Update(spaceID, settingCode, settingValue)
+	ok, err := i.isUnique(spaceID, settingCode, settingValue)
+	if err != nil {
+		return errors.Wrap(err, "ошибка проверки уникальности настройки")
+	}
+	if !ok {
+		return errors.New("значение настройки уже используется в другом спейсе")
+	}
+	err = i.spaceSettingsStore.Update(spaceID, settingCode, settingValue)
 	if err != nil {
 		return err
 	}
@@ -40,4 +50,16 @@ func (i impl) GetList(spaceID string) (settingsList []spaceapimodels.SpaceSettin
 		settingsList = append(settingsList, setting.ToModelView())
 	}
 	return settingsList, nil
+}
+
+func (i impl) isUnique(settingSpaceID, settingCode, settingValue string) (bool, error) {
+	if settingCode != string(models.HhClientIDSetting) &&
+		settingCode != string(models.AvitoClientIDSetting) {
+		return true, nil
+	}
+	spaceID, err := i.spaceSettingsStore.GetSpaceIDByCodeAndValue(settingCode, settingValue)
+	if err != nil {
+		return false, err
+	}
+	return spaceID == "" || settingSpaceID == spaceID, nil
 }

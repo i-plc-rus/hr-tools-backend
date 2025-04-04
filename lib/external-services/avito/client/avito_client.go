@@ -73,7 +73,8 @@ func NewProvider() {
 const (
 	host                 string = "https://api.avito.ru"
 	tokenPath            string = "%s/token"
-	oAuthPattern         string = "https://avito.ru/oauth?response_type=code&client_id=%v&scope=job:cv,job:applications,job:vacancy,job:write&state=%v"
+	tokenScope           string = "job:cv,job:write,job:applications,messenger:read,messenger:write,stats:read,job:vacancy,user:read"
+	oAuthPattern         string = "https://avito.ru/oauth?response_type=code&client_id=%v&scope=%v&state=%v"
 	vPublishPath         string = "%s/job/v2/vacancies"
 	selfPath             string = "%s/core/v1/accounts/self"
 	vPublishStatusPath   string = "%s/job/v2/vacancies/statuses"
@@ -91,7 +92,7 @@ const (
 )
 
 func (i impl) GetLoginUri(clientID, spaceID string) (string, error) {
-	uri := fmt.Sprintf(oAuthPattern, clientID, spaceID)
+	uri := fmt.Sprintf(oAuthPattern, clientID, tokenScope, spaceID)
 	return uri, nil
 }
 
