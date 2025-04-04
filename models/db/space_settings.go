@@ -23,7 +23,6 @@ func (r SpaceSetting) ToModelView() spaceapimodels.SpaceSettingView {
 	}
 }
 
-
 var DefaultHhClientIDSetting = SpaceSetting{
 	SpaceID: "",
 	Name:    "client_id для HeadHunter",
@@ -59,10 +58,34 @@ var DefaultSpaceSenderEmail = SpaceSetting{
 	Value:   "",
 }
 
+var DefaultWhatsAppAccessToken = SpaceSetting{
+	SpaceID: "",
+	Name:    "WhatsApp access token",
+	Code:    models.WhatsAppAccessToken,
+	Value:   "",
+}
+
+var DefaultBusinessAccountID = SpaceSetting{
+	SpaceID: "",
+	Name:    "WhatsApp business account id",
+	Code:    models.WhatsAppBusinessAccountID,
+	Value:   "",
+}
+
+var DefaultYandexGPTPromtSetting = SpaceSetting{
+	SpaceID: "",
+	Name:    "Инструкции для YandexGPT",
+	Code:    models.YandexGPTPromtSetting,
+	Value:   "",
+}
+
 var DefaultSettinsMap = map[models.SpaceSettingCode]SpaceSetting{
-	models.HhClientIDSetting:        DefaultHhClientIDSetting,
-	models.HhClientSecretSetting:    DefaultHhClientSecretSetting,
-	models.AvitoClientIDSetting:     DefaultAvitoClientIDSetting,
-	models.AvitoClientSecretSetting: DefaultAvitoClientSecretSetting,
-	models.SpaceSenderEmail:         DefaultSpaceSenderEmail,
+	models.YandexGPTPromtSetting:     DefaultYandexGPTPromtSetting,
+	models.HhClientIDSetting:         DefaultHhClientIDSetting,
+	models.HhClientSecretSetting:     DefaultHhClientSecretSetting,
+	models.AvitoClientIDSetting:      DefaultAvitoClientIDSetting,
+	models.AvitoClientSecretSetting:  DefaultAvitoClientSecretSetting,
+	models.SpaceSenderEmail:          DefaultSpaceSenderEmail,
+	models.WhatsAppAccessToken:       DefaultWhatsAppAccessToken,
+	models.WhatsAppBusinessAccountID: DefaultBusinessAccountID,
 }
