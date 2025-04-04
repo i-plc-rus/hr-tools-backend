@@ -13,6 +13,7 @@ type Provider interface {
 	GetByApplicantID(spaceID, applicantID string) (rec *dbmodels.ApplicantSurvey, err error)
 	Delete(spaceID, id string) error
 	DeleteByApplicantID(spaceID, applicantID string) error
+	SetIsSend(id string, isSend bool) error
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -112,6 +113,21 @@ func (i impl) DeleteByApplicantID(spaceID, applicantID string) error {
 		Where("space_id = ?", spaceID).
 		Where("applicant_id = ?", applicantID).
 		Delete(&rec).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (i impl) SetIsSend(id string, isSend bool) error {
+	updMap := map[string]interface{}{
+		"is_sent": isSend,
+	}
+	err := i.db.
+		Model(&dbmodels.ApplicantSurvey{}).
+		Where("id = ?", id).
+		Updates(updMap).
+		Error
 	if err != nil {
 		return err
 	}

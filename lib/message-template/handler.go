@@ -22,8 +22,6 @@ import (
 	msgtemplateapimodels "hr-tools-backend/models/api/message-template"
 	dbmodels "hr-tools-backend/models/db"
 	"html/template"
-	"os"
-	"strings"
 )
 
 type Provider interface {
@@ -511,47 +509,4 @@ func (i impl) getFile(ctx context.Context, spaceID, tplID string, fileType dbmod
 		}, nil
 	}
 	return nil, nil
-}
-
-func BuildLicenceRenewMsg(text string, user dbmodels.SpaceUser, space dbmodels.Space) (string, error) {
-	tmplBody, err := getLicenceRenewTpl()
-	if err != nil {
-		return "", err
-	}
-	body := strings.Replace(string(tmplBody), "\n", "", -1)
-	tpl, err := template.New("msg_body").Parse(body)
-	if err != nil {
-		return "", err
-	}
-	data := models.SalesTemplateData{
-		OrganizationName: space.OrganizationName,
-		Inn:              space.Inn,
-		Kpp:              space.Kpp,
-		OGRN:             space.OGRN,
-		DirectorName:     space.DirectorName,
-		UserFIO:          user.GetFullName(),
-		UserPhoneNumber:  user.PhoneNumber,
-		TextRequest:      text,
-	}
-
-	buf := new(bytes.Buffer)
-	err = tpl.Execute(buf, data)
-	if err != nil {
-		return "", err
-	}
-	msg := buf.String()
-	return msg, nil
-}
-
-func GetLicenceRenewTitle() string {
-	return "Продление лицензии"
-}
-
-func getLicenceRenewTpl() ([]byte, error) {
-	filePath := "static/sales_licence_renew.html"
-	body, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, errors.Wrapf(err, "ошибка чтения файла шаблона %v", filePath)
-	}
-	return body, nil
 }

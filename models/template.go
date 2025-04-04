@@ -39,3 +39,8 @@ type SalesTemplateData struct {
 	UserPhoneNumber  string
 	TextRequest      string
 }
+
+type SurvaySuggestTemplateData struct {
+	SurvayLink  string
+	CompanyName string
+}

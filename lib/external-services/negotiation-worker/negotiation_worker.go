@@ -10,6 +10,7 @@ import (
 	"hr-tools-backend/lib/utils/helpers"
 	"hr-tools-backend/models"
 	dbmodels "hr-tools-backend/models/db"
+	"runtime/debug"
 	"time"
 )
 
@@ -47,6 +48,13 @@ func (i impl) getLogger(integrationName string) *log.Entry {
 }
 
 func (i impl) run(ctx context.Context, integrationName string, jobHandler NegotiationCheckJob) {
+	defer func() {
+		if r := recover(); r != nil {
+			i.getLogger(integrationName).
+				WithField("panic_stack", string(debug.Stack())).
+				Errorf("panic: (%v)", r)
+		}
+	}()
 	period := time.Second
 	logger := i.getLogger(integrationName)
 	for {

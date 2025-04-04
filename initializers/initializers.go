@@ -36,10 +36,12 @@ import (
 	supersethandler "hr-tools-backend/lib/superset"
 	"hr-tools-backend/lib/survey"
 	applicantsurveyscoreworker "hr-tools-backend/lib/survey/applicant-survey-score-worker"
+	applicantsurveysuggestworker "hr-tools-backend/lib/survey/applicant-survey-suggest-worker"
 	applicantsurveyworker "hr-tools-backend/lib/survey/applicant-survey-worker"
 	vacancyhandler "hr-tools-backend/lib/vacancy"
 	vacancyreqhandler "hr-tools-backend/lib/vacancy-req"
 	connectionhub "hr-tools-backend/lib/ws/hub/connection-hub"
+	"time"
 )
 
 var LoggerConfig *fiberlog.Config
@@ -75,15 +77,46 @@ func InitAllServices(ctx context.Context) {
 	hhhandler.NewHandler()
 	avitohandler.NewHandler()
 	applicant.NewHandler()
-	externalserviceworker.StartWorker(ctx)
-	negotiationworker.StartWorker(ctx)
 	messagetemplate.NewHandler()
 	xlsexport.NewHandler()
 	analytics.NewHandler()
 	negotiationchathandler.NewHandler()
 	survey.NewHandler()
-	newmsgworker.StartWorker(ctx)
 	supersethandler.NewHandler(config.Conf.Superset.Host, config.Conf.Superset.Username, config.Conf.Superset.Password, config.Conf.Superset.DashboardParams)
-	applicantsurveyworker.StartWorker(ctx)
-	applicantsurveyscoreworker.StartWorker(ctx)
+	go initWorkers(ctx)
+}
+
+// запускаем с промежутком в 10 сек чтоб размыть нагрузку
+func initWorkers(ctx context.Context) {
+	//Задача проверки статусов модерации/публикации в HH/Avito
+	externalserviceworker.StartWorker(ctx)
+	if makeTimeGap(ctx) {
+		//Задача получения откликов по вакансиям из HH/Avito
+		negotiationworker.StartWorker(ctx)
+	}
+	if makeTimeGap(ctx) {
+		// Задача получения сообщений из HH/Avito от кандидатов
+		newmsgworker.StartWorker(ctx)
+	}
+	if makeTimeGap(ctx) {
+		// Задача генерации опросов для кандидатов отправивших отклик
+		applicantsurveyworker.StartWorker(ctx)
+	}
+	if makeTimeGap(ctx) {
+		// Задача отправки ссылок на опрос кандидатам
+		applicantsurveysuggestworker.StartWorker(ctx)
+	}
+	if makeTimeGap(ctx) {
+		// Задача оценки кандидатов
+		applicantsurveyscoreworker.StartWorker(ctx)
+	}
+}
+
+func makeTimeGap(ctx context.Context) (canRun bool) {
+	select {
+	case <-ctx.Done():
+		return false
+	case <-time.After(time.Second * 10):
+		return true
+	}
 }
