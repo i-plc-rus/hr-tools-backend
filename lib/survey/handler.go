@@ -330,15 +330,23 @@ func (i impl) AIScore(applicantSurveyRec dbmodels.ApplicantSurvey) (ok bool, err
 		}
 		applicantHistory.Save(applicantRec.SpaceID, applicantRec.ID, vacancy.ID, "", dbmodels.HistoryAIScore, changes)
 
+		var hMsg string
 		//для ошибки изменения статуса, ошибку только логируем, чтоб оценка сохранилась и повторно не выполнялась
 		if applicantScore.Score < applicantSurveyRec.HrThreshold {
-			err = applicant.Instance.UpdateStatus(applicantRec.SpaceID, applicantRec.ID, "", models.NegotiationStatusRejected)
+			hMsg, err = applicant.Instance.UpdateStatus(applicantRec.SpaceID, applicantRec.ID, "", models.NegotiationStatusRejected)
 		} else {
-			err = applicant.Instance.UpdateStatus(applicantRec.SpaceID, applicantRec.ID, "", models.NegotiationStatusAccepted)
+			hMsg, err = applicant.Instance.UpdateStatus(applicantRec.SpaceID, applicantRec.ID, "", models.NegotiationStatusAccepted)
 		}
 		if err != nil {
 			log.
 				WithError(err).
+				WithField("space_id", applicantRec.SpaceID).
+				WithField("applicant_id", applicantRec.ID).
+				Error("ошибка перевода кандидата после оценкии системой ИИ")
+		}
+		if hMsg != "" {
+			log.
+				WithError(errors.New(hMsg)).
 				WithField("space_id", applicantRec.SpaceID).
 				WithField("applicant_id", applicantRec.ID).
 				Error("ошибка перевода кандидата после оценкии системой ИИ")
