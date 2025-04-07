@@ -50,13 +50,6 @@ definitions:
       role:
         $ref: '#/definitions/models.UserRole'
     type: object
-  apimodels.Pagination:
-    properties:
-      limit:
-        type: integer
-      page:
-        type: integer
-    type: object
   apimodels.Response:
     properties:
       data:
@@ -67,6 +60,519 @@ definitions:
       status:
         description: результат обработки fail/success
         type: string
+    type: object
+  apimodels.ScrollerResponse:
+    properties:
+      data:
+        description: данные ответа
+      message:
+        description: сообщение ошибки
+        type: string
+      row_count:
+        description: для списков, общее кол-во записей, учитывая фильтр (если он есть)
+        type: integer
+      status:
+        description: результат обработки fail/success
+        type: string
+    type: object
+  applicantapimodels.ApplicantData:
+    properties:
+      address:
+        description: Адрес
+        type: string
+      birth_date:
+        description: Дата рождения ДД.ММ.ГГГГ
+        type: string
+      citizenship:
+        description: Гражданство
+        type: string
+      comment:
+        description: Коментарий
+        type: string
+      email:
+        description: Емайл
+        type: string
+      first_name:
+        description: Имя
+        type: string
+      gender:
+        allOf:
+        - $ref: '#/definitions/models.GenderType'
+        description: Пол кандидата
+      last_name:
+        description: Фамилия
+        type: string
+      middle_name:
+        description: Отчество
+        type: string
+      params:
+        allOf:
+        - $ref: '#/definitions/dbmodels.ApplicantParams'
+        description: Доподнительные параметры
+      phone:
+        description: Телефон
+        type: string
+      relocation:
+        allOf:
+        - $ref: '#/definitions/models.RelocationType'
+        description: Готовность к переезду
+      salary:
+        description: Желаемая ЗП
+        type: integer
+      source:
+        allOf:
+        - $ref: '#/definitions/models.ApplicantSource'
+        description: Источник кандидата
+      total_experience:
+        description: Опыт работ в месяцах
+        type: integer
+      vacancy_id:
+        description: Идентификатор вакансии
+        type: string
+    type: object
+  applicantapimodels.ApplicantDuplicate:
+    properties:
+      duplicate_id:
+        description: Идентификатор кандидата
+        type: string
+      duplicate_type:
+        allOf:
+        - $ref: '#/definitions/models.DuplicateType'
+        description: Тип дубля (По автору резюме/По контактным данным)
+      found:
+        description: Найден
+        type: boolean
+    type: object
+  applicantapimodels.ApplicantFilter:
+    properties:
+      added_day:
+        description: Дата добавления кандидата ДД.ММ.ГГГГ
+        type: string
+      added_period:
+        allOf:
+        - $ref: '#/definitions/models.ApAddedPeriodType'
+        description: Период добавления кандидата
+      added_type:
+        allOf:
+        - $ref: '#/definitions/models.AddedType'
+        description: Тип добавления
+      age_from:
+        description: Возраст "от"
+        type: integer
+      age_to:
+        description: Возраст "до"
+        type: integer
+      city:
+        description: Город проживания
+        type: string
+      gender:
+        allOf:
+        - $ref: '#/definitions/models.GenderType'
+        description: Пол кандидата
+      language:
+        description: Знание языков
+        type: string
+      limit:
+        description: Записей на странице
+        type: integer
+      page:
+        description: Страница (1,2,3..)
+        type: integer
+      relocation:
+        allOf:
+        - $ref: '#/definitions/models.RelocationType'
+        description: Готовность к переезду
+      schedule:
+        allOf:
+        - $ref: '#/definitions/models.Schedule'
+        description: График работы
+      search:
+        description: Поиск по ФИО/телефон/емайл/тег
+        type: string
+      sort:
+        $ref: '#/definitions/applicantapimodels.ApplicantSort'
+      source:
+        allOf:
+        - $ref: '#/definitions/models.ApplicantSource'
+        description: Источник
+      stage_name:
+        description: Этап
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/models.ApplicantStatus'
+        description: Статус кандидата
+      tag:
+        description: Тэг
+        type: string
+      total_experience_from:
+        description: Опыт работ в месяцах "от"
+        type: integer
+      total_experience_to:
+        description: Опыт работ в месяцах "до"
+        type: integer
+      vacancy_id:
+        description: Идентификатор вакансии
+        type: string
+      vacancy_name:
+        description: Название вакансии
+        type: string
+    type: object
+  applicantapimodels.ApplicantHistoryFilter:
+    properties:
+      comments_only:
+        description: Только комментарии
+        type: boolean
+      limit:
+        description: Записей на странице
+        type: integer
+      page:
+        description: Страница (1,2,3..)
+        type: integer
+    type: object
+  applicantapimodels.ApplicantHistoryView:
+    properties:
+      action_type:
+        allOf:
+        - $ref: '#/definitions/dbmodels.ActionType'
+        description: Тип действия
+      changes:
+        allOf:
+        - $ref: '#/definitions/dbmodels.ApplicantChanges'
+        description: Изменения
+      date:
+        description: дата записи dd.mm.yyyy
+        type: string
+      time:
+        description: время записи HH:mm
+        type: string
+      user_id:
+        description: Идентификатор сотрудника
+        type: string
+      user_name:
+        description: Имя сотрудника
+        type: string
+      vacancy_id:
+        description: Идентификатор вакансии
+        type: string
+      vacancy_name:
+        description: Название вакансии
+        type: string
+    type: object
+  applicantapimodels.ApplicantNote:
+    properties:
+      is_private:
+        description: Приватный
+        type: boolean
+      note:
+        description: Комментарий
+        type: string
+    type: object
+  applicantapimodels.ApplicantSort:
+    properties:
+      accept_date_desc:
+        description: Дата добавления, порядок сортировки false = ASC/ true = DESC
+          / nil = нет
+        type: boolean
+      fio_desc:
+        description: ФИО, порядок сортировки false = ASC/ true = DESC / nil = нет
+        type: boolean
+      salary_desc:
+        description: ЗП, порядок сортировки false = ASC/ true = DESC / nil = нет
+        type: boolean
+    type: object
+  applicantapimodels.ApplicantSourceData:
+    properties:
+      adding_source:
+        allOf:
+        - $ref: '#/definitions/applicantapimodels.SourceData'
+        description: Откликнулись
+      negotiation_source:
+        allOf:
+        - $ref: '#/definitions/applicantapimodels.SourceData'
+        description: Добавлены
+      total_source:
+        allOf:
+        - $ref: '#/definitions/applicantapimodels.SourceData'
+        description: Общая статистика
+    type: object
+  applicantapimodels.ApplicantView:
+    properties:
+      accept_date:
+        description: Дата добавления
+        type: string
+      address:
+        description: Адрес
+        type: string
+      age:
+        description: возраст
+        type: integer
+      birth_date:
+        description: Дата рождения ДД.ММ.ГГГГ
+        type: string
+      citizenship:
+        description: Гражданство
+        type: string
+      comment:
+        description: Коментарий
+        type: string
+      email:
+        description: Емайл
+        type: string
+      fio:
+        description: ФИО кандидата
+        type: string
+      first_name:
+        description: Имя
+        type: string
+      gender:
+        allOf:
+        - $ref: '#/definitions/models.GenderType'
+        description: Пол кандидата
+      id:
+        description: Идентификатор кандидата
+        type: string
+      last_name:
+        description: Фамилия
+        type: string
+      middle_name:
+        description: Отчество
+        type: string
+      negotiation_date:
+        description: Дата отклика во внешней системе ДД.ММ.ГГГГ
+        type: string
+      negotiation_id:
+        description: Идентификатор отклика во внешней системе
+        type: string
+      params:
+        allOf:
+        - $ref: '#/definitions/dbmodels.ApplicantParams'
+        description: Доподнительные параметры
+      phone:
+        description: Телефон
+        type: string
+      relocation:
+        allOf:
+        - $ref: '#/definitions/models.RelocationType'
+        description: Готовность к переезду
+      resume_id:
+        description: Идентификатор резюме во внешней системе
+        type: string
+      resume_title:
+        description: Заголовок резюме
+        type: string
+      salary:
+        description: Желаемая ЗП
+        type: integer
+      selection_stage_id:
+        description: Идентификатор этапа подбора кандидата
+        type: string
+      selection_stage_name:
+        description: Название этапа
+        type: string
+      source:
+        allOf:
+        - $ref: '#/definitions/models.ApplicantSource'
+        description: Источник кандидата
+      stage_time:
+        description: Время на этапе
+        type: string
+      start_date:
+        description: Дата выхода
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/models.ApplicantStatus'
+        description: Статус кандидата
+      total_experience:
+        description: Опыт работ в месяцах
+        type: integer
+      vacancy_id:
+        description: Идентификатор вакансии
+        type: string
+      vacancy_name:
+        description: Название вакансии
+        type: string
+    type: object
+  applicantapimodels.ApplicantViewExt:
+    properties:
+      accept_date:
+        description: Дата добавления
+        type: string
+      address:
+        description: Адрес
+        type: string
+      age:
+        description: возраст
+        type: integer
+      birth_date:
+        description: Дата рождения ДД.ММ.ГГГГ
+        type: string
+      citizenship:
+        description: Гражданство
+        type: string
+      comment:
+        description: Коментарий
+        type: string
+      duplicates:
+        description: Идентификатор кандидатов дубликатов
+        items:
+          type: string
+        type: array
+      email:
+        description: Емайл
+        type: string
+      fio:
+        description: ФИО кандидата
+        type: string
+      first_name:
+        description: Имя
+        type: string
+      gender:
+        allOf:
+        - $ref: '#/definitions/models.GenderType'
+        description: Пол кандидата
+      id:
+        description: Идентификатор кандидата
+        type: string
+      last_name:
+        description: Фамилия
+        type: string
+      middle_name:
+        description: Отчество
+        type: string
+      negotiation_date:
+        description: Дата отклика во внешней системе ДД.ММ.ГГГГ
+        type: string
+      negotiation_id:
+        description: Идентификатор отклика во внешней системе
+        type: string
+      params:
+        allOf:
+        - $ref: '#/definitions/dbmodels.ApplicantParams'
+        description: Доподнительные параметры
+      phone:
+        description: Телефон
+        type: string
+      potential_duplicate:
+        allOf:
+        - $ref: '#/definitions/applicantapimodels.ApplicantDuplicate'
+        description: Возможный дубликат
+      relocation:
+        allOf:
+        - $ref: '#/definitions/models.RelocationType'
+        description: Готовность к переезду
+      resume_id:
+        description: Идентификатор резюме во внешней системе
+        type: string
+      resume_title:
+        description: Заголовок резюме
+        type: string
+      salary:
+        description: Желаемая ЗП
+        type: integer
+      selection_stage_id:
+        description: Идентификатор этапа подбора кандидата
+        type: string
+      selection_stage_name:
+        description: Название этапа
+        type: string
+      source:
+        allOf:
+        - $ref: '#/definitions/models.ApplicantSource'
+        description: Источник кандидата
+      stage_time:
+        description: Время на этапе
+        type: string
+      start_date:
+        description: Дата выхода
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/models.ApplicantStatus'
+        description: Статус кандидата
+      tags:
+        items:
+          type: string
+        type: array
+      total_experience:
+        description: Опыт работ в месяцах
+        type: integer
+      vacancy_id:
+        description: Идентификатор вакансии
+        type: string
+      vacancy_name:
+        description: Название вакансии
+        type: string
+    type: object
+  applicantapimodels.MultiChangeStageRequest:
+    properties:
+      ids:
+        description: идентификаторы кандидатов
+        items:
+          type: string
+        type: array
+      stage_id:
+        description: идентификаторы этапа
+        type: string
+    type: object
+  applicantapimodels.MultiEmailResponse:
+    properties:
+      fail_mails:
+        description: список ФИО кандидатов которым не удалось отправить письма
+        items:
+          type: string
+        type: array
+    type: object
+  applicantapimodels.MultiRejectRequest:
+    properties:
+      ids:
+        description: идентификаторы кандидатов
+        items:
+          type: string
+        type: array
+      reject:
+        $ref: '#/definitions/applicantapimodels.RejectRequest'
+    type: object
+  applicantapimodels.RejectRequest:
+    properties:
+      initiator:
+        allOf:
+        - $ref: '#/definitions/models.RejectInitiator'
+        description: Инициатор отказа
+      reason:
+        description: Причина отказа
+        type: string
+    type: object
+  applicantapimodels.SourceData:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/applicantapimodels.SourceItem'
+        type: array
+      total:
+        type: integer
+    type: object
+  applicantapimodels.SourceItem:
+    properties:
+      count:
+        type: integer
+      name:
+        type: string
+      percent:
+        type: integer
+    type: object
+  applicantapimodels.XlsExportRequest:
+    properties:
+      filter:
+        allOf:
+        - $ref: '#/definitions/applicantapimodels.ApplicantFilter'
+        description: Фильтр скроллера, в случае если не указан список идентификатов
+      ids:
+        description: список идентификатов кандидатов
+        items:
+          type: string
+        type: array
     type: object
   authapimodels.JWTRefreshRequest:
     properties:
@@ -87,6 +593,19 @@ definitions:
       password:
         type: string
     type: object
+  authapimodels.PasswordRecovery:
+    properties:
+      email:
+        description: емайл для отправки письма с иснтвукцией, он же логин
+        type: string
+    type: object
+  authapimodels.PasswordResetRequest:
+    properties:
+      new_password:
+        type: string
+      reset_code:
+        type: string
+    type: object
   authapimodels.SendEmail:
     properties:
       email:
@@ -99,40 +618,213 @@ definitions:
         description: 'идентификатор вакансии в виде: 3364561973'
         type: integer
     type: object
-  dbmodels.VacancyFilter:
+  dbmodels.ActionType:
+    enum:
+    - comment
+    - added
+    - update
+    - negotiation
+    - stage_change
+    - duplicate
+    - archive
+    - reject
+    - reject
+    type: string
+    x-enum-comments:
+      HistoryTypeAdded: Кандидат добавлен
+      HistoryTypeArchive: Перемещен в архив
+      HistoryTypeComment: Добавлен комментраий к кандидату
+      HistoryTypeDuplicate: Дубликат по кандидату
+      HistoryTypeEmail: email
+      HistoryTypeNegotiation: Получен отклик от кандидата
+      HistoryTypeReject: Кандидат отклонен
+      HistoryTypeStageChange: Кандидат переведеден на другой этап
+      HistoryTypeUpdate: Кандидат обновлен
+    x-enum-varnames:
+    - HistoryTypeComment
+    - HistoryTypeAdded
+    - HistoryTypeUpdate
+    - HistoryTypeNegotiation
+    - HistoryTypeStageChange
+    - HistoryTypeDuplicate
+    - HistoryTypeArchive
+    - HistoryTypeReject
+    - HistoryTypeEmail
+  dbmodels.ApplicantChange:
     properties:
-      author_id:
+      field:
+        description: Измененное поле
         type: string
-      city_id:
-        type: string
-      department_id:
-        type: string
-      favorite:
-        type: boolean
-      request_author_id:
-        type: string
-      request_id:
-        type: string
-      request_type:
-        $ref: '#/definitions/models.VRType'
-      search:
-        type: string
-      selection_type:
-        $ref: '#/definitions/models.VRSelectionType'
-      sort:
-        $ref: '#/definitions/dbmodels.VacancySort'
-      statuses:
-        items:
-          $ref: '#/definitions/models.VacancyStatus'
-        type: array
-      urgency:
-        $ref: '#/definitions/models.VRUrgency'
+      new_value:
+        description: Новое значение
+      old_value:
+        description: Старое значение
     type: object
-  dbmodels.VacancySort:
+  dbmodels.ApplicantChanges:
     properties:
-      created_at_desc:
-        description: порядок сортировки false = ASC/ true = DESC
+      data:
+        description: Список изменений
+        items:
+          $ref: '#/definitions/dbmodels.ApplicantChange'
+        type: array
+      description:
+        description: Комментрий
+        type: string
+    type: object
+  dbmodels.ApplicantParams:
+    properties:
+      driver_license_types:
+        description: Водительсике права
+        items:
+          $ref: '#/definitions/models.DriverLicenseType'
+        type: array
+      education:
+        allOf:
+        - $ref: '#/definitions/models.EducationType'
+        description: Образование
+      employments:
+        description: Занятость
+        items:
+          $ref: '#/definitions/models.Employment'
+        type: array
+      have_additional_education:
+        description: Повышение квалификации, курсы
         type: boolean
+      languages:
+        description: Знание языков
+        items:
+          $ref: '#/definitions/dbmodels.Language'
+        type: array
+      schedules:
+        description: График работы
+        items:
+          $ref: '#/definitions/models.Schedule'
+        type: array
+      search_status:
+        allOf:
+        - $ref: '#/definitions/models.SearchStatusType'
+        description: Статус поиска работы
+      trip_readiness:
+        allOf:
+        - $ref: '#/definitions/models.TripReadinessType'
+        description: Готовность к командировкам
+    type: object
+  dbmodels.HRSurveyQuestion:
+    properties:
+      answers:
+        description: Варианты ответов
+        items:
+          $ref: '#/definitions/dbmodels.SurveyAnswers'
+        type: array
+      comment:
+        description: Комментарий
+        type: string
+      question_id:
+        description: Идентификатор вопроса
+        type: string
+      question_text:
+        description: Текст вопроса
+        type: string
+      question_type:
+        description: Тип вопроса
+        type: string
+      selected:
+        description: Выбранный ответ
+        type: string
+      weight:
+        description: Вес вопроса, заполняется автоматически
+        type: integer
+    type: object
+  dbmodels.Language:
+    properties:
+      language_level:
+        $ref: '#/definitions/models.LanguageLevelType'
+      name:
+        type: string
+    type: object
+  dbmodels.NegotiationFilter:
+    properties:
+      advanced_training:
+        description: Повышение квалификации, курсы
+        type: boolean
+      citizenship:
+        description: Гражданство
+        type: string
+      city:
+        description: Город проживания
+        type: string
+      driver_licence:
+        description: Водительсике права
+        items:
+          $ref: '#/definitions/models.DriverLicenseType'
+        type: array
+      education:
+        allOf:
+        - $ref: '#/definitions/models.EducationType'
+        description: Образование
+      employment:
+        allOf:
+        - $ref: '#/definitions/models.Employment'
+        description: Занятость
+      experience:
+        allOf:
+        - $ref: '#/definitions/models.ExperienceType'
+        description: Опыт
+      gender:
+        allOf:
+        - $ref: '#/definitions/models.GenderType'
+        description: Пол кандидата
+      job_search_statuses:
+        allOf:
+        - $ref: '#/definitions/models.SearchStatusType'
+        description: Статус поиска работы
+      language:
+        description: Знание языка
+        type: string
+      language_level:
+        allOf:
+        - $ref: '#/definitions/models.LanguageLevelType'
+        description: Уровень знания языка
+      response_period:
+        allOf:
+        - $ref: '#/definitions/models.ResponsePeriodType'
+        description: Период отклика на вакансию
+      salary_from:
+        description: Уровень дохода от
+        type: integer
+      salary_provided:
+        description: Указан доход
+        type: boolean
+      salary_to:
+        description: Уровень дохода до
+        type: integer
+      schedule:
+        allOf:
+        - $ref: '#/definitions/models.Schedule'
+        description: График работы
+      search:
+        description: поиск по ФИО/телефон/емайл
+        type: string
+      search_label:
+        allOf:
+        - $ref: '#/definitions/models.SearchLabelType'
+        description: Метка поиска резюме
+      source:
+        allOf:
+        - $ref: '#/definitions/models.ApplicantSource'
+        description: Источник
+      trip_readiness:
+        allOf:
+        - $ref: '#/definitions/models.TripReadinessType'
+        description: Готовность к командировкам
+      vacancy_id:
+        description: идентификатор вакансии
+        type: string
+    type: object
+  dbmodels.SurveyAnswers:
+    properties:
+      value:
+        type: string
     type: object
   dictapimodels.CityData:
     properties:
@@ -204,6 +896,55 @@ definitions:
       name:
         type: string
     type: object
+  dictapimodels.RejectReasonData:
+    properties:
+      initiator:
+        allOf:
+        - $ref: '#/definitions/models.RejectInitiator'
+        description: Инициатор отказа
+      name:
+        description: Причина отказа
+        type: string
+    type: object
+  dictapimodels.RejectReasonFind:
+    properties:
+      initiator:
+        allOf:
+        - $ref: '#/definitions/models.RejectInitiator'
+        description: Фильтр по инициатору отказа
+      search:
+        description: Поиск по содержимому причины
+        type: string
+    type: object
+  dictapimodels.RejectReasonView:
+    properties:
+      can_change:
+        description: Можно изменять
+        type: boolean
+      id:
+        description: Идентификатор записи
+        type: string
+      initiator:
+        allOf:
+        - $ref: '#/definitions/models.RejectInitiator'
+        description: Инициатор отказа
+      name:
+        description: Причина отказа
+        type: string
+    type: object
+  filesapimodels.FileView:
+    properties:
+      applicant_id:
+        type: string
+      content_type:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      space_id:
+        type: string
+    type: object
   gptmodels.GenVacancyDescRequest:
     properties:
       text:
@@ -222,6 +963,56 @@ definitions:
         description: 'ссылка на вакансию в виде: https://izhevsk.hh.ru/vacancy/108984166'
         type: string
     type: object
+  models.AddedType:
+    enum:
+    - Добавлен
+    - Откликнулся
+    type: string
+    x-enum-varnames:
+    - AddedTypeAdded
+    - AddedTypeNegotiation
+  models.ApAddedPeriodType:
+    enum:
+    - За сегодня
+    - За вчера
+    - За последние 7 дней
+    - За последний месяц
+    - За последний год
+    type: string
+    x-enum-varnames:
+    - ApAddedPeriodTypeTDay
+    - ApAddedPeriodTypeYDay
+    - ApAddedPeriodType7days
+    - ApAddedPeriodTypeMonth
+    - ApAddedPeriodTypeYear
+  models.ApplicantSource:
+    enum:
+    - Ручной ввод
+    - Avito
+    - HeadHunter
+    - Электронная почта
+    - Социальные сети
+    - Карьерный сайт
+    type: string
+    x-enum-varnames:
+    - ApplicantSourceManual
+    - ApplicantSourceAvito
+    - ApplicantSourceHh
+    - ApplicantSourceEmail
+    - ApplicantSourceSoc
+    - ApplicantSite
+  models.ApplicantStatus:
+    enum:
+    - В процессе
+    - Отклонен
+    - Отклик
+    - Архивный
+    type: string
+    x-enum-varnames:
+    - ApplicantStatusInProcess
+    - ApplicantStatusRejected
+    - ApplicantStatusNegotiation
+    - ApplicantStatusArchive
   models.ApprovalStatus:
     enum:
     - Согласованно
@@ -232,23 +1023,90 @@ definitions:
     - AStatusApproved
     - AStatusRejected
     - AStatusAwaiting
+  models.DriverLicenseType:
+    enum:
+    - A
+    - B
+    - C
+    - D
+    - E
+    - BE
+    - CE
+    - DE
+    - TM
+    - TB
+    type: string
+    x-enum-varnames:
+    - DriverLicenseA
+    - DriverLicenseB
+    - DriverLicenseC
+    - DriverLicenseD
+    - DriverLicenseE
+    - DriverLicenseBE
+    - DriverLicenseCE
+    - DriverLicenseDE
+    - DriverLicenseTM
+    - DriverLicenseTB
+  models.DuplicateType:
+    enum:
+    - ByAuthor
+    - ByContacts
+    type: string
+    x-enum-varnames:
+    - DuplicateTypeByAuthor
+    - DuplicateTypeByContacts
+  models.EducationType:
+    enum:
+    - secondary
+    - special_secondary
+    - unfinished_higher
+    - higher
+    - bachelor
+    - master
+    - candidate
+    - doctor
+    type: string
+    x-enum-comments:
+      EducationTypeBachelor: '"Бакалавр"'
+      EducationTypeCandidate: '"Кандидат наук"'
+      EducationTypeDoctor: '"Доктор наук"'
+      EducationTypeHigher: '"Высшее"'
+      EducationTypeMaster: '"Магистр"'
+      EducationTypeSecondary: '"Среднее"'
+      EducationTypeSpecialSecondary: '"Среднее специальное"'
+      EducationTypeUnfinishedHigher: '"Неоконченное высшее"'
+    x-enum-varnames:
+    - EducationTypeSecondary
+    - EducationTypeSpecialSecondary
+    - EducationTypeUnfinishedHigher
+    - EducationTypeHigher
+    - EducationTypeBachelor
+    - EducationTypeMaster
+    - EducationTypeCandidate
+    - EducationTypeDoctor
   models.Employment:
     enum:
     - temporary
     - full
     - internship
     - partial
+    - volunteer
+    - probation
     type: string
     x-enum-comments:
       EmploymentFull: Полная
       EmploymentInternship: Стажировка
       EmploymentPartial: Частичная
+      EmploymentProbation: Стажировка
       EmploymentTemporary: Временная
+      EmploymentVolunteer: Волонтерство
     x-enum-varnames:
     - EmploymentTemporary
     - EmploymentFull
     - EmploymentInternship
     - EmploymentPartial
+    - EmploymentVolunteer
+    - EmploymentProbation
   models.Experience:
     enum:
     - noMatter
@@ -269,6 +1127,110 @@ definitions:
     - ExperienceMoreThan3
     - ExperienceMoreThan5
     - ExperienceMoreThan10
+  models.ExperienceType:
+    enum:
+    - "No"
+    - Between1And3
+    - Between3And6
+    - MoreThan6
+    type: string
+    x-enum-comments:
+      ExperienceTypeBetween1And3: '"От 1 года до 3 лет"'
+      ExperienceTypeBetween3And6: '"От 3 года до 6 лет"'
+      ExperienceTypeMoreThan6: '"Более 6 лет"'
+      ExperienceTypeNo: '"Нет опыта"'
+    x-enum-varnames:
+    - ExperienceTypeNo
+    - ExperienceTypeBetween1And3
+    - ExperienceTypeBetween3And6
+    - ExperienceTypeMoreThan6
+  models.GenderType:
+    enum:
+    - male
+    - female
+    type: string
+    x-enum-comments:
+      GenderTypeF: женский
+      GenderTypeM: мужской
+    x-enum-varnames:
+    - GenderTypeM
+    - GenderTypeF
+  models.LanguageLevelType:
+    enum:
+    - a1
+    - a2
+    - b1
+    - b2
+    - c1
+    - c2
+    - l1
+    type: string
+    x-enum-varnames:
+    - LanguageLevelA1
+    - LanguageLevelA2
+    - LanguageLevelB1
+    - LanguageLevelB2
+    - LanguageLevelC1
+    - LanguageLevelC2
+    - LanguageLevelL1
+  models.LimitType:
+    enum:
+    - Минут
+    - Часов
+    - Дней
+    - Недель
+    type: string
+    x-enum-varnames:
+    - LimitTypeMin
+    - LimitTypeHour
+    - LimitTypDay
+    - LimitTypeWeek
+  models.NegotiationStatus:
+    enum:
+    - Рассмотреть позже
+    - Отклонен
+    - Подходит
+    type: string
+    x-enum-varnames:
+    - NegotiationStatusWait
+    - NegotiationStatusRejected
+    - NegotiationStatusAccepted
+  models.RejectInitiator:
+    enum:
+    - Рекрутер
+    - Руководитель
+    - Кандидат
+    type: string
+    x-enum-varnames:
+    - HrReject
+    - HeadReject
+    - ApplicantReject
+  models.RelocationType:
+    enum:
+    - "no"
+    - possible
+    - want
+    type: string
+    x-enum-comments:
+      RelocationTypeNo: '"не могу переехать"'
+      RelocationTypeWant: '"хочу переехать"'
+      RelocationTypeYes: '"могу переехать"'
+    x-enum-varnames:
+    - RelocationTypeNo
+    - RelocationTypeYes
+    - RelocationTypeWant
+  models.ResponsePeriodType:
+    enum:
+    - до 3 дней
+    - до 7 дней
+    - от 7 дней до 30 дней
+    - более месяца
+    type: string
+    x-enum-varnames:
+    - ResponsePeriodType3days
+    - ResponsePeriodType7days
+    - ResponsePeriodType7toMonth
+    - ResponsePeriodTypeMoreMonth
   models.Schedule:
     enum:
     - flyInFlyOut
@@ -289,11 +1251,131 @@ definitions:
     - ScheduleFullDay
     - ScheduleFlexible
     - ScheduleShift
+  models.SearchLabelType:
+    enum:
+    - only_with_photo
+    - only_with_salary
+    - only_with_age
+    - only_with_gender
+    type: string
+    x-enum-comments:
+      SearchLabelAge: Не показывать резюме без указания возраста
+      SearchLabelGender: Не показывать резюме без указания пола
+      SearchLabelPhoto: Только с фотографией
+      SearchLabelSalary: Не показывать резюме без зарплаты
+    x-enum-varnames:
+    - SearchLabelPhoto
+    - SearchLabelSalary
+    - SearchLabelAge
+    - SearchLabelGender
+  models.SearchStatusType:
+    enum:
+    - active_search
+    - looking_for_offers
+    - not_looking_for_job
+    - has_job_offer
+    - accepted_job_offer
+    type: string
+    x-enum-comments:
+      SearchStatusAcceptedJobOffer: Вышел на новое место
+      SearchStatusActive: Активно ищет работу
+      SearchStatusHasJobOffer: Предложили работу, решает
+      SearchStatusLookingForOffers: Рассматривает предложения
+      SearchStatusNotLookingForJob: Не ищет работу
+    x-enum-varnames:
+    - SearchStatusActive
+    - SearchStatusLookingForOffers
+    - SearchStatusNotLookingForJob
+    - SearchStatusHasJobOffer
+    - SearchStatusAcceptedJobOffer
+  models.SpacePushSettingCode:
+    enum:
+    - PushLicenseExpire
+    - PushVRClosed
+    - PushVRApproved
+    - PushVRRejected
+    - PushVacancyResponsible
+    - PushVacancyNewStatus
+    - PushVacancyPublished
+    - PushApplicantNegotiation
+    - PushApplicantNote
+    - PushApplicantMsg
+    - PushApplicantNewStage
+    type: string
+    x-enum-comments:
+      PushApplicantMsg: '!!'
+    x-enum-varnames:
+    - PushLicenseExpire
+    - PushVRClosed
+    - PushVRApproved
+    - PushVRRejected
+    - PushVacancyResponsible
+    - PushVacancyNewStatus
+    - PushVacancyPublished
+    - PushApplicantNegotiation
+    - PushApplicantNote
+    - PushApplicantMsg
+    - PushApplicantNewStage
+  models.SpaceSettingCode:
+    enum:
+    - ya_gpt_promt
+    - HHClientID
+    - HHClientSecret
+    - AvitoClientID
+    - AvitoClientSecret
+    - SpaceSenderEmail
+    type: string
+    x-enum-comments:
+      SpaceSenderEmail: почта, с которой отправляются письма кандидатам
+      YandexGPTPromtSetting: Инструкции для Yandex GPT при генерации описания вакансии
+    x-enum-varnames:
+    - YandexGPTPromtSetting
+    - HhClientIDSetting
+    - HhClientSecretSetting
+    - AvitoClientIDSetting
+    - AvitoClientSecretSetting
+    - SpaceSenderEmail
+  models.TemplateType:
+    enum:
+    - Письмо
+    - Комментарий к кандидату
+    - Комментарий к отказу
+    - Напоминание
+    - Комментарий к оценке
+    - SMS
+    - Оффер
+    type: string
+    x-enum-varnames:
+    - TplMail
+    - TplApplicantNote
+    - TplRejectNote
+    - TplReminder
+    - TplRatingNote
+    - TplSms
+    - TplOffer
+  models.TripReadinessType:
+    enum:
+    - ready
+    - sometimes
+    - never
+    type: string
+    x-enum-comments:
+      TripReadinessNever: '"готов к редким командировкам'
+      TripReadinessReady: готов к командировкам
+      TripReadinessSometimes: '"готов к редким командировкам'
+    x-enum-varnames:
+    - TripReadinessReady
+    - TripReadinessSometimes
+    - TripReadinessNever
   models.UserRole:
     enum:
+    - SPACE_ADMIN_ROLE
+    - SPACE_USER_ROLE
     - SUPER_ADMIN
     type: string
     x-enum-varnames:
+    - SpaceAdminRole
+    - SpaceUserRole
     - UserRoleSuperAdmin
   models.VRSelectionType:
     enum:
@@ -311,6 +1393,7 @@ definitions:
     - Согласована
     - На доработке
     - На согласовании
+    - Шаблон
     type: string
     x-enum-varnames:
     - VRStatusCreated
@@ -319,6 +1402,7 @@ definitions:
     - VRStatusAccepted
     - VRStatusUnderRevision
     - VRStatusUnderAccepted
+    - VRStatusTemplate
   models.VRType:
     enum:
     - Новая позиция
@@ -361,15 +1445,55 @@ definitions:
     - VacancyStatusCanceled
     - VacancyStatusSuspended
     - VacancyStatusClosed
+  msgtemplateapimodels.MsgTemplateData:
+    properties:
+      message:
+        description: 'Текст шаблона с переменными шаблона (Пример шаблона: "Вакансия
+          {{.VacancyName}} более не актуальна, приходи еще, {{.SelfName}}")'
+        type: string
+      name:
+        description: Название шаблона
+        type: string
+      pdf_message:
+        description: 'Текст шаблона оффера для генерации pdf с переменными шаблона
+          (Пример шаблона: "<center>Ваш оффер!</center>Тут кокой то текст оффера с
+          разными стилями: <b>bold</b>, <i>italic</i>, <u>underlined</u>, or <b><i><u>all
+          at once</u></i></b>!<br><br><right>С уважением</right><right>Директор {{.CompanyName}}</right><right>{{.CompanyDirectorName}}</right>")'
+        type: string
+      template_type:
+        allOf:
+        - $ref: '#/definitions/models.TemplateType'
+        description: Тип шаблона
+      title:
+        description: 'Тема/заголовок письма с переменными шаблона (Пример шаблона:
+          "Информация от {{.CompanyName}}")'
+        type: string
+    type: object
   msgtemplateapimodels.MsgTemplateView:
     properties:
       id:
+        description: Идентификатор шаблона
         type: string
       message:
+        description: 'Текст шаблона с переменными шаблона (Пример шаблона: "Вакансия
+          {{.VacancyName}} более не актуальна, приходи еще, {{.SelfName}}")'
         type: string
       name:
+        description: Название шаблона
         type: string
+      pdf_message:
+        description: 'Текст шаблона оффера для генерации pdf с переменными шаблона
+          (Пример шаблона: "<center>Ваш оффер!</center>Тут кокой то текст оффера с
+          разными стилями: <b>bold</b>, <i>italic</i>, <u>underlined</u>, or <b><i><u>all
+          at once</u></i></b>!<br><br><right>С уважением</right><right>Директор {{.CompanyName}}</right><right>{{.CompanyDirectorName}}</right>")'
+        type: string
+      template_type:
+        allOf:
+        - $ref: '#/definitions/models.TemplateType'
+        description: Тип шаблона
       title:
+        description: 'Тема/заголовок письма с переменными шаблона (Пример шаблона:
+          "Информация от {{.CompanyName}}")'
         type: string
     type: object
   msgtemplateapimodels.SendMessage:
@@ -380,6 +1504,128 @@ definitions:
       msg_template_id:
         description: ID шаблона сообщения, которое нужно отправить
         type: string
+    type: object
+  msgtemplateapimodels.TemplateItem:
+    properties:
+      name:
+        description: Значение для отображения пользователю
+        type: string
+      value:
+        description: Переменная шаблона
+        type: string
+    type: object
+  negotiationapimodels.CommentData:
+    properties:
+      comment:
+        type: string
+    type: object
+  negotiationapimodels.MessageItem:
+    properties:
+      author_full_name:
+        description: ФИО автора
+        type: string
+      id:
+        type: string
+      message_date_time:
+        description: Дата/время сообщения
+        type: string
+      self_message:
+        description: Сообщение от true - работодателя / false - кандидата
+        type: boolean
+      text:
+        description: Текст сообщения
+        type: string
+    type: object
+  negotiationapimodels.MessageListRequest:
+    properties:
+      applicant_id:
+        type: string
+    type: object
+  negotiationapimodels.MessengerAvailableRequest:
+    properties:
+      applicant_id:
+        type: string
+    type: object
+  negotiationapimodels.MessengerAvailableResponse:
+    properties:
+      is_available:
+        type: boolean
+      service:
+        description: Avito/HeadHunter
+        type: string
+    type: object
+  negotiationapimodels.NegotiationView:
+    properties:
+      address:
+        description: Адрес кандидата
+        type: string
+      age:
+        description: возраст
+        type: integer
+      citizenship:
+        description: Гражданство
+        type: string
+      comment:
+        description: коментарий к кандидату
+        type: string
+      email:
+        type: string
+      fio:
+        type: string
+      gender:
+        allOf:
+        - $ref: '#/definitions/models.GenderType'
+        description: Пол кандидата
+      id:
+        type: string
+      negotiation_date:
+        description: дата отклика
+        type: string
+      negotiation_status:
+        allOf:
+        - $ref: '#/definitions/models.NegotiationStatus'
+        description: статус отклика
+      params:
+        $ref: '#/definitions/dbmodels.ApplicantParams'
+      phone:
+        type: string
+      photo_url:
+        type: string
+      relocation:
+        allOf:
+        - $ref: '#/definitions/models.RelocationType'
+        description: Готовность к переезду
+      resume_title:
+        description: заголовок резюме
+        type: string
+      salary:
+        description: ожидаемая зп
+        type: integer
+      source:
+        allOf:
+        - $ref: '#/definitions/models.ApplicantSource'
+        description: источник
+      step:
+        description: этап
+        type: string
+      step_time:
+        description: время на этапе
+        type: string
+      vacancy_author:
+        description: Автор вакансии
+        type: string
+    type: object
+  negotiationapimodels.NewMessageRequest:
+    properties:
+      applicant_id:
+        type: string
+      text:
+        type: string
+    type: object
+  negotiationapimodels.StatusData:
+    properties:
+      status:
+        $ref: '#/definitions/models.NegotiationStatus'
     type: object
   spaceapimodels.CreateOrganization:
     properties:
@@ -401,25 +1647,122 @@ definitions:
   spaceapimodels.CreateUser:
     properties:
       email:
+        description: Email пользователя
         type: string
       first_name:
         type: string
       is_admin:
         type: boolean
+      job_title_id:
+        description: Идентификатор должности
+        type: string
       last_name:
         type: string
       password:
         type: string
       phone_number:
         type: string
+      role:
+        type: string
       space_id:
+        type: string
+      text_sign:
+        description: Текст подписи
+        type: string
+    type: object
+  spaceapimodels.PasswordChange:
+    properties:
+      current_password:
+        description: Текущий пароль
+        type: string
+      new_password:
+        description: Новый пароль
+        type: string
+    type: object
+  spaceapimodels.ProfileData:
+    properties:
+      company_address:
+        description: адрес организации
+        type: string
+      company_contact:
+        description: контакт организации
+        type: string
+      description:
+        description: Описание компании
+        type: string
+      director_name:
+        description: ФИО руководителя
+        type: string
+      organization_name:
+        description: Название компании
+        type: string
+      time_zone:
+        description: Часовой пояс
+        type: string
+      web:
+        description: Адрес сайта
+        type: string
+    type: object
+  spaceapimodels.PushSettingData:
+    properties:
+      code:
+        allOf:
+        - $ref: '#/definitions/models.SpacePushSettingCode'
+        description: Код события
+      value:
+        allOf:
+        - $ref: '#/definitions/spaceapimodels.PushSettingValue'
+        description: Значение настроек пуша
+    type: object
+  spaceapimodels.PushSettingValue:
+    properties:
+      email:
+        description: email уведомления о событии (вкл/выкл)
+        type: boolean
+      system:
+        description: Системные уведомления о событии (вкл/выкл)
+        type: boolean
+      tg:
+        description: telegram уведомления о событии (вкл/выкл)
+        type: boolean
+    type: object
+  spaceapimodels.PushSettingView:
+    properties:
+      code:
+        allOf:
+        - $ref: '#/definitions/models.SpacePushSettingCode'
+        description: Код события
+      name:
+        description: Название события
+        type: string
+      value:
+        allOf:
+        - $ref: '#/definitions/spaceapimodels.PushSettingValue'
+        description: Значение настроек пуша
+    type: object
+  spaceapimodels.PushSettings:
+    properties:
+      is_active:
+        description: Push-уведомления включены
+        type: boolean
+      settings:
+        description: Список событий
+        items:
+          $ref: '#/definitions/spaceapimodels.PushSettingView'
+        type: array
+    type: object
+  spaceapimodels.SalesRequest:
+    properties:
+      text:
+        description: Текст заявки
         type: string
     type: object
   spaceapimodels.SpaceSettingView:
     properties:
       code:
+        allOf:
+        - $ref: '#/definitions/models.SpaceSettingCode'
         description: Код настройки
-        type: string
       id:
         description: идентификтор Настройки
         type: string
@@ -436,6 +1779,7 @@ definitions:
   spaceapimodels.SpaceUser:
     properties:
       email:
+        description: Email пользователя
         type: string
       first_name:
         type: string
@@ -443,12 +1787,121 @@ definitions:
         type: string
       is_admin:
         type: boolean
+      is_email_verified:
+        description: Email подтвержден
+        type: boolean
+      job_title_id:
+        description: Идентификатор должности
+        type: string
+      job_title_name:
+        description: Навание должности
+        type: string
       last_name:
+        type: string
+      new_email:
+        description: Новый email, который станет основным после подтверждения
         type: string
       phone_number:
         type: string
+      role:
+        type: string
       space_id:
         type: string
+      text_sign:
+        description: Текст подписи
+        type: string
+    type: object
+  spaceapimodels.SpaceUserFilter:
+    properties:
+      limit:
+        description: Записей на странице
+        type: integer
+      page:
+        description: Страница (1,2,3..)
+        type: integer
+      search:
+        description: Поиск
+        type: string
+      sort:
+        allOf:
+        - $ref: '#/definitions/spaceapimodels.SpaceUserSort'
+        description: Сортировка
+    type: object
+  spaceapimodels.SpaceUserProfileData:
+    properties:
+      email:
+        description: Email пользователя
+        type: string
+      first_name:
+        description: Имя
+        type: string
+      internal_phone_number:
+        description: Внутренний номер
+        type: string
+      last_name:
+        description: Фамилия
+        type: string
+      phone_number:
+        description: Телефон
+        type: string
+      text_sign:
+        description: Текст подписи
+        type: string
+      use_personal_sign:
+        description: Персональная подпись
+        type: boolean
+    type: object
+  spaceapimodels.SpaceUserProfileView:
+    properties:
+      email:
+        description: Email пользователя
+        type: string
+      first_name:
+        description: Имя
+        type: string
+      id:
+        description: Идентфикатор пользователя
+        type: string
+      internal_phone_number:
+        description: Внутренний номер
+        type: string
+      is_email_verified:
+        description: Email подтвержден
+        type: boolean
+      job_title_name:
+        description: Должность
+        type: string
+      last_name:
+        description: Фамилия
+        type: string
+      new_email:
+        description: Новый email, который станет основным после подтверждения
+        type: string
+      phone_number:
+        description: Телефон
+        type: string
+      role:
+        description: Роль
+        type: string
+      text_sign:
+        description: Текст подписи
+        type: string
+      use_personal_sign:
+        description: Персональная подпись
+        type: boolean
+    type: object
+  spaceapimodels.SpaceUserSort:
+    properties:
+      email_desc:
+        description: Email, порядок сортировки false = ASC/ true = DESC / nil = нет
+        type: boolean
+      fio_desc:
+        description: Имя, порядок сортировки false = ASC/ true = DESC / nil = нет
+        type: boolean
+      role_desc:
+        description: Роль добавления, порядок сортировки false = ASC/ true = DESC
+          / nil = нет
+        type: boolean
     type: object
   spaceapimodels.UpdateSpaceSettingValue:
     properties:
@@ -459,19 +1912,54 @@ definitions:
   spaceapimodels.UpdateUser:
     properties:
       email:
+        description: Email пользователя
         type: string
       first_name:
         type: string
       is_admin:
         type: boolean
+      job_title_id:
+        description: Идентификатор должности
+        type: string
       last_name:
         type: string
       password:
         type: string
       phone_number:
         type: string
+      role:
+        type: string
       space_id:
         type: string
+      text_sign:
+        description: Текст подписи
+        type: string
+    type: object
+  supersetapimodels.GuestTokenResponse:
+    properties:
+      dashboard_id:
+        description: Идентификатор дашборда
+        type: string
+      token:
+        description: Гостевой токен
+        type: string
+    type: object
+  surveyapimodels.HRSurvey:
+    properties:
+      questions:
+        items:
+          $ref: '#/definitions/dbmodels.HRSurveyQuestion'
+        type: array
+    type: object
+  surveyapimodels.HRSurveyView:
+    properties:
+      is_filled_out:
+        description: '"анкета полностью заполнена"'
+        type: boolean
+      questions:
+        items:
+          $ref: '#/definitions/dbmodels.HRSurveyQuestion'
+        type: array
     type: object
   vacancyapimodels.ApprovalStageData:
     properties:
@@ -525,6 +2013,12 @@ definitions:
       url:
         type: string
     type: object
+  vacancyapimodels.PersonFilter:
+    properties:
+      search:
+        description: Поиск по ФИО
+        type: string
+    type: object
   vacancyapimodels.Salary:
     properties:
       by_result:
@@ -536,6 +2030,85 @@ definitions:
       to:
         type: integer
     type: object
+  vacancyapimodels.SearchPeriod:
+    enum:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    type: integer
+    x-enum-varnames:
+    - SearchByToday
+    - SearchBy3Days
+    - SearchByWeek
+    - SearchByMonth
+    - SearchByPeriod
+  vacancyapimodels.SelectionStageAdd:
+    properties:
+      limit_type:
+        allOf:
+        - $ref: '#/definitions/models.LimitType'
+        description: Лимит времени на этапе - единицы измерения
+      limit_value:
+        description: Лимит времени на этапе
+        type: integer
+      name:
+        description: Название этапа
+        type: string
+      stage_type:
+        description: Тип этапа
+        type: string
+    type: object
+  vacancyapimodels.SelectionStageView:
+    properties:
+      can_delete:
+        description: Возможность удаления этапа
+        type: boolean
+      id:
+        description: Идентификатор этапа подбора кандидата
+        type: string
+      limit_type:
+        allOf:
+        - $ref: '#/definitions/models.LimitType'
+        description: Лимит времени на этапе - единицы измерения
+      limit_value:
+        description: Лимит времени на этапе
+        type: integer
+      name:
+        description: Название этапа
+        type: string
+      stage_order:
+        description: Порядковый номер этапа
+        type: integer
+      stage_type:
+        description: Тип этапа
+        type: string
+      total:
+        description: Количество активных кандидатов
+        type: integer
+    type: object
+  vacancyapimodels.StatusChangeRequest:
+    properties:
+      status:
+        allOf:
+        - $ref: '#/definitions/models.VacancyStatus'
+        description: новый статус вакансии
+    type: object
+  vacancyapimodels.TeamPerson:
+    properties:
+      email:
+        description: Email пользователя
+        type: string
+      full_name:
+        type: string
+      id:
+        type: string
+      responsible:
+        type: boolean
+      role:
+        $ref: '#/definitions/models.UserRole'
+    type: object
   vacancyapimodels.VacancyData:
     properties:
       chief_fio:
@@ -546,6 +2119,9 @@ definitions:
         type: string
       company_id:
         description: ид компании
+        type: string
+      company_name:
+        description: название компании
         type: string
       company_struct_id:
         description: ид структуры компании
@@ -600,6 +2176,152 @@ definitions:
         description: ид заявки на вакансию
         type: string
     type: object
+  vacancyapimodels.VacancyFilter:
+    properties:
+      author_id:
+        description: Фильтр по автору вакансии
+        type: string
+      author_search:
+        description: Поиск по ФИО автора
+        type: string
+      city_id:
+        description: Фильтр по идентификатору города
+        type: string
+      department_id:
+        description: Фильтр по идентификатору подразделения
+        type: string
+      favorite:
+        description: Отображать избранные
+        type: boolean
+      limit:
+        description: Записей на странице
+        type: integer
+      page:
+        description: Страница (1,2,3..)
+        type: integer
+      request_author_id:
+        description: Фильтр по автору запроса на вкансию
+        type: string
+      request_id:
+        description: Идентификатор запроса на вакансию
+        type: string
+      request_type:
+        allOf:
+        - $ref: '#/definitions/models.VRType'
+        description: Фильтр по тип вакансии
+      responsible_search:
+        description: Поиск по ФИО ответственного
+        type: string
+      search:
+        description: Поиск
+        type: string
+      selection_type:
+        allOf:
+        - $ref: '#/definitions/models.VRSelectionType'
+        description: Фильтр по виду подбора
+      sort:
+        allOf:
+        - $ref: '#/definitions/vacancyapimodels.VacancySort'
+        description: Сортировка
+      statuses:
+        description: Фильтр по статусам
+        items:
+          $ref: '#/definitions/models.VacancyStatus'
+        type: array
+      tab:
+        allOf:
+        - $ref: '#/definitions/vacancyapimodels.VacancyTab'
+        description: 'Фильтр по вкладке: 0 - Все, 1 - Мои, 2 - Другие, 3 - Архив'
+      urgency:
+        allOf:
+        - $ref: '#/definitions/models.VRUrgency'
+        description: Фильтр по срочности
+    type: object
+  vacancyapimodels.VacancyRequestCreateData:
+    properties:
+      approval_stages:
+        items:
+          $ref: '#/definitions/vacancyapimodels.ApprovalStageData'
+        type: array
+      as_template:
+        description: сохранить как шаблон
+        type: boolean
+      chief_fio:
+        description: фио непосредственного руководителя
+        type: string
+      city_id:
+        description: ид города
+        type: string
+      company_id:
+        description: ид компании
+        type: string
+      company_name:
+        description: название компании
+        type: string
+      company_struct_id:
+        description: ид структуры компании
+        type: string
+      confidential:
+        description: конфиденциальная вакансия
+        type: boolean
+      department_id:
+        description: ид подразделения
+        type: string
+      description:
+        description: Коментарий к заявке
+        type: string
+      employment:
+        allOf:
+        - $ref: '#/definitions/models.Employment'
+        description: Занятость
+      experience:
+        allOf:
+        - $ref: '#/definitions/models.Experience'
+        description: Опыт работы
+      in_interaction:
+        description: внутреннее взаимодействие
+        type: string
+      interviewer:
+        description: сотрудник проводящий интервью
+        type: string
+      job_title_id:
+        description: ид штатной должности
+        type: string
+      opened_positions:
+        description: кол-во открытых позиций
+        type: integer
+      out_interaction:
+        description: внешнее взаимодействие
+        type: string
+      place_of_work:
+        description: адрес места работы
+        type: string
+      request_type:
+        allOf:
+        - $ref: '#/definitions/models.VRType'
+        description: тип вакансии
+      requirements:
+        description: требования/обязанности/условия
+        type: string
+      schedule:
+        allOf:
+        - $ref: '#/definitions/models.Schedule'
+        description: Режим работы
+      selection_type:
+        allOf:
+        - $ref: '#/definitions/models.VRSelectionType'
+        description: вид подбора
+      short_info:
+        description: краткая информация о комманде отдела
+        type: string
+      urgency:
+        allOf:
+        - $ref: '#/definitions/models.VRUrgency'
+        description: срочность
+      vacancy_name:
+        description: название вакансии
+        type: string
+    type: object
   vacancyapimodels.VacancyRequestData:
     properties:
       chief_fio:
@@ -610,6 +2332,9 @@ definitions:
         type: string
       company_id:
         description: ид компании
+        type: string
+      company_name:
+        description: название компании
         type: string
       company_struct_id:
         description: ид структуры компании
@@ -689,6 +2414,9 @@ definitions:
         type: string
       company_id:
         description: ид компании
+        type: string
+      company_name:
+        description: название компании
         type: string
       company_struct_id:
         description: ид структуры компании
@@ -776,6 +2504,7 @@ definitions:
         description: ид компании
         type: string
       company_name:
+        description: название компании
         type: string
       company_struct_id:
         description: ид структуры компании
@@ -803,6 +2532,8 @@ definitions:
         allOf:
         - $ref: '#/definitions/models.Experience'
         description: Опыт работы
+      favorite:
+        type: boolean
       id:
         type: string
       in_interaction:
@@ -822,6 +2553,8 @@ definitions:
       out_interaction:
         description: внешнее взаимодействие
         type: string
+      pinned:
+        type: boolean
       place_of_work:
         description: адрес места работы
         type: string
@@ -853,8 +2586,32 @@ definitions:
         description: название вакансии
         type: string
     type: object
+  vacancyapimodels.VacancySort:
+    properties:
+      created_at_desc:
+        description: порядок сортировки false = ASC/ true = DESC
+        type: boolean
+    type: object
+  vacancyapimodels.VacancyTab:
+    enum:
+    - 0
+    - 1
+    - 2
+    - 3
+    type: integer
+    x-enum-varnames:
+    - VacancyTabAll
+    - VacancyTabMy
+    - VacancyTabOther
+    - VacancyTabArch
   vacancyapimodels.VacancyView:
     properties:
+      author_full_name:
+        description: ФИО автора вакансии
+        type: string
+      author_id:
+        description: Идентификатор автора вакансии
+        type: string
       chief_fio:
         description: фио непосредственного руководителя
         type: string
@@ -867,6 +2624,7 @@ definitions:
         description: ид компании
         type: string
       company_name:
+        description: название компании
         type: string
       company_struct_id:
         description: ид структуры компании
@@ -916,6 +2674,12 @@ definitions:
       requirements:
         description: требования/обязанности/условия
         type: string
+      responsible_full_name:
+        description: ФИО ответственного
+        type: string
+      responsible_id:
+        description: Идентификатор ответственного
+        type: string
       salary:
         allOf:
         - $ref: '#/definitions/vacancyapimodels.Salary'
@@ -924,6 +2688,11 @@ definitions:
         allOf:
         - $ref: '#/definitions/models.Schedule'
         description: Режим работы
+      selection_stages:
+        description: этапы подбора
+        items:
+          $ref: '#/definitions/vacancyapimodels.SelectionStageView'
+        type: array
       selection_type:
         allOf:
         - $ref: '#/definitions/models.VRSelectionType'
@@ -939,6 +2708,72 @@ definitions:
         type: string
       vacancy_request_id:
         description: ид заявки на вакансию
+        type: string
+    type: object
+  vacancyapimodels.VrFilter:
+    properties:
+      author_id:
+        description: Фильтр по автору
+        type: string
+      city_id:
+        description: Фильтр по городу
+        type: string
+      favorite:
+        description: Избранные
+        type: boolean
+      limit:
+        description: Записей на странице
+        type: integer
+      page:
+        description: Страница (1,2,3..)
+        type: integer
+      search:
+        description: Поиск по названию
+        type: string
+      search_from:
+        description: Период "с", при выборе search_period = 5 (в формате "21.09.2023")
+        type: string
+      search_period:
+        allOf:
+        - $ref: '#/definitions/vacancyapimodels.SearchPeriod'
+        description: Поиск по дате (1 - За день|2 - за 3 дня|3 - за неделю|4 - за
+          30 дней|5 - за пероид)
+      search_to:
+        description: Период "по", при выборе search_period = 5 (в формате "21.09.2023")
+        type: string
+      selection_type:
+        allOf:
+        - $ref: '#/definitions/models.VRSelectionType'
+        description: Фильтр по виду подбора
+      sort:
+        allOf:
+        - $ref: '#/definitions/vacancyapimodels.VrSort'
+        description: Сортировка
+      statuses:
+        description: Фильтр по статусам
+        items:
+          $ref: '#/definitions/models.VRStatus'
+        type: array
+    type: object
+  vacancyapimodels.VrSort:
+    properties:
+      created_at_desc:
+        description: порядок сортировки false = ASC/ true = DESC
+        type: boolean
+    type: object
+  wsmodels.ServerMessage:
+    properties:
+      code:
+        description: код события
+        type: string
+      msg:
+        description: текст события
+        type: string
+      time:
+        description: время события
+        type: string
+      title:
+        description: заголовок события
         type: string
     type: object
 info:
@@ -1237,6 +3072,39 @@ paths:
       summary: Получить информацию о текущем пользователе
       tags:
       - Аутентификация пользователей
+  /api/v1/auth/recovery:
+    post:
+      description: Восстановить пароль, запрос на отправку письма
+      parameters:
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/authapimodels.PasswordRecovery'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/authapimodels.PasswordRecovery'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Восстановить пароль, запрос на отправку письма
+      tags:
+      - Аутентификация пользователей
   /api/v1/auth/refresh-token:
     post:
       description: Обновить JWT
@@ -1296,6 +3164,32 @@ paths:
       summary: Отправить письмо с подтверждением на почту
       tags:
       - Регистрация_организации
+  /api/v1/auth/reset:
+    post:
+      description: Восстановить пароль, запрос на сброс пароля по коду
+      parameters:
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/authapimodels.PasswordResetRequest'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Восстановить пароль, запрос на сброс пароля по коду
+      tags:
+      - Аутентификация пользователей
   /api/v1/auth/verify-email:
     get:
       description: Подтверждение почты кодом
@@ -2129,6 +4023,188 @@ paths:
       summary: Поиск по названию
       tags:
       - Справочник. Штатные должности
+  /api/v1/dict/reject_reason:
+    post:
+      description: Создание
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dictapimodels.RejectReasonData'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Создание
+      tags:
+      - Справочник. Причины отказа
+  /api/v1/dict/reject_reason/{id}:
+    delete:
+      description: Удаление
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Удаление
+      tags:
+      - Справочник. Причины отказа
+    get:
+      description: Получение по ИД
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dictapimodels.RejectReasonView'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получение по ИД
+      tags:
+      - Справочник. Причины отказа
+    put:
+      description: Обновление
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dictapimodels.RejectReasonData'
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Обновление
+      tags:
+      - Справочник. Причины отказа
+  /api/v1/dict/reject_reason/find:
+    post:
+      description: Список
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/dictapimodels.RejectReasonFind'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dictapimodels.RejectReasonView'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Список
+      tags:
+      - Справочник. Причины отказа
   /api/v1/gpt/generate_vacancy_description:
     post:
       description: Сгенерировать описание вакансии
@@ -2303,6 +4379,995 @@ paths:
       summary: Поиск по ИНН через Дадата
       tags:
       - Организации
+  /api/v1/space/analytics/source:
+    put:
+      description: Источники кандидатов
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/applicantapimodels.ApplicantFilter'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/applicantapimodels.ApplicantSourceData'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Источники кандидатов
+      tags:
+      - Аналитика
+  /api/v1/space/analytics/source_export:
+    put:
+      description: Источники кандидатов. Выгрузить в Excel
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/applicantapimodels.ApplicantFilter'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Источники кандидатов. Выгрузить в Excel
+      tags:
+      - Аналитика
+  /api/v1/space/applicant:
+    post:
+      description: Создание
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/applicantapimodels.ApplicantData'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Создание
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/{id}:
+    get:
+      description: Получение по ИД
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/applicantapimodels.ApplicantViewExt'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получение по ИД
+      tags:
+      - Кандидат
+    put:
+      description: Обновление
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/applicantapimodels.ApplicantData'
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Обновление
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/{id}/change_stage:
+    put:
+      description: Перевести на другой этап подбора
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Идентификатор этапа на который необходимо перевести кандидата
+        in: query
+        name: stage_id
+        required: true
+        type: string
+      - description: Идентификатор кандидата
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Перевести на другой этап подбора
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/{id}/changes:
+    put:
+      description: Лог действий
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Идентификатор кандидата
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: request filter
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/applicantapimodels.ApplicantHistoryFilter'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.ScrollerResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/applicantapimodels.ApplicantHistoryView'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Лог действий
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/{id}/doc/list:
+    get:
+      description: Получить список документов кандидата
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID кандидата
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/filesapimodels.FileView'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получить список документов кандидата
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/{id}/isolate:
+    put:
+      description: (Дубли) Пометить кандидатов как разных
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Идентификатор кандидата - дубликата, который помечается как не
+          дубликат
+        in: query
+        name: duplicate_id
+        required: true
+        type: string
+      - description: Идентификатор основного кандидата
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: (Дубли) Пометить кандидатов как разных
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/{id}/join:
+    put:
+      description: (Дубли) Объединение кандидатов
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Идентификатор кандидата - дубликата, который будет перенесен
+          в архив
+        in: query
+        name: duplicate_id
+        required: true
+        type: string
+      - description: Идентификатор основного кандидата
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: (Дубли) Объединение кандидатов
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/{id}/note:
+    put:
+      description: Добавить заметку о кандидате
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Идентификатор кандидата
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: request data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/applicantapimodels.ApplicantNote'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.ScrollerResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/applicantapimodels.ApplicantHistoryView'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Добавить заметку о кандидате
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/{id}/photo:
+    delete:
+      description: Удалить фото кандидата
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID кандидата
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Удалить фото кандидата
+      tags:
+      - Кандидат
+    get:
+      description: Скачать фото кандидата
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID кандидата
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Скачать фото кандидата
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/{id}/reject:
+    put:
+      description: Отклонить кандидата
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Идентификатор кандидата
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/applicantapimodels.RejectRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Отклонить кандидата
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/{id}/resume:
+    delete:
+      description: Удалить резюме кандидата
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID кандидата
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Удалить резюме кандидата
+      tags:
+      - Кандидат
+    get:
+      description: Скачать резюме кандидата
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID кандидата
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Скачать резюме кандидата
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/{id}/tag:
+    delete:
+      description: Удалить тэг
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: удаляемый Тег
+        in: query
+        name: tag
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Удалить тэг
+      tags:
+      - Кандидат
+    put:
+      description: Добавить тэг
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: добавляемый Тег
+        in: query
+        name: tag
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Добавить тэг
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/{id}/upload-doc:
+    post:
+      description: Загрузить документ кандидата
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID кандидата
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: file to upload
+        in: formData
+        name: document
+        required: true
+        type: file
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Загрузить документ кандидата
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/{id}/upload-photo:
+    post:
+      description: Загрузить фото кандидата
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID кандидата
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Фото кандидата
+        in: formData
+        name: photo
+        required: true
+        type: file
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Загрузить фото кандидата
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/{id}/upload-resume:
+    post:
+      description: Загрузить резюме кандидата
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID кандидата
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: file to upload
+        in: formData
+        name: resume
+        required: true
+        type: file
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Загрузить резюме кандидата
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/doc/{id}:
+    delete:
+      description: Удалить документ кандидата
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID документа
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Удалить документ кандидата
+      tags:
+      - Кандидат
+    get:
+      description: Скачать документ кандидата
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID документа
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Скачать документ кандидата
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/list:
+    post:
+      description: Список
+      parameters:
+      - description: request filter body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/applicantapimodels.ApplicantFilter'
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.ScrollerResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/applicantapimodels.ApplicantView'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Список
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/multi-actions/change_stage:
+    put:
+      description: Перевести на другой этап подбора
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/applicantapimodels.MultiChangeStageRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Перевести на другой этап подбора
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/multi-actions/export_xls:
+    put:
+      description: Выгрузить в Excel
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/applicantapimodels.XlsExportRequest'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Выгрузить в Excel
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/multi-actions/reject:
+    put:
+      description: Отклонить кандидатов
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/applicantapimodels.MultiRejectRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Отклонить кандидатов
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/multi-actions/send_email:
+    put:
+      description: Отправить письма кандидатам
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/applicantapimodels.MultiChangeStageRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/applicantapimodels.MultiEmailResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Отправить письма кандидатам
+      tags:
+      - Кандидат
   /api/v1/space/ext/avito/{id}/attach:
     put:
       description: Привязать существующую вакансию
@@ -2406,7 +5471,7 @@ paths:
       tags:
       - Интеграция Avito
   /api/v1/space/ext/avito/{id}/status:
-    put:
+    get:
       description: Статус размещения
       parameters:
       - description: Authorization token
@@ -2631,7 +5696,7 @@ paths:
       tags:
       - Интеграция HeadHunter
   /api/v1/space/ext/hh/{id}/status:
-    put:
+    get:
       description: Статус размещения
       parameters:
       - description: Authorization token
@@ -2753,6 +5818,573 @@ paths:
       summary: Получение ссылки для авторизации
       tags:
       - Интеграция HeadHunter
+  /api/v1/space/messenger/job/is_available:
+    get:
+      description: Проверка доступности чата через работный сайт
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/negotiationapimodels.MessengerAvailableRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/negotiationapimodels.MessengerAvailableResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Проверка доступности чата через работный сайт
+      tags:
+      - Мессенджер
+  /api/v1/space/messenger/job/list:
+    post:
+      description: Получение списка сообщений чата с кандидатом через работный сайт
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/negotiationapimodels.MessageListRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/negotiationapimodels.MessageItem'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получение списка сообщений чата с кандидатом через работный сайт
+      tags:
+      - Мессенджер
+  /api/v1/space/messenger/job/send_message:
+    post:
+      description: Отправка нового сообщение кандидату через работный сайт
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/negotiationapimodels.NewMessageRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Отправка нового сообщение кандидату через работный сайт
+      tags:
+      - Мессенджер
+  /api/v1/space/msg-templates:
+    post:
+      description: Создание
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/msgtemplateapimodels.MsgTemplateData'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Создание
+      tags:
+      - Шаблоны сообщений
+  /api/v1/space/msg-templates/{id}:
+    delete:
+      description: Удаление
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Удаление
+      tags:
+      - Шаблоны сообщений
+    get:
+      description: Получение по ИД
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dictapimodels.CompanyView'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получение по ИД
+      tags:
+      - Шаблоны сообщений
+    put:
+      description: Обновление
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/msgtemplateapimodels.MsgTemplateData'
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Обновление
+      tags:
+      - Шаблоны сообщений
+  /api/v1/space/msg-templates/{id}/logo:
+    delete:
+      description: Удалить изображение логотипа компании для шаблона
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: template rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Удалить изображение логотипа компании для шаблона
+      tags:
+      - Шаблоны сообщений
+    get:
+      description: Скачать изображение логотипа компании для шаблона
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: template rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Скачать изображение логотипа компании для шаблона
+      tags:
+      - Шаблоны сообщений
+    post:
+      description: Загрузить изображение логотипа компании для шаблона
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: template rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Фото
+        in: formData
+        name: photo
+        required: true
+        type: file
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Загрузить изображение логотипа компании для шаблона
+      tags:
+      - Шаблоны сообщений
+  /api/v1/space/msg-templates/{id}/preview_pdf:
+    get:
+      description: Предпросмотр pdf на основе шаблона
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: template rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Предпросмотр pdf на основе шаблона
+      tags:
+      - Шаблоны сообщений
+  /api/v1/space/msg-templates/{id}/sign:
+    delete:
+      description: Удалить изображение подписи для шаблона
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: template rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Удалить изображение подписи для шаблона
+      tags:
+      - Шаблоны сообщений
+    get:
+      description: Скачать изображение подписи для шаблона
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: template rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Скачать изображение подписи для шаблона
+      tags:
+      - Шаблоны сообщений
+    post:
+      description: Загрузить изображение подписи для шаблона
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: template rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Фото
+        in: formData
+        name: photo
+        required: true
+        type: file
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Загрузить изображение подписи для шаблона
+      tags:
+      - Шаблоны сообщений
+  /api/v1/space/msg-templates/{id}/stamp:
+    delete:
+      description: Удалить изображение печати компании для шаблона
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: template rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Удалить изображение печати компании для шаблона
+      tags:
+      - Шаблоны сообщений
+    get:
+      description: Скачать изображение печати компании для шаблона
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: template rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Скачать изображение печати компании для шаблона
+      tags:
+      - Шаблоны сообщений
+    post:
+      description: Загрузить изображение печати компании для шаблона
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: template rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Фото
+        in: formData
+        name: photo
+        required: true
+        type: file
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Загрузить изображение печати компании для шаблона
+      tags:
+      - Шаблоны сообщений
   /api/v1/space/msg-templates/list:
     get:
       description: Список шаблонов сообщений
@@ -2805,6 +6437,8 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
         "400":
           description: Bad Request
           schema:
@@ -2818,6 +6452,342 @@ paths:
       summary: Отправить сообщение кандидату на почту
       tags:
       - Шаблоны сообщений
+  /api/v1/space/msg-templates/variables:
+    get:
+      description: Переменные шаблона
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/msgtemplateapimodels.TemplateItem'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Переменные шаблона
+      tags:
+      - Шаблоны сообщений
+  /api/v1/space/negotiation/{id}:
+    get:
+      description: Получение по ИД
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/negotiationapimodels.NegotiationView'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получение по ИД
+      tags:
+      - Отклики
+  /api/v1/space/negotiation/{id}/comment:
+    put:
+      description: Сохранить комментарий
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Comment data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/negotiationapimodels.CommentData'
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Сохранить комментарий
+      tags:
+      - Отклики
+  /api/v1/space/negotiation/{id}/status_change:
+    put:
+      description: Смена статуса
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: new status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/negotiationapimodels.StatusData'
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Смена статуса
+      tags:
+      - Отклики
+  /api/v1/space/negotiation/list:
+    post:
+      description: Список
+      parameters:
+      - description: request filter body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dbmodels.NegotiationFilter'
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/negotiationapimodels.NegotiationView'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Список
+      tags:
+      - Отклики
+  /api/v1/space/profile:
+    get:
+      description: Получение профиля
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/spaceapimodels.ProfileData'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получение профиля
+      tags:
+      - Профиль организации
+    put:
+      description: Обновление профиля
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/spaceapimodels.ProfileData'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Обновление профиля
+      tags:
+      - Профиль организации
+  /api/v1/space/profile/photo:
+    get:
+      description: Скачать фото
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Скачать фото
+      tags:
+      - Профиль организации
+    post:
+      description: Загрузить фото
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Фото
+        in: formData
+        name: photo
+        required: true
+        type: file
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Загрузить фото
+      tags:
+      - Профиль организации
+  /api/v1/space/profile/send_license_request:
+    put:
+      description: Отправка заявки на связь с отделом продаж
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/spaceapimodels.SalesRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Отправка заявки на связь с отделом продаж
+      tags:
+      - Профиль организации
   /api/v1/space/settings/{code}:
     put:
       description: Обновить значение настройки пространства
@@ -2841,6 +6811,8 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
         "400":
           description: Bad Request
           schema:
@@ -2888,6 +6860,42 @@ paths:
       summary: Список настроек
       tags:
       - Настройки space
+  /api/v1/space/superset/guest_token:
+    get:
+      description: Получение гостевого токена
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Код дашборда
+        in: query
+        name: dashboard_code
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/supersetapimodels.GuestTokenResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получение гостевого токена
+      tags:
+      - Superset
   /api/v1/space/vacancy:
     post:
       description: Создание
@@ -3031,6 +7039,44 @@ paths:
       summary: Обновление
       tags:
       - Вакансия
+  /api/v1/space/vacancy/{id}/change_status:
+    put:
+      description: Изменение статуса вакансии
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/vacancyapimodels.StatusChangeRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Изменение статуса вакансии
+      tags:
+      - Вакансия
   /api/v1/space/vacancy/{id}/favorite:
     put:
       description: В избранное
@@ -3103,16 +7149,123 @@ paths:
       summary: Закрепить
       tags:
       - Вакансия
-  /api/v1/space/vacancy/list:
-    post:
-      description: Список
+  /api/v1/space/vacancy/{id}/stage:
+    delete:
+      description: Удаление этап подбора
       parameters:
-      - description: request filter body
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: идентификатор этапа
+        in: query
+        name: stage_id
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Удаление этап подбора
+      tags:
+      - Вакансия
+    post:
+      description: Добавить этап подбора
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: request body
         in: body
         name: body
         required: true
         schema:
-          $ref: '#/definitions/dbmodels.VacancyFilter'
+          $ref: '#/definitions/vacancyapimodels.SelectionStageAdd'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Добавить этап подбора
+      tags:
+      - Вакансия
+  /api/v1/space/vacancy/{id}/stage/change_order:
+    put:
+      description: Изменение порядка этапов подбора
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: идентификатор этапа
+        in: query
+        name: stage_id
+        type: string
+      - description: новый порядковый номер
+        in: query
+        name: stage_order
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Изменение порядка этапов подбора
+      tags:
+      - Вакансия
+  /api/v1/space/vacancy/{id}/stage/list:
+    post:
+      description: Список этапов подбора
+      parameters:
       - description: Authorization token
         in: header
         name: Authorization
@@ -3123,7 +7276,334 @@ paths:
           description: OK
           schema:
             allOf:
+            - $ref: '#/definitions/apimodels.ScrollerResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/vacancyapimodels.SelectionStageView'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Список этапов подбора
+      tags:
+      - Вакансия
+  /api/v1/space/vacancy/{id}/survey:
+    get:
+      description: Получение анкеты HR (генерация, в случае отсутствия)
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: идентификатор вакансии
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
             - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/surveyapimodels.HRSurveyView'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получение анкеты HR (генерация, в случае отсутствия)
+      tags:
+      - Анкета HR по вакансии
+    post:
+      description: Сохранение анкеты HR (перегенерация вопросов в случае если вопрос
+        не подходит)
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/surveyapimodels.HRSurvey'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/surveyapimodels.HRSurveyView'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Сохранение анкеты HR (перегенерация вопросов в случае если вопрос не
+        подходит)
+      tags:
+      - Анкета HR по вакансии
+  /api/v1/space/vacancy/{id}/team/{user_id}/exclude:
+    put:
+      description: Команда. Исключить участника
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: vacancy ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: user ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Команда. Исключить участника
+      tags:
+      - Вакансия
+  /api/v1/space/vacancy/{id}/team/{user_id}/invite:
+    put:
+      description: Команда. Пригласить участника
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: vacancy ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: user ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/vacancyapimodels.TeamPerson'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Команда. Пригласить участника
+      tags:
+      - Вакансия
+  /api/v1/space/vacancy/{id}/team/{user_id}/set_as_responsible:
+    put:
+      description: Команда. Сделать ответственным
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: vacancy ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: user ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Команда. Сделать ответственным
+      tags:
+      - Вакансия
+  /api/v1/space/vacancy/{id}/team/list:
+    post:
+      description: Команда
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: vacancy ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/vacancyapimodels.TeamPerson'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Команда
+      tags:
+      - Вакансия
+  /api/v1/space/vacancy/{id}/team/users_list:
+    post:
+      description: Команда. Список пользователей в системе
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request filter body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/vacancyapimodels.PersonFilter'
+      - description: vacancy ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/vacancyapimodels.TeamPerson'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Команда. Список пользователей в системе
+      tags:
+      - Вакансия
+  /api/v1/space/vacancy/list:
+    post:
+      description: Список
+      parameters:
+      - description: request filter body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/vacancyapimodels.VacancyFilter'
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.ScrollerResponse'
             - properties:
                 data:
                   items:
@@ -3157,7 +7637,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/vacancyapimodels.VacancyRequestEditData'
+          $ref: '#/definitions/vacancyapimodels.VacancyRequestCreateData'
       responses:
         "200":
           description: OK
@@ -3396,6 +7876,42 @@ paths:
       summary: Отменить заявку
       tags:
       - Заявка
+  /api/v1/space/vacancy_request/{id}/favorite:
+    put:
+      description: В избранное
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: выбрано/не выбрано
+        in: query
+        name: set
+        type: boolean
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: В избранное
+      tags:
+      - Заявка
   /api/v1/space/vacancy_request/{id}/on_approval:
     put:
       description: Отправить на согласование
@@ -3426,6 +7942,106 @@ paths:
           schema:
             $ref: '#/definitions/apimodels.Response'
       summary: Отправить на согласование
+      tags:
+      - Заявка
+  /api/v1/space/vacancy_request/{id}/on_create:
+    put:
+      description: Перевести шаблон на статус заявка создана
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Перевести шаблон на статус заявка создана
+      tags:
+      - Заявка
+  /api/v1/space/vacancy_request/{id}/pin:
+    put:
+      description: Закрепить
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: выбрано/не выбрано
+        in: query
+        name: set
+        type: boolean
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Закрепить
+      tags:
+      - Заявка
+  /api/v1/space/vacancy_request/{id}/publish:
+    put:
+      description: Создать вакансию
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Создать вакансию
       tags:
       - Заявка
   /api/v1/space/vacancy_request/{id}/reject:
@@ -3502,6 +8118,12 @@ paths:
     post:
       description: Список
       parameters:
+      - description: request filter body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/vacancyapimodels.VrFilter'
       - description: Authorization token
         in: header
         name: Authorization
@@ -3512,7 +8134,7 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/apimodels.Response'
+            - $ref: '#/definitions/apimodels.ScrollerResponse'
             - properties:
                 data:
                   items:
@@ -3532,6 +8154,250 @@ paths:
       summary: Список
       tags:
       - Заявка
+  /api/v1/user_profile:
+    get:
+      description: Получить профиль пользователя
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/spaceapimodels.SpaceUserProfileView'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получить профиль пользователя
+      tags:
+      - Профиль пользователя space
+    put:
+      description: Обновить профиль пользователя
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: space user ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/spaceapimodels.SpaceUserProfileData'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Обновить профиль пользователя
+      tags:
+      - Профиль пользователя space
+  /api/v1/user_profile/change_password:
+    put:
+      description: Изменить пароль
+      parameters:
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/spaceapimodels.PasswordChange'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Изменить пароль
+      tags:
+      - Профиль пользователя space
+  /api/v1/user_profile/photo:
+    get:
+      description: Скачать фото
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Скачать фото
+      tags:
+      - Профиль пользователя space
+    post:
+      description: Загрузить фото
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Фото
+        in: formData
+        name: photo
+        required: true
+        type: file
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Загрузить фото
+      tags:
+      - Профиль пользователя space
+  /api/v1/user_profile/push_settings:
+    get:
+      description: Push уведомления - список событий
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/spaceapimodels.PushSettings'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Push уведомления - список событий
+      tags:
+      - Профиль пользователя space
+    put:
+      description: Push уведомления - настройка уведомлений по событию
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/spaceapimodels.PushSettingData'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Push уведомления - настройка уведомлений по событию
+      tags:
+      - Профиль пользователя space
+  /api/v1/user_profile/push_settings/enable:
+    put:
+      description: Push уведомления - настройка отправки
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: выбрано/не выбрано
+        in: query
+        name: set
+        type: boolean
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Push уведомления - настройка отправки
+      tags:
+      - Профиль пользователя space
   /api/v1/users:
     post:
       description: Создать нового пользователя
@@ -3548,8 +8414,8 @@ paths:
         schema:
           $ref: '#/definitions/spaceapimodels.CreateUser'
       responses:
-        "200":
-          description: OK
+        "201":
+          description: Created
         "400":
           description: Bad Request
           schema:
@@ -3586,6 +8452,8 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
         "400":
           description: Bad Request
           schema:
@@ -3615,6 +8483,13 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/spaceapimodels.SpaceUser'
+              type: object
         "400":
           description: Bad Request
           schema:
@@ -3650,6 +8525,8 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
         "400":
           description: Bad Request
           schema:
@@ -3661,6 +8538,36 @@ paths:
           schema:
             $ref: '#/definitions/apimodels.Response'
       summary: Обновить пользователя
+      tags:
+      - Пользователи space
+  /api/v1/users/{id}/photo:
+    get:
+      description: Скачать фото
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: space user ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Скачать фото
       tags:
       - Пользователи space
   /api/v1/users/list:
@@ -3677,10 +8584,19 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/apimodels.Pagination'
+          $ref: '#/definitions/spaceapimodels.SpaceUserFilter'
       responses:
         "200":
           description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.ScrollerResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/spaceapimodels.SpaceUser'
+                  type: array
+              type: object
         "400":
           description: Bad Request
           schema:
@@ -3694,4 +8610,27 @@ paths:
       summary: Получить список пользователей space
       tags:
       - Пользователи space
+  /ws:
+    get:
+      description: Системные пуши
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/wsmodels.ServerMessage'
+        "400":
+          description: Bad Request
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+      summary: Системные пуши
+      tags:
+      - Websocket Системные пуши
 swagger: "2.0"

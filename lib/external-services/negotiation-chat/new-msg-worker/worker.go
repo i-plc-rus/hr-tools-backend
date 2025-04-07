@@ -82,8 +82,14 @@ func (i impl) handle(ctx context.Context, integrationName string, provider exter
 		logger.WithError(err).Error("ошибка получения списка активных кандидатов")
 		return
 	}
+	connectedMap := make(map[string]bool, len(list))
 	for _, applicant := range list {
-		if !provider.CheckConnected(ctx, applicant.SpaceID) {
+		isConnected, ok := connectedMap[applicant.SpaceID]
+		if !ok {
+			isConnected = provider.CheckConnected(ctx, applicant.SpaceID)
+			connectedMap[applicant.SpaceID] = isConnected
+		}
+		if !isConnected {
 			continue
 		}
 		msg, err := provider.GetLastInMessage(ctx, applicant)

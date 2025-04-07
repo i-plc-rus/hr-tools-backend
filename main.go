@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/gofiber/contrib/swagger"
+	swaggermiddleware "github.com/go-openapi/runtime/middleware"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	fiberRecover "github.com/gofiber/fiber/v2/middleware/recover"
@@ -15,6 +15,7 @@ import (
 	publicapi "hr-tools-backend/controllers/v1/public"
 	"hr-tools-backend/fiberlog"
 	"hr-tools-backend/initializers"
+	"hr-tools-backend/initializers/swagger"
 	"hr-tools-backend/lib/ws"
 	"hr-tools-backend/middleware"
 	"os"
@@ -37,7 +38,17 @@ func main() {
 		Path:     "/swagger",
 		FilePath: "./docs/swagger.json",
 	}
-	app.Use(swagger.New(swaggerCfg))
+	ops := swaggermiddleware.SwaggerUIOpts{
+		SwaggerURL:       "./static/swagger-ui-bundle.js",
+		SwaggerPresetURL: "./static/swagger-ui-standalone-preset.js",
+		SwaggerStylesURL: "./static/swagger-ui.css",
+		Favicon16:        "./static/favicon-16x16.png",
+		Favicon32:        "./static/favicon-32x32.png",
+	}
+
+	app.Use(swagger.New(ops, swaggerCfg))
+
+	app.Static("/static", "./static/static_web") 
 
 	wsApp := fiber.New(fiber.Config{
 		BodyLimit: 10 * 1024 * 1024, // limit of 10MB

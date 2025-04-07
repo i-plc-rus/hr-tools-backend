@@ -76,9 +76,12 @@ func (c *negotiationApiController) statusChange(ctx *fiber.Ctx) error {
 	}
 	spaceID := middleware.GetUserSpace(ctx)
 	userID := middleware.GetUserID(ctx)
-	err = applicant.Instance.UpdateStatus(spaceID, id, userID, payload.Status)
+	hMsg, err := applicant.Instance.UpdateStatus(spaceID, id, userID, payload.Status)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка изменения статуса отклика")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }

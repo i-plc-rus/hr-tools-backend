@@ -97,28 +97,28 @@ type ApplicantsStage struct {
 	Total            int
 }
 
-func (a Applicant) IsAllowStatusChange(newStatus models.NegotiationStatus) (bool, error) {
+func (a Applicant) IsAllowStatusChange(newStatus models.NegotiationStatus) (string, bool) {
 	if newStatus != models.NegotiationStatusWait &&
 		newStatus != models.NegotiationStatusRejected &&
 		newStatus != models.NegotiationStatusAccepted {
-		return false, errors.New("неизвестный статус")
+		return "неизвестный статус", false
 	}
 	if a.NegotiationStatus == newStatus {
-		return false, nil
+		return "", false
 	}
 	if a.Status == models.ApplicantStatusInProcess {
-		return false, errors.New("смена статуса отклика недоступна, кандидат в процессе рассмотрения")
+		return "смена статуса отклика недоступна, кандидат в процессе рассмотрения", false
 	}
 	if a.Status == models.ApplicantStatusRejected {
-		return false, errors.New("смена статуса отклика недоступна, кандидат уже отклонен")
+		return "смена статуса отклика недоступна, кандидат уже отклонен", false
 	}
 	if a.Status == models.ApplicantStatusArchive {
-		return false, errors.Errorf("смена статуса отклика недоступна, кандидат находится в статусе '%v'", models.ApplicantStatusArchive)
+		return fmt.Sprintf("смена статуса отклика недоступна, кандидат находится в статусе '%v'", models.ApplicantStatusArchive), false
 	}
 	if a.NegotiationStatus == models.NegotiationStatusAccepted {
-		return false, errors.New("смена статуса отклика недоступна, отклик уже принят")
+		return "смена статуса отклика недоступна, отклик уже принят", false
 	}
-	return true, nil
+	return "", true
 }
 
 type NegotiationFilter struct {
