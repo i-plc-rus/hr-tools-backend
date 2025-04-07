@@ -51,4 +51,5 @@ const (
 	HistoryTypeArchive     ActionType = "archive"      // Перемещен в архив
 	HistoryTypeReject      ActionType = "reject"       // Кандидат отклонен
 	HistoryTypeEmail       ActionType = "reject"       // email
+	HistoryAIScore         ActionType = "ai_score"     // Оценка ИИ
 )

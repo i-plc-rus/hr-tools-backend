@@ -15,6 +15,7 @@ import (
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	"hr-tools-backend/models"
 	dbmodels "hr-tools-backend/models/db"
+	"runtime/debug"
 	"time"
 )
 
@@ -50,6 +51,13 @@ func (i impl) getLogger(integrationName string) *log.Entry {
 }
 
 func (i impl) run(ctx context.Context, integrationName string, provider externalservices.JobSiteProvider) {
+	defer func() {
+		if r := recover(); r != nil {
+			i.getLogger(integrationName).
+				WithField("panic_stack", string(debug.Stack())).
+				Errorf("panic: (%v)", r)
+		}
+	}()
 	period := time.Second
 	logger := i.getLogger(integrationName)
 	for {

@@ -234,7 +234,7 @@ func (i *impl) VacancyClose(ctx context.Context, spaceID, vacancyID string) (hMs
 func (i *impl) VacancyAttach(ctx context.Context, spaceID, vacancyID string, extID string) (hMsg string, err error) {
 	avitoID, err := strconv.Atoi(extID)
 	if err != nil {
-		return "указане некорректный идентификатор вакансии", nil
+		return "указан некорректный идентификатор вакансии", nil
 	}
 	accessToken, hMsg, err := i.getToken(ctx, spaceID)
 	if err != nil || hMsg != "" {

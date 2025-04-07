@@ -1,11 +1,13 @@
 package applicantapimodels
 
 import (
-	"github.com/pkg/errors"
+	"hr-tools-backend/config"
 	"hr-tools-backend/models"
 	apimodels "hr-tools-backend/models/api"
 	dbmodels "hr-tools-backend/models/db"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type ApplicantView struct {
@@ -24,6 +26,15 @@ type ApplicantView struct {
 	VacancyName        string                 `json:"vacancy_name"`         // Название вакансии
 	FIO                string                 `json:"fio"`                  // ФИО кандидата
 	Age                int                    `json:"age"`                  // возраст
+	Survey             ApplicantSurvey        `json:"survey"`               // анкета для кандидата
+}
+
+type ApplicantSurvey struct {
+	Url         string // Ссылка на анкету для кандидата
+	IsFilledOut bool   // Анкета заполнена кандидатом и может использоваться для оценки
+	IsScored    bool   // Анкета получила оценку от нейросети
+	HrThreshold int    // Порог адаптивного фильтра
+	Score       int    // Итоговая оцена кандидата
 }
 
 type ApplicantViewExt struct {
@@ -141,7 +152,14 @@ func ApplicantConvert(rec dbmodels.Applicant) ApplicantView {
 		result.VacancyName = rec.Vacancy.VacancyName
 	}
 	result.FIO = rec.GetFIO()
-	result.FIO = rec.GetFIO()
+	if rec.ApplicantSurvey != nil {
+		result.Survey.Url = config.Conf.UIParams.SurveyPath + rec.ApplicantSurvey.ID
+		result.Survey.IsFilledOut = rec.ApplicantSurvey.IsFilledOut
+		result.Survey.IsFilledOut = rec.ApplicantSurvey.IsScored
+		result.Survey.HrThreshold = rec.ApplicantSurvey.HrThreshold
+		result.Survey.Score = rec.ApplicantSurvey.ScoreAI.Score
+
+	}
 	return result
 }
 

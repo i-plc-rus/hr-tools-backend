@@ -3,6 +3,7 @@ package dbmodels
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"strings"
 )
 
 type HRSurvey struct {
@@ -45,4 +46,14 @@ type HRSurveyQuestion struct {
 
 type SurveyAnswers struct {
 	Value string `json:"value"`
+}
+
+func (j HRSurveyQuestions) GetThreshold() int {
+	threshold := 0
+	for _, q := range j.Questions {
+		if strings.ToUpper(q.Selected) == "ОБЯЗАТЕЛЬНО" {
+			threshold += q.Weight
+		}
+	}
+	return int(float64(threshold) * 0.6)
 }

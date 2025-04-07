@@ -27,6 +27,8 @@ type Provider interface {
 	ListOfApplicantByIDs(spaceID string, ids []string, filter *applicantapimodels.ApplicantFilter) ([]dbmodels.ApplicantWithJob, error)
 	ListOfApplicantSource(spaceID string, filter applicantapimodels.ApplicantFilter) ([]dbmodels.ApplicantSource, error)
 	ListOfActiveApplicants() ([]dbmodels.Applicant, error)
+	ListOfActivefNegotiation(withHrSurvy bool) ([]dbmodels.Applicant, error)
+	ListForSurveySend() ([]dbmodels.Applicant, error)
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -260,6 +262,41 @@ func (i impl) ListOfActiveApplicants() ([]dbmodels.Applicant, error) {
 		Where("applicants.source in (?)", []models.ApplicantSource{models.ApplicantSourceAvito, models.ApplicantSourceHh})
 	err := tx.Preload(clause.Associations).Find(&list).Error
 
+	if err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (i impl) ListOfActivefNegotiation(withHrSurvy bool) ([]dbmodels.Applicant, error) {
+	list := []dbmodels.Applicant{}
+	tx := i.db.
+		Model(dbmodels.Applicant{}).
+		Where("applicants.negotiation_id is not null").
+		Where("applicants.status = ?", models.ApplicantStatusNegotiation)
+	if withHrSurvy {
+		tx.Joins("left join vacancies as v on vacancy_id = v.id").
+			Joins("join hr_surveys as hr on v.id = hr.vacancy_id").
+			Where("hr.is_filled_out = true")
+	}
+	err := tx.Preload(clause.Associations).Find(&list).Error
+	if err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (i impl) ListForSurveySend() ([]dbmodels.Applicant, error) {
+	list := []dbmodels.Applicant{}
+	tx := i.db.
+		Model(dbmodels.Applicant{}).
+		Where("applicants.negotiation_id is not null").
+		Where("applicants.status = ?", models.ApplicantStatusNegotiation)
+	tx.Joins("join applicant_surveys as su on su.applicant_id = applicants.id").
+		Where("su.is_filled_out = false").
+		Where("su.is_scored = false").
+		Where("su.is_sent is null")
+	err := tx.Preload(clause.Associations).Find(&list).Error
 	if err != nil {
 		return nil, err
 	}

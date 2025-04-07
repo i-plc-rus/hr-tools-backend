@@ -383,6 +383,22 @@ const (
 	SearchStatusAcceptedJobOffer SearchStatusType = "accepted_job_offer"  //Вышел на новое место
 )
 
+func (s SearchStatusType) ToString() string {
+	switch s {
+	case SearchStatusActive:
+		return "Активно ищет работу"
+	case SearchStatusLookingForOffers:
+		return "Рассматривает предложения"
+	case SearchStatusNotLookingForJob:
+		return "Не ищет работу"
+	case SearchStatusHasJobOffer:
+		return "Предложили работу, решает"
+	case SearchStatusAcceptedJobOffer:
+		return "Вышел на новое место"
+	}
+	return ""
+}
+
 type SearchLabelType string
 
 const (

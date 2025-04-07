@@ -12,6 +12,7 @@ import (
 	apiv1 "hr-tools-backend/controllers/v1"
 	"hr-tools-backend/controllers/v1/dict"
 	"hr-tools-backend/controllers/v1/external"
+	publicapi "hr-tools-backend/controllers/v1/public"
 	"hr-tools-backend/fiberlog"
 	"hr-tools-backend/initializers"
 	"hr-tools-backend/initializers/swagger"
@@ -109,6 +110,10 @@ func main() {
 	apiV1.Mount("/admin_panel", adminPanel)
 	//admin.Use(middleware.SuperAdminRoleRequired())
 	apiv1.InitAdminApiRouters(adminPanel)
+
+	public := fiber.New()
+	apiV1.Mount("/public", public)
+	publicapi.InitPublicSurveyApiRouters(public)
 
 	app.Hooks().OnShutdown()
 
