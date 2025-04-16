@@ -28,7 +28,7 @@ func InitPublicSurveyApiRouters(app *fiber.App) {
 // @Tags Анкета кандидата
 // @Description Получение анкеты
 // @Param   id          		path    string  true         "Идентификатор ID"
-// @Success 200 {object} apimodels.Response{data=surveyapimodels.ApplicantSurveyPublicView}
+// @Success 200 {object} apimodels.Response{data=surveyapimodels.ApplicantSurveyView}
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
