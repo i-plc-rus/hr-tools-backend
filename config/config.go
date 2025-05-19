@@ -1,9 +1,10 @@
 package config
 
 import (
-	"github.com/gotify/configor"
 	"hr-tools-backend/models"
 	"strings"
+
+	"github.com/gotify/configor"
 )
 
 var Conf *Configuration
@@ -81,7 +82,7 @@ type Configuration struct {
 		DashboardParams models.DashboardParams
 	}
 	Sales struct {
-		Email string `default:"sales@hr.tools.pro" env:"SALES_EMAIL"`
+		Email string `default:"info@it-tech.group" env:"SALES_EMAIL"` // sales@hr.tools.pro - previous one
 	}
 	UIParams struct {
 		SurveyPath string `default:"https://s.hr-tools.pro/public/survey/" env:"PUBLIC_SURVEY_UI_URL"`

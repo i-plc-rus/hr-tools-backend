@@ -1,12 +1,13 @@
 package apiv1
 
 import (
-	"github.com/gofiber/fiber/v2"
 	"hr-tools-backend/controllers"
 	spaceauthhandler "hr-tools-backend/lib/space/auth"
 	"hr-tools-backend/middleware"
 	apimodels "hr-tools-backend/models/api"
 	authapimodels "hr-tools-backend/models/api/auth"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 type authApiController struct {
@@ -44,7 +45,7 @@ func (c *authApiController) login(ctx *fiber.Ctx) error {
 	}
 	resp, err := spaceauthhandler.Instance.Login(payload.Email, payload.Password)
 	if err != nil {
-		return ctx.SendStatus(fiber.StatusUnauthorized)
+		return ctx.Status(fiber.StatusUnauthorized).JSON(apimodels.NewError(err.Error()))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(resp))
 }
