@@ -130,6 +130,7 @@ func (i *impl) CheckConnected(ctx context.Context, spaceID string) bool {
 		return false
 	}
 	if hMsg != "" || accessToken == "" {
+		logger.Errorf("токен пуст или ошибка: %v", hMsg)
 		return false
 	}
 	return i.checkToken(spaceID, accessToken)
