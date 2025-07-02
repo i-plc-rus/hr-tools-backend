@@ -94,6 +94,7 @@ type VacancyView struct {
 	ID              string               `json:"id"`
 	CreationDate    time.Time            `json:"creation_date"`
 	SelectionStages []SelectionStageView `json:"selection_stages"` // этапы подбора
+	Comments        []Comment            `json:"comments"`
 }
 
 type Salary struct {
@@ -201,6 +202,13 @@ func VacancyConvert(rec dbmodels.VacancyExt) VacancyView {
 	for _, stage := range rec.SelectionStages {
 		result.SelectionStages = append(result.SelectionStages, SelectionStageConvert(stage))
 	}
+	for _, comment := range rec.Comments {
+		result.Comments = append(result.Comments, Comment{
+			Date:     comment.Date,
+			AuthorID: comment.AuthorID,
+			Comment:  comment.Comment,
+		})
+	}
 	return result
 }
 
@@ -247,6 +255,22 @@ func (s StatusChangeRequest) Validate() error {
 	if s.Status != models.VacancyStatusOpened && s.Status != models.VacancyStatusCanceled &&
 		s.Status != models.VacancyStatusSuspended && s.Status != models.VacancyStatusClosed {
 		return errors.New("указан некорректный статус")
+	}
+	return nil
+}
+
+type Comment struct {
+	Date     time.Time `json:"date"`
+	AuthorID string    `json:"author_id"`
+	Comment  string    `json:"comment"`
+}
+
+func (c Comment) Validate() error {
+	if c.AuthorID == "" {
+		return errors.New("не указан идентификатор пользователя")
+	}
+	if c.Comment == "" {
+		return errors.New("не указан комментарий")
 	}
 	return nil
 }

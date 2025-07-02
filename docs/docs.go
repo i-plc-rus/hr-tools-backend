@@ -2538,6 +2538,107 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/public/survey/{id}": {
+            "get": {
+                "description": "Получение анкеты",
+                "tags": [
+                    "Анкета кандидата"
+                ],
+                "summary": "Получение анкеты",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Идентификатор ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/surveyapimodels.ApplicantSurveyView"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Сохранение ответов",
+                "tags": [
+                    "Анкета кандидата"
+                ],
+                "summary": "Сохранение ответов",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Идентификатор ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/surveyapimodels.ApplicantSurveyResponses"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/space/analytics/source": {
             "put": {
                 "description": "Источники кандидатов",
@@ -6751,6 +6852,63 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/space/vacancy/{id}/comment": {
+            "post": {
+                "description": "Добавить комментарий",
+                "tags": [
+                    "Вакансия"
+                ],
+                "summary": "Добавить комментарий",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/vacancyapimodels.Comment"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "rec ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/space/vacancy/{id}/favorite": {
             "put": {
                 "description": "В избранное",
@@ -9544,6 +9702,31 @@ const docTemplate = `{
                 }
             }
         },
+        "applicantapimodels.ApplicantSurvey": {
+            "type": "object",
+            "properties": {
+                "hrThreshold": {
+                    "description": "Порог адаптивного фильтра",
+                    "type": "integer"
+                },
+                "isFilledOut": {
+                    "description": "Анкета заполнена кандидатом и может использоваться для оценки",
+                    "type": "boolean"
+                },
+                "isScored": {
+                    "description": "Анкета получила оценку от нейросети",
+                    "type": "boolean"
+                },
+                "score": {
+                    "description": "Итоговая оцена кандидата",
+                    "type": "integer"
+                },
+                "url": {
+                    "description": "Ссылка на анкету для кандидата",
+                    "type": "string"
+                }
+            }
+        },
         "applicantapimodels.ApplicantView": {
             "type": "object",
             "properties": {
@@ -9672,6 +9855,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/models.ApplicantStatus"
+                        }
+                    ]
+                },
+                "survey": {
+                    "description": "анкета для кандидата",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/applicantapimodels.ApplicantSurvey"
                         }
                     ]
                 },
@@ -9832,6 +10023,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/models.ApplicantStatus"
+                        }
+                    ]
+                },
+                "survey": {
+                    "description": "анкета для кандидата",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/applicantapimodels.ApplicantSurvey"
                         }
                     ]
                 },
@@ -10042,9 +10241,11 @@ const docTemplate = `{
                 "duplicate",
                 "archive",
                 "reject",
-                "reject"
+                "reject",
+                "ai_score"
             ],
             "x-enum-comments": {
+                "HistoryAIScore": "Оценка ИИ",
                 "HistoryTypeAdded": "Кандидат добавлен",
                 "HistoryTypeArchive": "Перемещен в архив",
                 "HistoryTypeComment": "Добавлен комментраий к кандидату",
@@ -10064,7 +10265,8 @@ const docTemplate = `{
                 "HistoryTypeDuplicate",
                 "HistoryTypeArchive",
                 "HistoryTypeReject",
-                "HistoryTypeEmail"
+                "HistoryTypeEmail",
+                "HistoryAIScore"
             ]
         },
         "dbmodels.ApplicantChange": {
@@ -10156,6 +10358,41 @@ const docTemplate = `{
                             "$ref": "#/definitions/models.TripReadinessType"
                         }
                     ]
+                }
+            }
+        },
+        "dbmodels.ApplicantSurveyQuestion": {
+            "type": "object",
+            "properties": {
+                "answers": {
+                    "description": "Варианты ответов",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "comment": {
+                    "description": "Комментарий",
+                    "type": "string"
+                },
+                "question_id": {
+                    "description": "Идентификатор вопроса",
+                    "type": "string"
+                },
+                "question_text": {
+                    "description": "Текст вопроса",
+                    "type": "string"
+                },
+                "question_type": {
+                    "description": "Тип вопроса",
+                    "type": "string"
+                },
+                "selected": {
+                    "description": "Ответ кандидата",
+                    "type": "string"
+                },
+                "weight": {
+                    "type": "integer"
                 }
             }
         },
@@ -11883,6 +12120,45 @@ const docTemplate = `{
                 }
             }
         },
+        "surveyapimodels.ApplicantSurveyAnswer": {
+            "type": "object",
+            "properties": {
+                "answer": {
+                    "description": "Ответ кандидата",
+                    "type": "string"
+                },
+                "question_id": {
+                    "description": "Идентификатор вопроса",
+                    "type": "string"
+                }
+            }
+        },
+        "surveyapimodels.ApplicantSurveyResponses": {
+            "type": "object",
+            "properties": {
+                "responses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/surveyapimodels.ApplicantSurveyAnswer"
+                    }
+                }
+            }
+        },
+        "surveyapimodels.ApplicantSurveyView": {
+            "type": "object",
+            "properties": {
+                "is_filled_out": {
+                    "description": "\"анкета полностью заполнена\"",
+                    "type": "boolean"
+                },
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dbmodels.ApplicantSurveyQuestion"
+                    }
+                }
+            }
+        },
         "surveyapimodels.HRSurvey": {
             "type": "object",
             "properties": {
@@ -11948,6 +12224,20 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/vacancyapimodels.ApprovalStageData"
                     }
+                }
+            }
+        },
+        "vacancyapimodels.Comment": {
+            "type": "object",
+            "properties": {
+                "author_id": {
+                    "type": "string"
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
                 }
             }
         },
@@ -12814,6 +13104,10 @@ const docTemplate = `{
                 "job_title_name": {
                     "type": "string"
                 },
+                "open_vacancies": {
+                    "description": "кол-во вакансий открытых по заявке",
+                    "type": "integer"
+                },
                 "opened_positions": {
                     "description": "кол-во открытых позиций",
                     "type": "integer"
@@ -12923,6 +13217,12 @@ const docTemplate = `{
                 "city_id": {
                     "description": "ид города",
                     "type": "string"
+                },
+                "comments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/vacancyapimodels.Comment"
+                    }
                 },
                 "company_id": {
                     "description": "ид компании",

@@ -1,9 +1,10 @@
 package db
 
 import (
+	dbmodels "hr-tools-backend/models/db"
+
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	dbmodels "hr-tools-backend/models/db"
 )
 
 func AutoMigrateDB() error {
@@ -51,6 +52,10 @@ func AutoMigrateDB() error {
 
 	if err := DB.AutoMigrate(&dbmodels.Vacancy{}); err != nil {
 		return errors.Wrap(err, "ошибка создания структуры Vacancy")
+	}
+
+	if err := DB.AutoMigrate(&dbmodels.VacancyComment{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры VacancyComment")
 	}
 
 	if err := DB.AutoMigrate(&dbmodels.Favorite{}); err != nil {
