@@ -1,14 +1,15 @@
 package vacancystore
 
 import (
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"hr-tools-backend/models"
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
 	"strings"
+
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Provider interface {
@@ -24,6 +25,7 @@ type Provider interface {
 	RemoveFavorite(vacancyID, userID string) error
 	ListAvitoByStatus(spaceID string, status models.VacancyPubStatus) (list []dbmodels.Vacancy, err error)
 	ListHhByStatus(spaceID string, status models.VacancyPubStatus) (list []dbmodels.Vacancy, err error)
+	AddComment(data dbmodels.VacancyComment) error
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -232,6 +234,13 @@ func (i impl) ListHhByStatus(spaceID string, status models.VacancyPubStatus) (li
 		return nil, err
 	}
 	return list, nil
+}
+
+func (i impl) AddComment(data dbmodels.VacancyComment) error {
+	if err := i.db.Create(&data).Error; err != nil {
+		return err
+	}
+	return nil
 }
 
 func (i impl) addSort(tx *gorm.DB, sort vacancyapimodels.VacancySort) {

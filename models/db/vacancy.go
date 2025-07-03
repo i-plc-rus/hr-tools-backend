@@ -1,9 +1,11 @@
 package dbmodels
 
 import (
+	"hr-tools-backend/models"
+	"time"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"hr-tools-backend/models"
 )
 
 func (v *Vacancy) AfterDelete(tx *gorm.DB) (err error) {
@@ -50,6 +52,7 @@ type Vacancy struct {
 	SelectionStages []SelectionStage
 	VacancyTeam     []VacancyTeam
 	HRSurvey        *HRSurvey
+	Comments        []VacancyComment `gorm:"foreignKey:VacancyID"`
 }
 
 type HhData struct {
@@ -79,4 +82,12 @@ type VacancyExt struct {
 	Pinned          bool
 	ResponsibleID   string
 	ResponsibleUser *SpaceUser `gorm:"foreignKey:ResponsibleID"`
+}
+
+type VacancyComment struct {
+	ID        string
+	VacancyID string `gorm:"index"`
+	Date      time.Time
+	AuthorID  string
+	Comment   string
 }

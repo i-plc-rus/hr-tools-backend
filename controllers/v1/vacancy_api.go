@@ -28,6 +28,7 @@ func InitVacancyApiRouters(app *fiber.App) {
 			idRoute.Put("pin", controller.pin)
 			idRoute.Put("favorite", controller.favorite)
 			idRoute.Put("change_status", controller.changeStatus)
+			idRoute.Post("comment", controller.addComment)
 			idRoute.Route("stage", func(stageRoute fiber.Router) {
 				stageRoute.Post("list", controller.stageList)
 				stageRoute.Post("", controller.stageCreate)
@@ -268,6 +269,40 @@ func (c *vacancyApiController) changeStatus(ctx *fiber.Ctx) error {
 	err = vacancyhandler.Instance.StatusChange(spaceID, id, userID, payload.Status)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка изменения статуса вакансии")
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Добавить комментарий к вакансии
+// @Tags Вакансия
+// @Description Добавить комментарий к вакансии
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param	body body	 vacancyapimodels.Comment	true	"request body"
+// @Param   id          		path    string  				    	true         "rec ID"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/vacancy/{id}/comment [post]
+func (c *vacancyApiController) addComment(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	var payload vacancyapimodels.Comment
+	if err = c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	if err = payload.Validate(); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	err = vacancyhandler.Instance.AddComment(spaceID, id, payload)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка добавления комментария")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }

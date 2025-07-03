@@ -25,7 +25,9 @@ import (
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
 	"sort"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -49,6 +51,7 @@ type Provider interface {
 	UsersList(spaceID, vacancyID string, filter vacancyapimodels.PersonFilter) (result []vacancyapimodels.Person, err error)
 	ExecuteFromTeam(spaceID, vacancyID, userID string) (hMsg string, err error)
 	SetAsResponsible(spaceID, vacancyID, userID string) error
+	AddComment(spaceID, id string, data vacancyapimodels.Comment) error
 }
 
 var Instance Provider
@@ -643,6 +646,34 @@ func (i impl) SetAsResponsible(spaceID, vacancyID, userID string) error {
 		notification := models.GetPushVacancyResponsible(rec.VacancyName, vt.SpaceUser.GetFullName())
 		i.sendNotification(*rec, notification)
 	}()
+	return nil
+}
+
+func (i impl) AddComment(spaceID, id string, data vacancyapimodels.Comment) error {
+	logger := i.getLogger(spaceID, id, "")
+
+	// get vacancy for sure that it exists
+	rec, err := i.store.GetByID(spaceID, id)
+	if err != nil {
+		return err
+	}
+	if rec == nil {
+		return errors.New("вакансия не найдена")
+	}
+
+	dbComment := dbmodels.VacancyComment{
+		ID:        uuid.New().String(),
+		VacancyID: id,
+		Date:      time.Now(),
+		AuthorID:  data.AuthorID,
+		Comment:   data.Comment,
+	}
+
+	if err := i.store.AddComment(dbComment); err != nil {
+		logger.Error("не удалось сохранить комментарий", "error", err)
+		return err
+	}
+	logger.Info("добавлен комментарий к вакансии")
 	return nil
 }
 
