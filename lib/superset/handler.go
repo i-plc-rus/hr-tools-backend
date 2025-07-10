@@ -6,9 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/patrickmn/go-cache"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/config"
 	"hr-tools-backend/models"
 	supersetapimodels "hr-tools-backend/models/api/superset"
@@ -19,6 +16,10 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/patrickmn/go-cache"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 type Provider interface {
@@ -161,7 +162,7 @@ func (i impl) guestToken(accessToken, csrfToken string, csrfCookies []*http.Cook
 	guestReq := supersetapimodels.SupersetGuestTokenReq{
 		Resources: []supersetapimodels.Resource{},
 		RLS: []supersetapimodels.RLS{
-			{Clause: fmt.Sprintf("space_id = %v", spaceID)},
+			{Clause: fmt.Sprintf("space_id = '%s'", spaceID)},
 		},
 		User: supersetapimodels.User{
 			Username: guestUsername,
