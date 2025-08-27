@@ -345,7 +345,7 @@ func (i impl) Reject(spaceID, id, userID string, data vacancyapimodels.VacancyRe
 		return "", err
 	}
 	if !rec.Status.AllowReject() {
-		return fmt.Sprintf("невозможно согласовать заявку в текущем статусе: %v", rec.Status), nil
+		return fmt.Sprintf("невозможно отклонить заявку в текущем статусе: %v", rec.Status), nil
 	}
 	_, stage := rec.GetCurrentApprovalStage()
 	if stage != nil {
@@ -382,7 +382,8 @@ func (i impl) Reject(spaceID, id, userID string, data vacancyapimodels.VacancyRe
 		notification := models.GetPushVRRejected(rec.VacancyName, user.GetFullName(), user.Role.ToHuman())
 		i.sendNotification(rec, notification)
 	}(*rec)
-	return "", nil
+
+	return i.ChangeStatus(spaceID, id, userID, models.VRStatusNotAccepted)
 }
 
 func (i impl) getRec(spaceID, id string) (item *dbmodels.VacancyRequest, err error) {
