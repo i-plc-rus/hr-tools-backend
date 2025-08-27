@@ -163,9 +163,17 @@ func (i *impl) VacancyPublish(ctx context.Context, spaceID, vacancyID string) (h
 		return hMsg, nil
 	}
 
-	id, err := i.client.VacancyPublish(ctx, accessToken, *request)
-	if err != nil {
-		return "", err
+	id, hMsg, err := i.client.VacancyPublish(ctx, accessToken, *request)
+	if err != nil || hMsg != "" {
+		updMap := map[string]interface{}{
+			"hh_reasons": hMsg,
+			"hh_status":  models.VacancyPubStatusNone,
+		}
+		e := i.vacancyStore.Update(spaceID, vacancyID, updMap)
+		if e != nil {
+			i.getLogger(spaceID, vacancyID).WithError(e).Error("не удалось сохранить причину размещения вакансии")
+		}
+		return hMsg, err
 	}
 	vacancyUrl := fmt.Sprintf(VacancyUriTpl, id)
 	updMap := map[string]interface{}{
@@ -291,6 +299,7 @@ func (i *impl) GetVacancyInfo(ctx context.Context, spaceID, vacancyID string) (*
 	result := vacancyapimodels.ExtVacancyInfo{
 		Url:    rec.HhUri,
 		Status: models.VacancyPubStatusNone,
+		Reason: rec.HhReasons,
 	}
 	if rec.HhID == "" {
 		return &result, nil

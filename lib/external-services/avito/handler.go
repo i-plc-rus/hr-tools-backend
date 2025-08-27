@@ -700,10 +700,18 @@ func (i *impl) CheckIsModerationDone(ctx context.Context, spaceID string, list [
 			reasons = errorReason
 		}
 		updMap := map[string]interface{}{
-			"avito_id":      status.Vacancy.ID,
 			"avito_uri":     status.Vacancy.Url,
 			"avito_reasons": reasons,
 			"avito_status":  newStatus,
+		}
+		if status.Vacancy.ID != "" {
+			avitoID, err := strconv.Atoi(status.Vacancy.ID)
+			if err != nil {
+				logger.
+					WithError(err).Warn("ошибка получения идентификатора вакансии Avito")
+			} else {
+				updMap["avito_id"] = avitoID
+			}
 		}
 		logger.Info("Изменен статус публикации")
 		err = i.vacancyStore.Update(spaceID, rec.ID, updMap)

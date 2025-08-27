@@ -56,9 +56,10 @@ type Vacancy struct {
 }
 
 type HhData struct {
-	HhID     string                  `gorm:"type:varchar(255)"`
-	HhUri    string                  `gorm:"type:varchar(500)"`
-	HhStatus models.VacancyPubStatus `gorm:"type:varchar(255)"` // статус публикации
+	HhID      string                  `gorm:"type:varchar(255)"`
+	HhUri     string                  `gorm:"type:varchar(500)"`
+	HhStatus  models.VacancyPubStatus `gorm:"type:varchar(255)"` // статус публикации
+	HhReasons string                  `gorm:"type:varchar(500)"` // Расширенное описание статуса
 }
 
 type AvitoData struct {
