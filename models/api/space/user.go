@@ -87,13 +87,14 @@ func (r SpaceUserCommonData) Validate() error {
 }
 
 type SpaceUserProfileData struct {
-	Email               string `json:"email"`                 // Email пользователя
-	FirstName           string `json:"first_name"`            // Имя
-	LastName            string `json:"last_name"`             // Фамилия
-	PhoneNumber         string `json:"phone_number"`          // Телефон
-	InternalPhoneNumber string `json:"internal_phone_number"` // Внутренний номер
-	UsePersonalSign     bool   `json:"use_personal_sign"`     // Персональная подпись
-	TextSign            string `json:"text_sign"`             // Текст подписи
+	Email               string  `json:"email"`                 // Email пользователя
+	FirstName           string  `json:"first_name"`            // Имя
+	LastName            string  `json:"last_name"`             // Фамилия
+	PhoneNumber         string  `json:"phone_number"`          // Телефон
+	InternalPhoneNumber string  `json:"internal_phone_number"` // Внутренний номер
+	UsePersonalSign     bool    `json:"use_personal_sign"`     // Персональная подпись
+	TextSign            string  `json:"text_sign"`             // Текст подписи
+	JobTitleID          *string `json:"job_title_id"`          // Идентификатор должности
 }
 
 func (r SpaceUserProfileData) Validate() error {
