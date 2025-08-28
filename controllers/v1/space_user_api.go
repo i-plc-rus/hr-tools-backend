@@ -29,7 +29,7 @@ func InitSpaceUserRouters(app *fiber.App) {
 			usersIDRoute.Delete("", controller.DeleteUser)
 			usersIDRoute.Put("", controller.UpdateUser)
 			usersIDRoute.Get("", controller.GetUserByID)
-			usersIDRoute.Get("photo", controller.getGetUserPhoto)     // скачать фото
+			usersIDRoute.Get("photo", controller.getGetUserPhoto) // скачать фото
 		})
 
 	})
@@ -276,7 +276,7 @@ func (c *spaceUserController) changePassword(ctx *fiber.Ctx) error {
 	if err := payload.Validate(); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
-	hMsg, err := spaceusershander.Instance.СhangePassword(userID, payload)
+	hMsg, err := spaceusershander.Instance.ChangePassword(userID, payload)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка изменения пароля")
 	}

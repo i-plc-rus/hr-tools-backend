@@ -24,7 +24,7 @@ type Provider interface {
 	GetByID(userID string) (user spaceapimodels.SpaceUser, err error)
 	UpdateUserProfile(userID string, request spaceapimodels.SpaceUserProfileData) error
 	GetProfileByID(userID string) (user spaceapimodels.SpaceUserProfileView, err error)
-	СhangePassword(userID string, payload spaceapimodels.PasswordChange) (nMsg string, err error)
+	ChangePassword(userID string, payload spaceapimodels.PasswordChange) (nMsg string, err error)
 	GetPushSettings(spaceID, userID string) (spaceapimodels.PushSettings, error)
 	UpdatePushSettings(spaceID, userID string, payload spaceapimodels.PushSettingData) error
 	UpdatePushEnable(userID string, enabled bool) error
@@ -110,8 +110,8 @@ func (i impl) UpdateUser(userID string, request spaceapimodels.UpdateUser) error
 
 	err = db.DB.Transaction(func(tx *gorm.DB) error {
 		updMap := map[string]interface{}{
-			"first_name": request.FirstName,
-			"last_name":  request.LastName,
+			"first_name":   request.FirstName,
+			"last_name":    request.LastName,
 			"phone_number": request.PhoneNumber,
 		}
 		if request.IsAdmin != nil {
@@ -204,6 +204,11 @@ func (i impl) UpdateUserProfile(userID string, request spaceapimodels.SpaceUserP
 			"text_sign":             request.TextSign,
 			"use_personal_sign":     request.UsePersonalSign,
 		}
+
+		if request.JobTitleID != nil && *request.JobTitleID != "" {
+			updMap["job_title_id"] = request.JobTitleID
+		}
+
 		isEmailChanged := user.Email != request.Email
 		if isEmailChanged {
 			if smtp.Instance.IsConfigured() {
@@ -243,7 +248,7 @@ func (i impl) GetProfileByID(userID string) (user spaceapimodels.SpaceUserProfil
 	return userDB.ToProfile(), nil
 }
 
-func (i impl) СhangePassword(userID string, payload spaceapimodels.PasswordChange) (nMsg string, err error) {
+func (i impl) ChangePassword(userID string, payload spaceapimodels.PasswordChange) (nMsg string, err error) {
 	userDB, err := i.spaceUserStore.GetByID(userID)
 	if err != nil {
 		return "", err
