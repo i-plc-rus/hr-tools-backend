@@ -5,6 +5,7 @@ import (
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
@@ -38,7 +39,8 @@ func (i impl) GetCountList(spaceID string, filter spaceapimodels.SpaceUserFilter
 	var rowCount int64
 	tx := i.db.
 		Model(dbmodels.SpaceUser{}).
-		Where("space_id = ?", spaceID)
+		Where("space_id = ?", spaceID).
+		Where("deleted_at IS NULL")
 	i.addFilter(tx, filter)
 	err = tx.Count(&rowCount).Error
 	if err != nil {
@@ -51,7 +53,8 @@ func (i impl) GetList(spaceID string, filter spaceapimodels.SpaceUserFilter) (us
 	tx := i.db.
 		Model(dbmodels.SpaceUser{}).
 		Select("space_users.*, (last_name || ' ' || first_name) as fio").
-		Where("space_id = ?", spaceID)
+		Where("space_id = ?", spaceID).
+		Where("deleted_at IS NULL")
 	i.addFilter(tx, filter)
 	i.addSort(tx, filter.Sort)
 	page, limit := filter.GetPage()
@@ -70,9 +73,10 @@ func (i impl) GetList(spaceID string, filter spaceapimodels.SpaceUserFilter) (us
 }
 
 func (i impl) Delete(userID string) error {
-	return i.db.
+	now := time.Now()
+	return i.db.Model(&dbmodels.SpaceUser{}).
 		Where("id = ?", userID).
-		Delete(&dbmodels.SpaceUser{}).
+		Update("deleted_at", &now).
 		Error
 }
 
@@ -80,6 +84,7 @@ func (i impl) Update(userID string, updMap map[string]interface{}) error {
 	err := i.db.
 		Model(&dbmodels.SpaceUser{}).
 		Where("id = ?", userID).
+		Where("deleted_at IS NULL").
 		Updates(updMap).
 		Error
 	if err != nil {
@@ -91,6 +96,7 @@ func (i impl) Update(userID string, updMap map[string]interface{}) error {
 func (i impl) GetByID(userID string) (rec *dbmodels.SpaceUser, err error) {
 	err = i.db.Model(dbmodels.SpaceUser{}).
 		Where("id = ?", userID).
+		Where("deleted_at IS NULL").
 		Preload(clause.Associations).
 		First(&rec).
 		Error
@@ -105,6 +111,7 @@ func (i impl) GetByID(userID string) (rec *dbmodels.SpaceUser, err error) {
 
 func (i impl) FindByEmail(email string, checkNew bool) (rec *dbmodels.SpaceUser, err error) {
 	tx := i.db.Model(dbmodels.SpaceUser{}).
+		Where("deleted_at IS NULL").
 		Where("email = ?", email)
 	if checkNew {
 		tx.Or("new_email = ?", email)
@@ -133,6 +140,7 @@ func (i impl) Create(rec dbmodels.SpaceUser) (string, error) {
 func (i impl) ExistByEmail(email string) (bool, error) {
 	err := i.db.
 		Where("email = ?", email).
+		Where("deleted_at IS NULL").
 		First(&dbmodels.SpaceUser{}).
 		Error
 	if err != nil {
@@ -147,6 +155,7 @@ func (i impl) ExistByEmail(email string) (bool, error) {
 func (i impl) GetByResetCode(code string) (rec *dbmodels.SpaceUser, err error) {
 	err = i.db.Model(dbmodels.SpaceUser{}).
 		Where("reset_code = ?", code).
+		Where("deleted_at IS NULL").
 		Preload(clause.Associations).
 		First(&rec).
 		Error
@@ -163,7 +172,8 @@ func (i impl) GetListForVacancy(spaceID, vacancyID string, filter vacancyapimode
 	tx := i.db.Model(dbmodels.SpaceUser{})
 	tx = tx.
 		Where("space_id = ?", spaceID).
-		Where("id not in (select user_id from vacancy_teams where vacancy_id = ?)", vacancyID)
+		Where("id not in (select user_id from vacancy_teams where vacancy_id = ?)", vacancyID).
+		Where("deleted_at IS NULL")
 	if filter.Search != "" {
 		tx = tx.Where("LOWER(first_name|| ' ' || last_name) like ?", "%"+strings.ToLower(filter.Search)+"%")
 	}
