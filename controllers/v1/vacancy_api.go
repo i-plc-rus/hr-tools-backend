@@ -595,9 +595,12 @@ func (c *vacancyApiController) getSurvey(ctx *fiber.Ctx) error {
 	}
 
 	spaceID := middleware.GetUserSpace(ctx)
-	resp, err := survey.Instance.GetHRSurvey(spaceID, id)
+	resp, hMsg, err := survey.Instance.GetHRSurvey(spaceID, id)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения анкеты по вакансии")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	if resp == nil {
 		return ctx.Status(fiber.StatusNotFound).JSON(apimodels.NewError("Анкета отсутсвует"))

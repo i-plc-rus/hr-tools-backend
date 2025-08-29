@@ -23,7 +23,7 @@ import (
 
 type Provider interface {
 	SaveHRSurvey(spaceID, vacancyID string, survey surveyapimodels.HRSurvey) (*surveyapimodels.HRSurveyView, error)
-	GetHRSurvey(spaceID, vacancyID string) (*surveyapimodels.HRSurveyView, error)
+	GetHRSurvey(spaceID, vacancyID string) (surveyView *surveyapimodels.HRSurveyView, hMsg string, err error)
 	GetApplicantSurvey(spaceID, vacancyID, applicantID string) (*surveyapimodels.ApplicantSurveyView, error)
 	GenApplicantSurvey(spaceID, vacancyID, applicantID string) (ok bool, err error)
 	GetPublicApplicantSurvey(id string) (*surveyapimodels.ApplicantSurveyView, error)
@@ -91,6 +91,9 @@ func (i impl) SaveHRSurvey(spaceID, vacancyID string, survey surveyapimodels.HRS
 		if err != nil {
 			return nil, errors.Wrap(err, "ошибка получения вакансии")
 		}
+		if vacancyRec == nil {
+			return nil, errors.New("вакансия не найдена")
+		}
 		regeneratedQuestions, err := i.regenerateSurvey(*vacancyRec, regenerateQuestions)
 		if err != nil {
 			return nil, err
@@ -118,10 +121,10 @@ func (i impl) SaveHRSurvey(spaceID, vacancyID string, survey surveyapimodels.HRS
 	return &result, nil
 }
 
-func (i impl) GetHRSurvey(spaceID, vacancyID string) (*surveyapimodels.HRSurveyView, error) {
+func (i impl) GetHRSurvey(spaceID, vacancyID string) (surveyView *surveyapimodels.HRSurveyView, hMsg string, err error) {
 	rec, err := i.vSurveyStore.GetByVacancyID(spaceID, vacancyID)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if rec != nil {
 		result := surveyapimodels.HRSurveyView{
@@ -130,18 +133,25 @@ func (i impl) GetHRSurvey(spaceID, vacancyID string) (*surveyapimodels.HRSurveyV
 				Questions: rec.Survey.Questions,
 			},
 		}
-		return &result, nil
+		return &result, "", nil
 	}
 	// анкета не найдена, генерируем
 	vacancyRec, err := i.vacancyStore.GetByID(spaceID, vacancyID)
 	if err != nil {
-		return nil, errors.Wrap(err, "ошибка получения вакансии")
+		return nil, "", errors.Wrap(err, "ошибка получения вакансии")
+	}
+	if vacancyRec == nil {
+		return nil, "вакансия не найдена", nil
 	}
 	surveyData, err := i.generateSurvey(*vacancyRec)
 	if err != nil {
-		return nil, errors.Wrap(err, "ошибка генерации анкеты")
+		return nil, "", errors.Wrap(err, "ошибка генерации анкеты")
 	}
-	return i.SaveHRSurvey(spaceID, vacancyID, *surveyData)
+	surveyView, err = i.SaveHRSurvey(spaceID, vacancyID, *surveyData)
+	if err != nil {
+		return nil, "", err
+	}
+	return surveyView, "", nil
 }
 
 func (i impl) GetApplicantSurvey(spaceID, vacancyID, applicantID string) (*surveyapimodels.ApplicantSurveyView, error) {
