@@ -28,6 +28,7 @@ type SpaceUser struct {
 	JobTitleID          *string `gorm:"type:varchar(36)"`
 	JobTitle            *JobTitle
 	PushEnabled         bool
+	DeletedAt           *time.Time `gorm:"index"`
 }
 
 func (r SpaceUser) ToModel() spaceapimodels.SpaceUser {
