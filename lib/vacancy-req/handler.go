@@ -25,9 +25,9 @@ import (
 )
 
 type Provider interface {
-	Create(spaceID, userID string, data vacancyapimodels.VacancyRequestCreateData) (id string, err error)
+	Create(spaceID, userID string, data vacancyapimodels.VacancyRequestCreateData) (id, hMsg string, err error)
 	GetByID(spaceID, id string) (item vacancyapimodels.VacancyRequestView, err error)
-	Update(spaceID, id string, data vacancyapimodels.VacancyRequestEditData) error
+	Update(spaceID, id string, data vacancyapimodels.VacancyRequestEditData) (hMsg string, err error)
 	Delete(spaceID, id string) error
 	List(spaceID, userID string, filter vacancyapimodels.VrFilter) (list []vacancyapimodels.VacancyRequestView, rowCount int64, err error)
 	ChangeStatus(spaceID, id, userID string, status models.VRStatus) (hMsh string, err error)
@@ -105,11 +105,11 @@ func (i impl) checkDependency(spaceID string, data vacancyapimodels.VacancyReque
 	return nil
 }
 
-func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyRequestCreateData) (id string, err error) {
+func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyRequestCreateData) (id, hMsg string, err error) {
 	logger := log.WithField("space_id", spaceID)
 	err = i.checkDependency(spaceID, data.VacancyRequestData)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	rec := dbmodels.VacancyRequest{
 		BaseSpaceModel: dbmodels.BaseSpaceModel{
@@ -167,15 +167,19 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyReques
 		if err != nil {
 			return err
 		}
-		return aprovalStagesHandler.Save(spaceID, id, data.ApprovalStages.ApprovalStages)
+		hMsg, err = aprovalStagesHandler.Save(spaceID, id, data.ApprovalStages.ApprovalStages)
+		return err
 	})
 	if err != nil {
-		return "", err
+		return "", "", err
+	}
+	if hMsg != "" {
+		return "", hMsg, nil
 	}
 	logger.
 		WithField("rec_id", id).
 		Info("Создана заявка")
-	return id, nil
+	return id, "", nil
 }
 
 func (i impl) GetByID(spaceID, id string) (item vacancyapimodels.VacancyRequestView, err error) {
@@ -186,10 +190,10 @@ func (i impl) GetByID(spaceID, id string) (item vacancyapimodels.VacancyRequestV
 	return vacancyapimodels.VacancyRequestConvert(*rec), nil
 }
 
-func (i impl) Update(spaceID, id string, data vacancyapimodels.VacancyRequestEditData) error {
+func (i impl) Update(spaceID, id string, data vacancyapimodels.VacancyRequestEditData) (hMsg string, err error) {
 	logger := log.WithField("space_id", spaceID).
 		WithField("rec_id", id)
-	err := db.DB.Transaction(func(tx *gorm.DB) error {
+	err = db.DB.Transaction(func(tx *gorm.DB) error {
 		if data.CompanyID == "" && data.CompanyName != "" {
 			companyID, err := createCompany(tx, spaceID, data.CompanyName)
 			if err != nil {
@@ -203,13 +207,17 @@ func (i impl) Update(spaceID, id string, data vacancyapimodels.VacancyRequestEdi
 		if err != nil {
 			return err
 		}
-		return aprovalStagesHandler.Save(spaceID, id, data.ApprovalStages.ApprovalStages)
+		hMsg, err = aprovalStagesHandler.Save(spaceID, id, data.ApprovalStages.ApprovalStages)
+		return err
 	})
 	if err != nil {
-		return err
+		return "", err
+	}
+	if hMsg != "" {
+		return hMsg, nil
 	}
 	logger.Info("обновлена заявка")
-	return nil
+	return "", nil
 }
 
 func (i impl) Delete(spaceID, id string) error {
