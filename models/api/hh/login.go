@@ -27,6 +27,31 @@ type ErrorData struct {
 	OauthError       string      `json:"oauth_error"` //403
 }
 
+func (e ErrorData) GetPublishErrorReason() string {
+	if e.ErrorDescription != "" {
+		return e.ErrorDescription
+	}
+	if len(e.Errors) != 0 {
+		switch e.Errors[0].Value {
+		case "not_enough_purchased_services":
+			return "купленных услуг недостаточно для публикации или обновления данного типа вакансии"
+		case "quota_exceeded":
+			return "квота менеджера на публикацию данного типа вакансии закончилась"
+		case "duplicate":
+			return "аналогичная вакансия уже опубликована"
+		case "replacement":
+			return "вакансия существенно изменена, есть риски блокировки"
+		case "creation_forbidden":
+			return "публикация вакансий недоступна текущему менеджеру"
+		case "unavailable_for_archived":
+			return "редактирование недоступно для архивной вакансии"
+		case "conflict_changes":
+			return "конфликтные изменения данных вакансии"
+		}
+	}
+	return "Ошибка публикация вакансии на HeadHunter"
+}
+
 type ErrorItem struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
