@@ -3,15 +3,16 @@ package applicantstore
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"hr-tools-backend/models"
 	applicantapimodels "hr-tools-backend/models/api/applicant"
 	dbmodels "hr-tools-backend/models/db"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Provider interface {
@@ -331,11 +332,11 @@ func (i impl) addApplicantFilter(tx *gorm.DB, filter applicantapimodels.Applican
 		tx.Where("relocation = ?", *filter.Relocation)
 	}
 	if filter.AgeFrom > 0 {
-		date := time.Now().AddDate(filter.AgeFrom*(-1), 0, 0)
+		date := time.Now().AddDate(-filter.AgeFrom, 0, 0)
 		tx.Where("birth_date <= ?", date)
 	}
 	if filter.AgeTo > 0 {
-		date := time.Now().AddDate(filter.AgeTo*(-1), 0, 0)
+		date := time.Now().AddDate(-(filter.AgeTo + 1), 0, 1) // +1 день, чтобы получить включительно
 		tx.Where("birth_date >= ?", date)
 	}
 	if filter.TotalExperienceFrom > 0 {
