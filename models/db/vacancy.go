@@ -89,5 +89,6 @@ type VacancyComment struct {
 	VacancyID string `gorm:"index"`
 	Date      time.Time
 	AuthorID  string
+	Author    *SpaceUser `gorm:"foreignKey:AuthorID"`
 	Comment   string
 }

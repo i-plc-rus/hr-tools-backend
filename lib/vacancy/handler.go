@@ -661,6 +661,14 @@ func (i impl) AddComment(spaceID, id string, data vacancyapimodels.Comment) erro
 		return errors.New("вакансия не найдена")
 	}
 
+	spaceUser, err := i.spaceUserStore.GetByID(data.AuthorID)
+	if err != nil {
+		return err
+	}
+	if spaceUser == nil || spaceUser.SpaceID != spaceID {
+		return errors.New("автор не найден")
+	}
+
 	dbComment := dbmodels.VacancyComment{
 		ID:        uuid.New().String(),
 		VacancyID: id,

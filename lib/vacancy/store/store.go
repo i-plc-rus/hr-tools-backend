@@ -55,6 +55,7 @@ func (i impl) GetByID(spaceID, id string) (*dbmodels.Vacancy, error) {
 		Where("id = ?", id).
 		Where("space_id = ?", spaceID).
 		Preload(clause.Associations).
+		Preload("Comments.Author").
 		First(&rec).
 		Error
 	if err != nil {
@@ -131,7 +132,9 @@ func (i impl) List(spaceID, userID string, filter vacancyapimodels.VacancyFilter
 	i.addFilter(tx, filter, userID)
 	page, limit := filter.GetPage()
 	i.setPage(tx, page, limit)
-	err = tx.Preload(clause.Associations).Find(&list).Error
+	err = tx.Preload(clause.Associations).
+		Preload("Comments.Author").
+		Find(&list).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

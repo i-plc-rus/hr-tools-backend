@@ -94,7 +94,7 @@ type VacancyView struct {
 	ID              string               `json:"id"`
 	CreationDate    time.Time            `json:"creation_date"`
 	SelectionStages []SelectionStageView `json:"selection_stages"` // этапы подбора
-	Comments        []Comment            `json:"comments"`
+	Comments        []CommentView        `json:"comments"`
 }
 
 type Salary struct {
@@ -203,11 +203,17 @@ func VacancyConvert(rec dbmodels.VacancyExt) VacancyView {
 		result.SelectionStages = append(result.SelectionStages, SelectionStageConvert(stage))
 	}
 	for _, comment := range rec.Comments {
-		result.Comments = append(result.Comments, Comment{
-			Date:     comment.Date,
-			AuthorID: comment.AuthorID,
-			Comment:  comment.Comment,
-		})
+		commentView := CommentView{
+			Comment: Comment{
+				Date:     comment.Date,
+				AuthorID: comment.AuthorID,
+				Comment:  comment.Comment,
+			},
+		}
+		if comment.Author != nil {
+			commentView.AuthorFIO = comment.Author.GetFullName()
+		}
+		result.Comments = append(result.Comments, commentView)
 	}
 	return result
 }
@@ -263,6 +269,11 @@ type Comment struct {
 	Date     time.Time `json:"date"`
 	AuthorID string    `json:"author_id"`
 	Comment  string    `json:"comment"`
+}
+
+type CommentView struct {
+	Comment
+	AuthorFIO string `json:"author_fio"`
 }
 
 func (c Comment) Validate() error {
