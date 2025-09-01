@@ -15,6 +15,7 @@ import (
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	"hr-tools-backend/lib/utils/helpers"
+	"hr-tools-backend/lib/utils/lock"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	"hr-tools-backend/models"
 	hhapimodels "hr-tools-backend/models/api/hh"
@@ -43,8 +44,6 @@ func NewHandler() {
 		cityMap:            map[string]string{},
 		filesStorage:       filestorage.Instance,
 		applicantHistory:   applicanthistoryhandler.Instance,
-		refreshMap:         map[string]hhapimodels.ResponseToken{},
-		refreshMx:          sync.Mutex{},
 	}
 }
 
@@ -59,13 +58,12 @@ type impl struct {
 	cityMap            map[string]string
 	filesStorage       filestorage.Provider
 	applicantHistory   applicanthistoryhandler.Provider
-	refreshMap         map[string]hhapimodels.ResponseToken
-	refreshMx          sync.Mutex
 }
 
 const (
-	TokenCode     = "HH_TOKEN"
-	VacancyUriTpl = "https://hh.ru/vacancy/%v"
+	TokenCode       = "HH_TOKEN"
+	VacancyUriTpl   = "https://hh.ru/vacancy/%v"
+	NotConnectedMsg = "HeadHunter не подключен"
 )
 
 func (i *impl) getLogger(spaceID, vacancyID string) *log.Entry {
@@ -124,20 +122,24 @@ func (i *impl) RequestToken(spaceID, code string) {
 
 func (i *impl) CheckConnected(ctx context.Context, spaceID string) bool {
 	logger := i.getLogger(spaceID, "")
-	accessToken, hMsg, err := i.getToken(ctx, spaceID)
+	_, _, hMsg, err := i.getToken(ctx, spaceID)
 	if err != nil {
 		logger.WithError(err).Error("ошибка получения токена hh")
 		return false
 	}
-	if hMsg != "" || accessToken == "" {
-		logger.Errorf("токен пуст или ошибка: %v", hMsg)
+	if hMsg == NotConnectedMsg {
+		logger.Info(NotConnectedMsg)
 		return false
 	}
-	return i.checkToken(spaceID, accessToken)
+	if hMsg != "" {
+		logger.Errorf("Ошибка получения токена: %v", hMsg)
+		return false
+	}
+	return true
 }
 
 func (i *impl) VacancyPublish(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error) {
-	accessToken, hMsg, err := i.getToken(ctx, spaceID)
+	_, accessToken, hMsg, err := i.getToken(ctx, spaceID)
 	if err != nil || hMsg != "" {
 		return hMsg, err
 	}
@@ -189,7 +191,7 @@ func (i *impl) VacancyPublish(ctx context.Context, spaceID, vacancyID string) (h
 }
 
 func (i *impl) VacancyUpdate(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error) {
-	accessToken, hMsg, err := i.getToken(ctx, spaceID)
+	_, accessToken, hMsg, err := i.getToken(ctx, spaceID)
 	if err != nil || hMsg != "" {
 		return hMsg, err
 	}
@@ -222,13 +224,9 @@ func (i *impl) VacancyUpdate(ctx context.Context, spaceID, vacancyID string) (hM
 }
 
 func (i *impl) VacancyClose(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error) {
-	accessToken, hMsg, err := i.getToken(ctx, spaceID)
+	self, accessToken, hMsg, err := i.getToken(ctx, spaceID)
 	if err != nil || hMsg != "" {
 		return hMsg, err
-	}
-	meResp, err := i.client.Me(ctx, accessToken)
-	if err != nil {
-		return "", errors.Wrap(err, "ошибка получения информации о токене HH")
 	}
 	rec, err := i.vacancyStore.GetByID(spaceID, vacancyID)
 	if err != nil {
@@ -240,7 +238,7 @@ func (i *impl) VacancyClose(ctx context.Context, spaceID, vacancyID string) (hMs
 	if rec.HhID == "" {
 		return "вакансия еще не опубликованна", nil
 	}
-	return "", i.client.VacancyClose(ctx, accessToken, meResp.Employer.ID, rec.HhID)
+	return "", i.client.VacancyClose(ctx, accessToken, self.Employer.ID, rec.HhID)
 }
 
 func (i *impl) VacancyAttach(ctx context.Context, spaceID, vacancyID, hhID string) (hMsg string, err error) {
@@ -257,15 +255,11 @@ func (i *impl) VacancyAttach(ctx context.Context, spaceID, vacancyID, hhID strin
 	if models.VacancyStatusOpened != rec.Status {
 		return fmt.Sprintf("неподходящей статус вакансии: %v", rec.Status), nil
 	}
-	accessToken, hMsg, err := i.getToken(ctx, spaceID)
+	self, accessToken, hMsg, err := i.getToken(ctx, spaceID)
 	if err != nil || hMsg != "" {
 		return hMsg, err
 	}
 
-	self, err := i.client.Me(ctx, accessToken)
-	if err != nil {
-		return "", err
-	}
 	info, err := i.client.GetVacancy(ctx, accessToken, hhID)
 	if err != nil {
 		return "", err
@@ -309,7 +303,7 @@ func (i *impl) GetVacancyInfo(ctx context.Context, spaceID, vacancyID string) (*
 }
 
 func (i *impl) HandleNegotiations(ctx context.Context, data dbmodels.Vacancy) error {
-	accessToken, hMsg, err := i.getToken(ctx, data.SpaceID)
+	_, accessToken, hMsg, err := i.getToken(ctx, data.SpaceID)
 	if err != nil {
 		return err
 	}
@@ -468,7 +462,7 @@ func (i *impl) HandleNegotiations(ctx context.Context, data dbmodels.Vacancy) er
 }
 
 func (i *impl) SendMessage(ctx context.Context, data dbmodels.Applicant, msg string) error {
-	accessToken, hMsg, err := i.getToken(ctx, data.SpaceID)
+	_, accessToken, hMsg, err := i.getToken(ctx, data.SpaceID)
 	if err != nil {
 		return err
 	}
@@ -479,7 +473,7 @@ func (i *impl) SendMessage(ctx context.Context, data dbmodels.Applicant, msg str
 }
 
 func (i *impl) GetMessages(ctx context.Context, user dbmodels.SpaceUser, data dbmodels.Applicant) ([]negotiationapimodels.MessageItem, error) {
-	accessToken, hMsg, err := i.getToken(ctx, data.SpaceID)
+	_, accessToken, hMsg, err := i.getToken(ctx, data.SpaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -514,7 +508,7 @@ func (i *impl) GetMessages(ctx context.Context, user dbmodels.SpaceUser, data db
 }
 
 func (i *impl) GetLastInMessage(ctx context.Context, data dbmodels.Applicant) (*negotiationapimodels.MessageItem, error) {
-	accessToken, hMsg, err := i.getToken(ctx, data.SpaceID)
+	_, accessToken, hMsg, err := i.getToken(ctx, data.SpaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -604,39 +598,76 @@ func (i *impl) storeToken(spaceID string, token hhapimodels.ResponseToken, reque
 	return tokenData, nil
 }
 
-func (i *impl) getToken(ctx context.Context, spaceID string) (accessToken, hMsg string, err error) {
-	tokenData, ok, err := i.getTokenFromStorage(spaceID)
-	if err != nil {
-		return "", "", err
-	}
-	if !ok {
-		return "", "HeadHunter не подключен", nil
-	}
-	if !tokenData.IsExpired() {
-		return tokenData.AccessToken, "", nil
-	}
-	body, _ := json.Marshal(tokenData)
-	logger := i.getLogger(spaceID, "").
-		WithField("token_data", string(body))
-	logger.Info("время жизни токена HH истекло, запрашиваем новый")
+func (i *impl) getToken(ctx context.Context, spaceID string) (self *hhapimodels.MeResponse, accessToken, hMsg string, err error) {
 
-	tokenResp, refreshed, err := i.refresh(ctx, tokenData.RefreshToken)
-	if err != nil {
-		return "", "", err
+	getTokenSafeFunc := func() error {
+		tokenData, ok, err := i.getTokenFromStorage(spaceID)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			hMsg = NotConnectedMsg
+			return nil
+		}
+		if !tokenData.IsExpired() {
+			//Проверяем токен
+			accessToken = tokenData.AccessToken
+			//
+			isExpired := false
+			self, isExpired, err = i.client.Me(ctx, accessToken)
+			if err != nil {
+				return err
+			}
+			if !isExpired {
+				// токен есть и он валиден
+				return nil
+			}
+		}
+		body, _ := json.Marshal(tokenData)
+		logger := i.getLogger(spaceID, "").
+			WithField("token_data", string(body))
+		logger.Info("время жизни токена HH истекло, запрашиваем новый")
+
+		tokenResp, isDeactivated, err := i.refresh(ctx, tokenData.RefreshToken)
+		if err != nil {
+			return err
+		}
+		if isDeactivated {
+			logger.Info("Refresh-токен более не действителен, необходима повторная авторизация")
+			i.removeToken(spaceID)
+			hMsg = "Необходима повторная авторизация на HeadHunter"
+			return nil
+		}
+
+		tokenData, err = i.storeToken(spaceID, tokenResp, time.Now(), true)
+		if err != nil {
+			tokenRespBody, _ := json.Marshal(tokenResp)
+			logger.
+				WithError(err).
+				WithField("refresh_token_data", string(tokenRespBody)).
+				Error("ошибка сохранения обновленного токена HH")
+			return errors.Wrap(err, "ошибка сохранения обновленного токена")
+		}
+		accessToken = tokenResp.AccessToken
+
+		//Проверяем новый токен
+		isExpired := false
+		self, isExpired, err = i.client.Me(ctx, accessToken)
+		if err != nil {
+			return err
+		}
+		if isExpired {
+			hMsg = "действие с HeadHunter временно не доступно, повторите попытку позже"
+			return nil
+		}
+		return nil
 	}
-	if !refreshed {
-		return tokenResp.AccessToken, "", nil
+	// выполняем с блокировкой по spaceID
+	ok, err := lock.WithDelay(ctx, spaceID, 10*time.Second, getTokenSafeFunc)
+	if !ok {
+		return nil, "", "ошибка получения токена HeadHunter, операция временно невозможна", nil
 	}
-	tokenData, err = i.storeToken(spaceID, tokenResp, time.Now(), true)
-	if err != nil {
-		tokenRespBody, _ := json.Marshal(tokenResp)
-		logger.
-			WithError(err).
-			WithField("refresh_token_data", string(tokenRespBody)).
-			Error("ошибка сохранения обновленного токена HH")
-		return "", "", errors.Wrap(err, "ошибка сохранения обновленного токена")
-	}
-	return tokenResp.AccessToken, "", nil
+	return self, accessToken, hMsg, err
 }
 
 func (i *impl) fillVacancyData(ctx context.Context, rec *dbmodels.Vacancy) (req *hhapimodels.VacancyPubRequest, hMsg string) {
@@ -701,7 +732,7 @@ func (i *impl) CheckIsActivePublications(ctx context.Context, spaceID string, li
 
 func (i *impl) checkPublications(ctx context.Context, spaceID string, list []dbmodels.Vacancy) error {
 	logger := i.getLogger(spaceID, "")
-	accessToken, hMsg, err := i.getToken(ctx, spaceID)
+	_, accessToken, hMsg, err := i.getToken(ctx, spaceID)
 	if err != nil {
 		return err
 	}
@@ -744,7 +775,7 @@ func (i *impl) checkPublications(ctx context.Context, spaceID string, list []dbm
 }
 
 func (i *impl) downloadResumePdf(ctx context.Context, spaceID, applicantID, resumeUrl string) error {
-	accessToken, hMsg, err := i.getToken(ctx, spaceID)
+	_, accessToken, hMsg, err := i.getToken(ctx, spaceID)
 	if err != nil {
 		return err
 	}
@@ -770,22 +801,18 @@ func (i *impl) sendNotification(rec dbmodels.Vacancy, data models.NotificationDa
 	}
 }
 
-func (i *impl) refresh(ctx context.Context, refreshToken string) (resp hhapimodels.ResponseToken, refreshed bool, err error) {
-	i.refreshMx.Lock()
-	defer i.refreshMx.Unlock()
-	data, ok := i.refreshMap[refreshToken]
-	if ok {
-		return data, false, nil
-	}
+func (i *impl) refresh(ctx context.Context, refreshToken string) (resp hhapimodels.ResponseToken, isDeactivated bool, err error) {
 	req := hhapimodels.RefreshToken{
 		RefreshToken: refreshToken,
 	}
-	tokenResp, err := i.client.RefreshToken(ctx, req)
+	tokenResp, isDeactivated, err := i.client.RefreshToken(ctx, req)
 	if err != nil {
 		return hhapimodels.ResponseToken{}, false, errors.Wrap(err, "ошибка получения токена для HeadHunter")
 	}
-	i.refreshMap[refreshToken] = *tokenResp
-	return *tokenResp, true, nil
+	if isDeactivated {
+		return hhapimodels.ResponseToken{}, true, nil
+	}
+	return *tokenResp, false, nil
 }
 
 func (i *impl) getTokenFromStorage(spaceID string) (hhapimodels.TokenData, bool, error) {
@@ -815,19 +842,7 @@ func (i *impl) getTokenFromStorage(spaceID string) (hhapimodels.TokenData, bool,
 	return tokenData, true, nil
 }
 
-func (i *impl) checkToken(spaceID string, accessToken string) (valid bool) {
-	logger := i.getLogger(spaceID, "")
-	if accessToken == "" {
-		logger.Error("checkToken: отсутсвует токен HH")
-		return false
-	}
-	_, err := i.client.Me(context.TODO(), accessToken)
-	if err != nil {
-		logger.
-			WithField("accessToken", accessToken).
-			WithError(err).
-			Error("ошибка получения информации о токене HH")
-		return false
-	}
-	return true
+func (i *impl) removeToken(spaceID string) error {
+	i.tokenMap.Delete(spaceID)
+	return i.extStore.DeleteRec(spaceID, TokenCode)
 }
