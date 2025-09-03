@@ -34,6 +34,7 @@ func InitVacancyRequestApiRouters(app *fiber.App) {
 			idRoute.Put("reject", controller.reject)          // отклонить
 			idRoute.Put("to_revision", controller.toRevision) // на доработку
 			idRoute.Put("cancel", controller.cancel)          // отменить
+			idRoute.Post("comment", controller.addComment)
 		})
 	})
 }
@@ -469,6 +470,40 @@ func (c *vacancyReqApiController) publish(ctx *fiber.Ctx) error {
 	}
 	if hMsg != "" {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Добавить комментарий к заявке
+// @Tags Заявка
+// @Description Добавить комментарий к заявке
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param	body body	 vacancyapimodels.Comment	true	"request body"
+// @Param   id          		path    string  				    	true         "rec ID"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/vacancy_request/{id}/comment [post]
+func (c *vacancyReqApiController) addComment(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	var payload vacancyapimodels.Comment
+	if err = c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	if err = payload.Validate(); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	err = vacancyreqhandler.Instance.AddComment(spaceID, id, payload)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка добавления комментария")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }

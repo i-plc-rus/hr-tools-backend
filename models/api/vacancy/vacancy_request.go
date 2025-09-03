@@ -89,6 +89,7 @@ type VacancyRequestView struct {
 	Pinned               bool                `json:"pinned"`
 	Favorite             bool                `json:"favorite"`
 	OpenVacancies        int                 `json:"open_vacancies"` // кол-во вакансий открытых по заявке
+	Comments             []CommentView       `json:"comments"`
 }
 
 func VacancyRequestConvert(rec dbmodels.VacancyRequest) VacancyRequestView {
@@ -159,6 +160,19 @@ func VacancyRequestConvert(rec dbmodels.VacancyRequest) VacancyRequestView {
 	}
 	result.ApprovalStages = approvalStages
 	result.OpenVacancies = len(rec.Vacancies)
+	for _, comment := range rec.Comments {
+		commentView := CommentView{
+			Comment: Comment{
+				Date:     comment.Date,
+				AuthorID: comment.AuthorID,
+				Comment:  comment.Comment,
+			},
+		}
+		if comment.Author != nil {
+			commentView.AuthorFIO = comment.Author.GetFullName()
+		}
+		result.Comments = append(result.Comments, commentView)
+	}
 	return result
 }
 
