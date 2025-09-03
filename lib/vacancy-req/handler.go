@@ -18,7 +18,9 @@ import (
 	"hr-tools-backend/models"
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -36,6 +38,7 @@ type Provider interface {
 	CreateVacancy(spaceID, id, userID string) (hMsh string, err error)
 	ToPin(id, userID string, isSet bool) error
 	ToFavorite(id, userID string, isSet bool) error
+	AddComment(spaceID, id string, data vacancyapimodels.Comment) error
 }
 
 var Instance Provider
@@ -514,6 +517,43 @@ func (i impl) ToFavorite(id, userID string, isSet bool) error {
 		return i.store.SetFavorite(id, userID)
 	}
 	return i.store.RemoveFavorite(id, userID)
+}
+
+func (i impl) AddComment(spaceID, id string, data vacancyapimodels.Comment) error {
+	logger := log.WithField("space_id", spaceID).
+		WithField("rec_id", id)
+
+	// get vacancy request for sure that it exists
+	rec, err := i.store.GetByID(spaceID, id)
+	if err != nil {
+		return err
+	}
+	if rec == nil {
+		return errors.New("заявка на вакансию не найдена")
+	}
+
+	spaceUser, err := i.spaceUserStore.GetByID(data.AuthorID)
+	if err != nil {
+		return err
+	}
+	if spaceUser == nil || spaceUser.SpaceID != spaceID {
+		return errors.New("автор не найден")
+	}
+
+	dbComment := dbmodels.VacancyRequestComment{
+		ID:               uuid.New().String(),
+		VacancyRequestID: id,
+		Date:             time.Now(),
+		AuthorID:         data.AuthorID,
+		Comment:          data.Comment,
+	}
+
+	if err := i.store.AddComment(dbComment); err != nil {
+		logger.Error("не удалось сохранить комментарий", "error", err)
+		return err
+	}
+	logger.Info("добавлен комментарий к заявке на вакансию")
+	return nil
 }
 
 func createCompany(tx *gorm.DB, spaceID, name string) (string, error) {

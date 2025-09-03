@@ -128,6 +128,10 @@ func AutoMigrateDB() error {
 		return errors.Wrap(err, "ошибка создания структуры AiLog")
 	}
 
+	if err := DB.AutoMigrate(&dbmodels.VacancyRequestComment{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры VacancyRequestComment")
+	}
+
 	log.Info("Миграция прошла успешно")
 	return nil
 }

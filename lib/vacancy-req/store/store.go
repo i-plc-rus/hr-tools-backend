@@ -22,6 +22,7 @@ type Provider interface {
 	RemovePin(id, userID string) error
 	SetFavorite(id, userID string) error
 	RemoveFavorite(id, userID string) error
+	AddComment(data dbmodels.VacancyRequestComment) error
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -51,6 +52,7 @@ func (i impl) GetByID(spaceID, id string) (*dbmodels.VacancyRequest, error) {
 		Where("space_id = ?", spaceID).
 		Preload(clause.Associations).
 		Preload("ApprovalStages.SpaceUser").
+		Preload("Comments.Author").
 		First(&rec).
 		Error
 	if err != nil {
@@ -125,7 +127,9 @@ func (i impl) List(spaceID, userID string, filter vacancyapimodels.VrFilter) (li
 	i.addFilter(tx, filter)
 	page, limit := filter.GetPage()
 	i.setPage(tx, page, limit)
-	tx = tx.Preload(clause.Associations).Preload("ApprovalStages.SpaceUser")
+	tx = tx.Preload(clause.Associations).
+		Preload("ApprovalStages.SpaceUser").
+		Preload("Comments.Author")
 	err = tx.Find(&list).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -192,6 +196,13 @@ func (i impl) RemoveFavorite(id, userID string) error {
 		Delete(&rec).Error
 	if err != nil {
 		return errors.Wrap(err, "ошибка удаления из избранного")
+	}
+	return nil
+}
+
+func (i impl) AddComment(data dbmodels.VacancyRequestComment) error {
+	if err := i.db.Create(&data).Error; err != nil {
+		return err
 	}
 	return nil
 }

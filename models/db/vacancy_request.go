@@ -5,6 +5,7 @@ import (
 	"gorm.io/gorm/clause"
 	"hr-tools-backend/models"
 	"sort"
+	"time"
 )
 
 type VacancyRequest struct {
@@ -44,6 +45,16 @@ type VacancyRequest struct {
 	Favorite        bool
 	Pinned          bool
 	Vacancies       []Vacancy
+	Comments        []VacancyRequestComment `gorm:"foreignKey:VacancyRequestID"`
+}
+
+type VacancyRequestComment struct {
+	ID               string
+	VacancyRequestID string `gorm:"index"`
+	Date             time.Time
+	AuthorID         string
+	Author           *SpaceUser `gorm:"foreignKey:AuthorID"`
+	Comment          string
 }
 
 func (v *VacancyRequest) AfterDelete(tx *gorm.DB) (err error) {
