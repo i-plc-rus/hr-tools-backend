@@ -17,8 +17,8 @@ import (
 type Provider interface {
 	GetLoginUri(clientID, spaceID string) (string, error)
 	RequestToken(ctx context.Context, req hhapimodels.RequestToken) (*hhapimodels.ResponseToken, error)
-	RefreshToken(ctx context.Context, req hhapimodels.RefreshToken) (*hhapimodels.ResponseToken, error)
-	Me(ctx context.Context, accessToken string) (*hhapimodels.MeResponse, error)
+	RefreshToken(ctx context.Context, req hhapimodels.RefreshToken) (token *hhapimodels.ResponseToken, isDeactivated bool, err error)
+	Me(ctx context.Context, accessToken string) (me *hhapimodels.MeResponse, isExpired bool, err error)
 
 	//https://api.hh.ru/openapi/redoc#tag/Upravlenie-vakansiyami/operation/publish-vacancy
 	VacancyPublish(ctx context.Context, accessToken string, request hhapimodels.VacancyPubRequest) (vacancyID string, hMsg string, err error)
@@ -84,6 +84,10 @@ const (
 	messagesListPath          string = "%s/negotiations/%v/messages"
 	messageNewPath            string = "%s/negotiations/%v/messages"
 )
+const (
+	tokenExpiredError     string = "token-expired"
+	tokenDeactivatedError string = "token deactivated"
+)
 
 func (i impl) GetLoginUri(clientID, spaceID string) (string, error) {
 	redirectUri, err := url.QueryUnescape(i.redirectUri)
@@ -122,7 +126,7 @@ func (i impl) RequestToken(ctx context.Context, req hhapimodels.RequestToken) (*
 	return &resp, nil
 }
 
-func (i impl) RefreshToken(ctx context.Context, req hhapimodels.RefreshToken) (*hhapimodels.ResponseToken, error) {
+func (i impl) RefreshToken(ctx context.Context, req hhapimodels.RefreshToken) (token *hhapimodels.ResponseToken, isDeactivated bool, err error) {
 	uri := fmt.Sprintf(tokenPath, i.host)
 	data := url.Values{}
 	data.Add("refresh_token", req.RefreshToken)
@@ -136,22 +140,31 @@ func (i impl) RefreshToken(ctx context.Context, req hhapimodels.RefreshToken) (*
 		WithField("external_request", uri).
 		WithField("request_body", fmt.Sprintf("%+v", data.Encode()))
 
-	err := i.sendRequest(logger, r, &resp, "", true)
+	errData, err := i.sendRequestWithErrorData(logger, r, &resp, "", true)
 	if err != nil {
-		return nil, err
+		if errData != nil && errData.ErrorDescription == tokenDeactivatedError {
+			return nil, true, nil
+		}
+		return nil, false, err
 	}
-	return &resp, nil
+	return &resp, false, nil
 }
 
-func (i impl) Me(ctx context.Context, accessToken string) (*hhapimodels.MeResponse, error) {
+func (i impl) Me(ctx context.Context, accessToken string) (me *hhapimodels.MeResponse, isExpired bool, err error) {
 	uri := fmt.Sprintf(mePath, i.host)
 	logger := log.
 		WithField("external_request", uri)
 	r, _ := http.NewRequestWithContext(ctx, "GET", uri, nil)
 	r.Header.Add("Content-Type", "application/json")
 	resp := hhapimodels.MeResponse{}
-	err := i.sendRequest(logger, r, &resp, accessToken, true)
-	return &resp, err
+	errData, err := i.sendRequestWithErrorData(logger, r, &resp, accessToken, true)
+	if err != nil {
+		if errData != nil && errData.OauthError == tokenExpiredError {
+			return nil, true, nil
+		}
+		return nil, false, err
+	}
+	return &resp, false, nil
 }
 
 func (i impl) VacancyPublish(ctx context.Context, accessToken string, request hhapimodels.VacancyPubRequest) (vacancyID string, hMsg string, err error) {
