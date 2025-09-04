@@ -612,7 +612,7 @@ func (i *impl) getToken(ctx context.Context, spaceID string) (self *hhapimodels.
 		if !tokenData.IsExpired() {
 			//Проверяем токен
 			accessToken = tokenData.AccessToken
-			//
+
 			isExpired := false
 			self, isExpired, err = i.client.Me(ctx, accessToken)
 			if err != nil {
@@ -623,9 +623,13 @@ func (i *impl) getToken(ctx context.Context, spaceID string) (self *hhapimodels.
 				return nil
 			}
 		}
-		body, _ := json.Marshal(tokenData)
-		logger := i.getLogger(spaceID, "").
-			WithField("token_data", string(body))
+		logger := i.getLogger(spaceID, "")
+		body, err := json.Marshal(tokenData)
+		if err != nil {
+			logger.WithError(err).Warn("ошибка сериализации структуры TokenData")
+		} else {
+			logger = logger.WithField("token_data", string(body))
+		}
 		logger.Info("время жизни токена HH истекло, запрашиваем новый")
 
 		tokenResp, isDeactivated, err := i.refresh(ctx, tokenData.RefreshToken)
