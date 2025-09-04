@@ -17,11 +17,11 @@ import (
 type Provider interface {
 	GetLoginUri(clientID, spaceID string) (string, error)
 	RequestToken(ctx context.Context, req hhapimodels.RequestToken) (*hhapimodels.ResponseToken, error)
-	RefreshToken(ctx context.Context, req hhapimodels.RefreshToken) (*hhapimodels.ResponseToken, error)
-	Me(ctx context.Context, accessToken string) (*hhapimodels.MeResponse, error)
+	RefreshToken(ctx context.Context, req hhapimodels.RefreshToken) (token *hhapimodels.ResponseToken, isDeactivated bool, err error)
+	Me(ctx context.Context, accessToken string) (me *hhapimodels.MeResponse, isExpired bool, err error)
 
 	//https://api.hh.ru/openapi/redoc#tag/Upravlenie-vakansiyami/operation/publish-vacancy
-	VacancyPublish(ctx context.Context, accessToken string, request hhapimodels.VacancyPubRequest) (vacancyID string, err error)
+	VacancyPublish(ctx context.Context, accessToken string, request hhapimodels.VacancyPubRequest) (vacancyID string, hMsg string, err error)
 
 	//https://api.hh.ru/openapi/redoc#tag/Upravlenie-vakansiyami/operation/edit-vacancy
 	VacancyUpdate(ctx context.Context, accessToken string, vacancyID string, request hhapimodels.VacancyPubRequest) error
@@ -84,6 +84,10 @@ const (
 	messagesListPath          string = "%s/negotiations/%v/messages"
 	messageNewPath            string = "%s/negotiations/%v/messages"
 )
+const (
+	tokenExpiredError     string = "token-expired"
+	tokenDeactivatedError string = "token deactivated"
+)
 
 func (i impl) GetLoginUri(clientID, spaceID string) (string, error) {
 	redirectUri, err := url.QueryUnescape(i.redirectUri)
@@ -122,7 +126,7 @@ func (i impl) RequestToken(ctx context.Context, req hhapimodels.RequestToken) (*
 	return &resp, nil
 }
 
-func (i impl) RefreshToken(ctx context.Context, req hhapimodels.RefreshToken) (*hhapimodels.ResponseToken, error) {
+func (i impl) RefreshToken(ctx context.Context, req hhapimodels.RefreshToken) (token *hhapimodels.ResponseToken, isDeactivated bool, err error) {
 	uri := fmt.Sprintf(tokenPath, i.host)
 	data := url.Values{}
 	data.Add("refresh_token", req.RefreshToken)
@@ -136,31 +140,40 @@ func (i impl) RefreshToken(ctx context.Context, req hhapimodels.RefreshToken) (*
 		WithField("external_request", uri).
 		WithField("request_body", fmt.Sprintf("%+v", data.Encode()))
 
-	err := i.sendRequest(logger, r, &resp, "", true)
+	errData, err := i.sendRequestWithErrorData(logger, r, &resp, "", true)
 	if err != nil {
-		return nil, err
+		if errData != nil && errData.ErrorDescription == tokenDeactivatedError {
+			return nil, true, nil
+		}
+		return nil, false, err
 	}
-	return &resp, nil
+	return &resp, false, nil
 }
 
-func (i impl) Me(ctx context.Context, accessToken string) (*hhapimodels.MeResponse, error) {
+func (i impl) Me(ctx context.Context, accessToken string) (me *hhapimodels.MeResponse, isExpired bool, err error) {
 	uri := fmt.Sprintf(mePath, i.host)
 	logger := log.
 		WithField("external_request", uri)
 	r, _ := http.NewRequestWithContext(ctx, "GET", uri, nil)
 	r.Header.Add("Content-Type", "application/json")
 	resp := hhapimodels.MeResponse{}
-	err := i.sendRequest(logger, r, &resp, accessToken, true)
-	return &resp, err
+	errData, err := i.sendRequestWithErrorData(logger, r, &resp, accessToken, true)
+	if err != nil {
+		if errData != nil && errData.OauthError == tokenExpiredError {
+			return nil, true, nil
+		}
+		return nil, false, err
+	}
+	return &resp, false, nil
 }
 
-func (i impl) VacancyPublish(ctx context.Context, accessToken string, request hhapimodels.VacancyPubRequest) (vacancyID string, err error) {
+func (i impl) VacancyPublish(ctx context.Context, accessToken string, request hhapimodels.VacancyPubRequest) (vacancyID string, hMsg string, err error) {
 	uri := fmt.Sprintf(vPublishPath, i.host)
 	logger := log.
 		WithField("external_request", uri)
 	body, err := json.Marshal(request)
 	if err != nil {
-		return "", errors.Wrap(err, "ошибка десериализации запроса")
+		return "", "", errors.Wrap(err, "ошибка десериализации запроса")
 	}
 
 	r, _ := http.NewRequestWithContext(ctx, "POST", uri, bytes.NewBuffer(body))
@@ -170,11 +183,14 @@ func (i impl) VacancyPublish(ctx context.Context, accessToken string, request hh
 	logger = logger.
 		WithField("request_body", string(body))
 
-	err = i.sendRequest(logger, r, &resp, accessToken, true)
+	errData, err := i.sendRequestWithErrorData(logger, r, &resp, accessToken, true)
 	if err != nil {
-		return "", err
+		if errData != nil {
+			return "", errData.GetPublishErrorReason(), nil
+		}
+		return "", "", err
 	}
-	return resp.ID, nil
+	return resp.ID, "", nil
 }
 
 func (i impl) VacancyUpdate(ctx context.Context, accessToken, vacancyID string, request hhapimodels.VacancyPubRequest) error {
@@ -374,6 +390,11 @@ func (i impl) DownloadResume(ctx context.Context, accessToken, resumeUrl string)
 }
 
 func (i impl) sendRequest(logger *log.Entry, r *http.Request, resp interface{}, accessToken string, needUnmarshalResponse bool) error {
+	_, err := i.sendRequestWithErrorData(logger, r, resp, accessToken, needUnmarshalResponse)
+	return err
+}
+
+func (i impl) sendRequestWithErrorData(logger *log.Entry, r *http.Request, resp interface{}, accessToken string, needUnmarshalResponse bool) (errData *hhapimodels.ErrorData, err error) {
 	r.Header.Add("User-Agent", "HRTools/1.0")
 	if accessToken != "" {
 		r.Header.Add("Authorization", fmt.Sprintf("Bearer %v", accessToken))
@@ -385,7 +406,7 @@ func (i impl) sendRequest(logger *log.Entry, r *http.Request, resp interface{}, 
 	logger = addStatusCode(logger, response)
 	if err != nil {
 		logger.WithError(err).Error("ошибка отправки запроса в HH")
-		return errors.Wrap(err, "ошибка отправки запроса в HH")
+		return nil, errors.Wrap(err, "ошибка отправки запроса в HH")
 	}
 	if response != nil && (response.StatusCode >= 200 && response.StatusCode <= 300) {
 		if resp != nil && needUnmarshalResponse {
@@ -393,22 +414,23 @@ func (i impl) sendRequest(logger *log.Entry, r *http.Request, resp interface{}, 
 				err = json.Unmarshal(responseBody, resp)
 				if err != nil {
 					logger.WithError(err).Error("ошибка сериализации ответа")
-					return errors.Wrap(err, "ошибка сериализации ответа")
+					return nil, errors.Wrap(err, "ошибка сериализации ответа")
 				}
 			}
 		}
-		return nil
+		return nil, nil
 	}
-
+	logger.Error("Некорректный запрос в HH")
 	errorResp := hhapimodels.ErrorData{}
 	if response != nil && responseBody != nil {
 		err = json.Unmarshal(responseBody, &errorResp)
 		if err != nil {
 			logger.WithError(err).Error("ошибка сериализации ответа с ошибкой")
+		} else {
+			return &errorResp, errors.Errorf("Некорректный запрос. Ошибка: %+v", errorResp)
 		}
 	}
-	logger.Error("Некорректный запрос в HH")
-	return errors.Errorf("Некорректный запрос. Ошибка: %+v", errorResp)
+	return nil, errors.Errorf("Некорректный запрос. Ошибка: %+v", errorResp)
 }
 
 func getResponseBody(logger *log.Entry, response *http.Response) ([]byte, *log.Entry) {

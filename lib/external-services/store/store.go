@@ -10,6 +10,7 @@ type Provider interface {
 	Set(spaceID, code string, value []byte) error
 	Get(spaceID, code string) (value []byte, ok bool, err error)
 	GetRec(spaceID, code string) (rec *dbmodels.ExtData, err error)
+	DeleteRec(spaceID, code string) error
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -71,4 +72,17 @@ func (i impl) GetRec(spaceID, code string) (rec *dbmodels.ExtData, err error) {
 		return nil, err
 	}
 	return rec, nil
+}
+
+func (i impl) DeleteRec(spaceID, code string) error {
+	rec := dbmodels.ExtData{}
+	err := i.db.
+		Where("space_id = ? AND code = ?", spaceID, code).
+		Delete(&rec).
+		Error
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
