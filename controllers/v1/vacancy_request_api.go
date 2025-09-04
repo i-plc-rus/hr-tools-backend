@@ -60,9 +60,12 @@ func (c *vacancyReqApiController) create(ctx *fiber.Ctx) error {
 	}
 	spaceID := middleware.GetUserSpace(ctx)
 	userID := middleware.GetUserID(ctx)
-	id, err := vacancyreqhandler.Instance.Create(spaceID, userID, payload)
+	id, hMsg, err := vacancyreqhandler.Instance.Create(spaceID, userID, payload)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка создания заявки")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(id))
 }
@@ -94,9 +97,12 @@ func (c *vacancyReqApiController) update(ctx *fiber.Ctx) error {
 	}
 
 	spaceID := middleware.GetUserSpace(ctx)
-	err = vacancyreqhandler.Instance.Update(spaceID, id, payload)
+	hMsg, err := vacancyreqhandler.Instance.Update(spaceID, id, payload)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка обновления заявки")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
@@ -256,9 +262,12 @@ func (c *vacancyReqApiController) saveStages(ctx *fiber.Ctx) error {
 	}
 
 	spaceID := middleware.GetUserSpace(ctx)
-	err = aprovalstageshandler.Instance.Save(spaceID, id, payload.ApprovalStages)
+	hMsg, err := aprovalstageshandler.Instance.Save(spaceID, id, payload.ApprovalStages)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка обновления цепочки согласования")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
