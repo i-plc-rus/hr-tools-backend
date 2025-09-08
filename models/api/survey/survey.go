@@ -216,3 +216,16 @@ func GetApplicantAnswersContent(rec dbmodels.ApplicantSurvey) (string, error) {
 	}
 	return string(body), nil
 }
+
+type ApplicantVkStep0SurveyView struct {
+	Questions []ApplicantVkStep0Question `json:"questions"`
+	ApplicantSurvey
+	IsFilledOut bool `json:"is_filled_out"` // "анкета полностью заполнена"
+}
+
+type ApplicantVkStep0Question struct {
+	QuestionID   string   `json:"question_id"`   // Идентификатор вопроса
+	QuestionText string   `json:"question_text"` // Текст вопроса
+	QuestionType string   `json:"question_type"` // Тип вопроса
+	Answers      []string `json:"answers"`       // Варианты ответов
+}

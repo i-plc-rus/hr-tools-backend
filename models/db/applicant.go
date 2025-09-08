@@ -50,6 +50,7 @@ type Applicant struct {
 	RejectReason          string                   `gorm:"type:varchar(255)" comment:"Причина отказа"`
 	RejectInitiator       models.RejectInitiator   `gorm:"type:varchar(255)" comment:"Инициатор отказа"`
 	ApplicantSurvey       *ApplicantSurvey
+	ApplicantVkStep       *ApplicantVkStep
 }
 
 type ApplicantWithJob struct {

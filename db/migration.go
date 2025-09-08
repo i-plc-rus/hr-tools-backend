@@ -132,6 +132,10 @@ func AutoMigrateDB() error {
 		return errors.Wrap(err, "ошибка создания структуры VacancyRequestComment")
 	}
 
+	if err := DB.AutoMigrate(&dbmodels.ApplicantVkStep{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры ApplicantVkStep")
+	}
+
 	log.Info("Миграция прошла успешно")
 	return nil
 }
