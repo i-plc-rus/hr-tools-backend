@@ -193,7 +193,6 @@ func (i impl) ScoreApplicant(spaceID, vacancyID, vacancyInfo, applicantInfo, hrS
 		ApplicantScorePromt5,
 	)
 
-	fmt.Println(userPromt)
 	resp.Description, err = i.getYaClient().
 		GenerateByPromtAndText(ApplicantScoreSysPromt, userPromt)
 	if err != nil {
