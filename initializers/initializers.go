@@ -40,6 +40,9 @@ import (
 	applicantsurveyworker "hr-tools-backend/lib/survey/applicant-survey-worker"
 	vacancyhandler "hr-tools-backend/lib/vacancy"
 	vacancyreqhandler "hr-tools-backend/lib/vacancy-req"
+	"hr-tools-backend/lib/vk"
+	vkstep0runworker "hr-tools-backend/lib/vk/step0-run-worker"
+	vkstep1runworker "hr-tools-backend/lib/vk/step1-run-worker"
 	connectionhub "hr-tools-backend/lib/ws/hub/connection-hub"
 	"time"
 )
@@ -73,7 +76,7 @@ func InitAllServices(ctx context.Context) {
 	vacancyhandler.NewHandler()
 	vacancyreqhandler.NewHandler()
 	spacesettingshandler.NewHandler()
-	gpthandler.NewHandler(false)
+	gpthandler.NewHandler(true)
 	hhhandler.NewHandler()
 	avitohandler.NewHandler()
 	applicant.NewHandler()
@@ -82,6 +85,7 @@ func InitAllServices(ctx context.Context) {
 	analytics.NewHandler()
 	negotiationchathandler.NewHandler()
 	survey.NewHandler()
+	vk.NewHandler()
 	supersethandler.NewHandler(config.Conf.Superset.Host, config.Conf.Superset.Username, config.Conf.Superset.Password, config.Conf.Superset.DashboardParams)
 	go initWorkers(ctx)
 }
@@ -90,6 +94,13 @@ func InitAllServices(ctx context.Context) {
 func initWorkers(ctx context.Context) {
 	//Задача проверки статусов модерации/публикации в HH/Avito
 	externalserviceworker.StartWorker(ctx)
+	
+	// Задача  ВК. Шаг 0. отправка ссылки на анкету с типовыми вопросами
+	vkstep0runworker.StartWorker(ctx)
+
+	// Задача ВК. Шаг 1. Генерация черновика скрипта
+	vkstep1runworker.StartWorker(ctx)
+
 	if makeTimeGap(ctx) {
 		//Задача получения откликов по вакансиям из HH/Avito
 		negotiationworker.StartWorker(ctx)

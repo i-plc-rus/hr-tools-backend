@@ -1,7 +1,6 @@
 package gpthandler
 
 import (
-	"errors"
 	"fmt"
 	"hr-tools-backend/config"
 	"hr-tools-backend/db"
@@ -12,6 +11,7 @@ import (
 	gptmodels "hr-tools-backend/models/api/gpt"
 	dbmodels "hr-tools-backend/models/db"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -21,7 +21,6 @@ type Provider interface {
 	ReGenerateHRSurvey(spaceID, vacancyID, vacancyInfo, questions string) (resp gptmodels.GenVacancyDescResponse, err error)
 	GenerateApplicantSurvey(spaceID, vacancyID, vacancyInfo, applicantInfo, hrSurvey string) (resp gptmodels.GenVacancyDescResponse, err error)
 	ScoreApplicant(spaceID, vacancyID, vacancyInfo, applicantInfo, hrSurvey, applicantAnswers string) (resp gptmodels.GenVacancyDescResponse, err error)
-	VkStep1(spaceID, vacancyID, vacancyInfo, applicantInfo, hrSurvey, applicantAnswers string) (resp gptmodels.GenVacancyDescResponse, err error)
 }
 
 type impl struct {
@@ -34,6 +33,14 @@ var Instance Provider
 
 func NewHandler(useFakeAi bool) {
 	Instance = impl{
+		spaceSettingsStore: spacesettingsstore.NewInstance(db.DB),
+		logStore:           ailogstore.NewInstance(db.DB),
+		useFakeAi:          useFakeAi,
+	}
+}
+
+func GetHandler(useFakeAi bool) *impl {
+	return &impl{
 		spaceSettingsStore: spacesettingsstore.NewInstance(db.DB),
 		logStore:           ailogstore.NewInstance(db.DB),
 		useFakeAi:          useFakeAi,
@@ -75,22 +82,6 @@ const (
 2. Сгенерировать итоговый комментарий, суммирующий соответствие кандидата вакансии.
 3. Формат: {"details": [ { "question_id": "", "score": <число>, "comment": "<текст>" } ], "comment": "<итоговый текст>" }`
 
-	VkStep1SysPromt = "Ты — нейросеть, помогаешь HR-специалистам формировать сценарии для интервью."
-	VkStep1Template = `{
-  "vacancy":%v,
-  "hr_priorities":%v,
-  "candidate_answers":%v,
-  "instruction":"Сгенерируй пул из 15 вопросов и текст сценария для интервью (intro/outro). Формат ответа: смотри в answer_format",
-"answer_format":{
-  "questions":[
-    {"id":"q1","text":"…","type":"single_choice"}
-  ],
-  "script_intro":"…",
-  "script_outro":"…",
-  "comments":{"q1":"…"}
-}
-}
-`
 )
 
 func (i impl) GenerateVacancyDescription(spaceID, text string) (resp gptmodels.GenVacancyDescResponse, err error) {
@@ -210,21 +201,6 @@ func (i impl) ScoreApplicant(spaceID, vacancyID, vacancyInfo, applicantInfo, hrS
 			WithField("space_id", spaceID).
 			WithError(err).
 			Error("ошибка оценки вопросов для HR анкеты через YandexGPT")
-		return resp, err
-	}
-	i.saveLog(spaceID, vacancyID, ApplicantScoreSysPromt, userPromt, resp.Description, dbmodels.AiScoreApplicantType)
-	return resp, nil
-}
-
-func (i impl) VkStep1(spaceID, vacancyID, vacancyInfo, applicantInfo, hrSurvey, applicantAnswers string) (resp gptmodels.GenVacancyDescResponse, err error) {
-	userPromt := fmt.Sprintf(VkStep1Template, vacancyInfo,hrSurvey,applicantAnswers)
-	resp.Description, err = i.getYaClient().
-		GenerateByPromtAndText(VkStep1SysPromt, userPromt)
-	if err != nil {
-		log.
-			WithField("space_id", spaceID).
-			WithError(err).
-			Error("ошибка генерация черновика скрипта через GPT")
 		return resp, err
 	}
 	i.saveLog(spaceID, vacancyID, ApplicantScoreSysPromt, userPromt, resp.Description, dbmodels.AiScoreApplicantType)

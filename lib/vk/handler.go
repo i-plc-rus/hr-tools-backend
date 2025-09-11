@@ -1,9 +1,9 @@
 package vk
 
 import (
-	"encoding/json"
 	"hr-tools-backend/config"
 	"hr-tools-backend/db"
+	"hr-tools-backend/lib/applicant"
 	applicantstore "hr-tools-backend/lib/applicant/store"
 	companystore "hr-tools-backend/lib/dicts/company/store"
 	negotiationchathandler "hr-tools-backend/lib/external-services/negotiation-chat"
@@ -14,6 +14,7 @@ import (
 	vacancysurveystore "hr-tools-backend/lib/survey/vacancy-survey-store"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	applicantvkstore "hr-tools-backend/lib/vk/applicant-vk-store"
+	"hr-tools-backend/models"
 	negotiationapimodels "hr-tools-backend/models/api/negotiation"
 	surveyapimodels "hr-tools-backend/models/api/survey"
 	dbmodels "hr-tools-backend/models/db"
@@ -24,16 +25,18 @@ import (
 )
 
 type Provider interface {
-	RunStep0(spaceID, vacancyID, applicantID string) (ok bool, err error)
-	GetStep0Survey(id string) (*surveyapimodels.ApplicantVkStep0SurveyView, error) // анкета для фронта
-	// HandleStep0Survey // ответы от фронта, сохранение в бд, анализ проходит или нет
-	RunStep1(spaceID, vacancyID, applicantID string) (ok bool, err error)
+	RunStep0(applicant dbmodels.Applicant) (ok bool, err error)
+	GetSurveyStep0(id string) (*surveyapimodels.VkStep0SurveyView, error)                                                              // анкета для фронта
+	HandleSurveyStep0(id string, answers surveyapimodels.VkStep0SurveyAnswers) (result surveyapimodels.VkStep0SurveyResult, err error) // ответы от фронта, сохранение в бд, анализ проходит или нет
+	RunStep1(applicant dbmodels.Applicant) (ok bool, err error)
 }
 
 var Instance Provider
 
 const (
 	defaultCompanyName = "HR-Tools"
+	Step0SucessMsg     = "Ваша анкета успешно сформирована, с вами свяжутся для информирования о результатах"  //TODO нужен текст ответа
+	Step0FailMsg       = "Ваша анкета успешно сформирована, с вами свяжутся для информирования о результатах." //TODO нужен текст ответа
 )
 
 func NewHandler() {
@@ -45,6 +48,7 @@ func NewHandler() {
 		negotiationChatHandler: negotiationchathandler.Instance,
 		companyStore:           companystore.NewInstance(db.DB),
 		messageTemplate:        messagetemplate.Instance,
+		vkAiProvider:           gpthandler.GetHandler(true),
 	}
 }
 
@@ -57,6 +61,7 @@ type impl struct {
 	negotiationChatHandler negotiationchathandler.Provider
 	companyStore           companystore.Provider
 	messageTemplate        messagetemplate.Provider
+	vkAiProvider           surveyapimodels.VkAiProvider // при необходимости поменяем пакет имплементации, пока GPT
 }
 
 func (i impl) getLogger(spaceID, applicantID string) *logrus.Entry {
@@ -65,18 +70,8 @@ func (i impl) getLogger(spaceID, applicantID string) *logrus.Entry {
 		WithField("applicant_id", applicantID)
 }
 
-func (i impl) RunStep0(spaceID, vacancyID, applicantID string) (ok bool, err error) {
-	applicantRec, err := i.applicantStore.GetByID(spaceID, applicantID)
-	if err != nil {
-		return false, errors.Wrap(err, "ошибка получения данных кандидата")
-	}
-	if applicantRec == nil {
-		return false, nil
-	}
-	if applicantRec.ApplicantSurvey == nil {
-		return false, nil
-	}
-	rec, err := i.vkStore.GetByApplicantID(spaceID, applicantID)
+func (i impl) RunStep0(applicantRec dbmodels.Applicant) (ok bool, err error) {
+	rec, err := i.vkStore.GetByApplicantID(applicantRec.SpaceID, applicantRec.ID)
 	if err != nil {
 		return false, err
 	}
@@ -86,11 +81,11 @@ func (i impl) RunStep0(spaceID, vacancyID, applicantID string) (ok bool, err err
 		}
 	} else {
 		rec = &dbmodels.ApplicantVkStep{
-			BaseSpaceModel: dbmodels.BaseSpaceModel{SpaceID: spaceID},
-			ApplicantID:    applicantID,
+			BaseSpaceModel: dbmodels.BaseSpaceModel{SpaceID: applicantRec.SpaceID},
+			ApplicantID:    applicantRec.ID,
 			Status:         dbmodels.VkStep0NotSent,
 			Step0: dbmodels.VkStep0{
-				Answers: []dbmodels.VkStep0{},
+				Answers: []dbmodels.VkStep0Answer{},
 			},
 		}
 		id, err := i.vkStore.Save(*rec)
@@ -101,9 +96,9 @@ func (i impl) RunStep0(spaceID, vacancyID, applicantID string) (ok bool, err err
 	}
 
 	// отправка ссылки на анкету
-	logger := i.getLogger(spaceID, applicantID)
+	logger := i.getLogger(applicantRec.SpaceID, applicantRec.ID)
 	isChatAvailable := false
-	availability, err := i.negotiationChatHandler.IsVailable(spaceID, applicantID)
+	availability, err := i.negotiationChatHandler.IsVailable(applicantRec.SpaceID, applicantRec.ID)
 	if err != nil {
 		logger.
 			WithError(err).
@@ -112,16 +107,16 @@ func (i impl) RunStep0(spaceID, vacancyID, applicantID string) (ok bool, err err
 		isChatAvailable = availability.IsAvailable
 	}
 
-	companyName := i.getCompanyName(spaceID, applicantRec.Vacancy.CompanyID)
+	companyName := i.getCompanyName(applicantRec.SpaceID, applicantRec.Vacancy.CompanyID)
 	link := config.Conf.UIParams.SurveyStep0Path + rec.ID
 	isSend := false
 	if isChatAvailable {
-		if i.sendToChat(spaceID, applicantID, companyName, link, logger) {
+		if i.sendToChat(applicantRec.SpaceID, applicantRec.ID, companyName, link, logger) {
 			isSend = true
 		}
 	}
 	if applicantRec.Email != "" {
-		emailFrom, err := i.messageTemplate.GetSenderEmail(spaceID)
+		emailFrom, err := i.messageTemplate.GetSenderEmail(applicantRec.SpaceID)
 		if err != nil {
 			logger.
 				WithError(err).
@@ -134,11 +129,11 @@ func (i impl) RunStep0(spaceID, vacancyID, applicantID string) (ok bool, err err
 	}
 	if isSend {
 		rec = &dbmodels.ApplicantVkStep{
-			BaseSpaceModel: dbmodels.BaseSpaceModel{SpaceID: spaceID},
-			ApplicantID:    applicantID,
+			BaseSpaceModel: dbmodels.BaseSpaceModel{SpaceID: applicantRec.SpaceID},
+			ApplicantID:    applicantRec.ID,
 			Status:         dbmodels.VkStep0Sent,
 			Step0: dbmodels.VkStep0{
-				Answers: []dbmodels.VkStep0{},
+				Answers: []dbmodels.VkStep0Answer{},
 			},
 		}
 		_, err = i.vkStore.Save(*rec)
@@ -150,7 +145,7 @@ func (i impl) RunStep0(spaceID, vacancyID, applicantID string) (ok bool, err err
 	return false, nil
 }
 
-func (i impl) GetStep0Survey(id string) (*surveyapimodels.ApplicantVkStep0SurveyView, error) {
+func (i impl) GetSurveyStep0(id string) (*surveyapimodels.VkStep0SurveyView, error) {
 	rec, err := i.vkStore.GetByID(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "ошибка получения анкеты кандидата")
@@ -158,38 +153,94 @@ func (i impl) GetStep0Survey(id string) (*surveyapimodels.ApplicantVkStep0Survey
 	if rec == nil {
 		return nil, errors.New("анкета не найдена")
 	}
-	result := surveyapimodels.ApplicantVkStep0SurveyView{
-		Questions: []surveyapimodels.ApplicantVkStep0Question{
-			{
-				QuestionID:   "1",
-				QuestionText: TypicalQuestion1,
-			},
-			// TODO Добавить типовые вопросы
-		},
-	}
+	result := getQuestionsStep0()
 	return &result, nil
 }
 
-// HandleStep0Survey
-
-func (i impl) RunStep1(spaceID, vacancyID, applicantID string) (ok bool, err error) {
-	// applicantSurveyRec dbmodels.ApplicantSurvey
-	applicantRec, err := i.applicantStore.GetByID(spaceID, applicantID)
+func (i impl) HandleSurveyStep0(id string, request surveyapimodels.VkStep0SurveyAnswers) (result surveyapimodels.VkStep0SurveyResult, err error) {
+	rec, err := i.vkStore.GetByID(id)
 	if err != nil {
-		return false, errors.Wrap(err, "ошибка получения данных кандидата")
+		return result, errors.Wrap(err, "ошибка получения анкеты кандидата")
 	}
-	if applicantRec == nil {
-		return false, nil
+	if rec == nil {
+		return result, errors.New("анкета не найдена")
 	}
-	if applicantRec.ApplicantSurvey == nil {
-		return false, nil
+	rec.Step0 = dbmodels.VkStep0{
+		Answers: []dbmodels.VkStep0Answer{},
+	}
+	for _, answer := range request.Answers {
+		rec.Step0.Answers = append(rec.Step0.Answers,
+			dbmodels.VkStep0Answer{
+				ID:     answer.QuestionID,
+				Answer: answer.Answer,
+			})
+	}
+	rec.Status = dbmodels.VkStep0Answered
+	_, err = i.vkStore.Save(*rec)
+	if err != nil {
+		return result, errors.Wrap(err, "ошибка сохранения анкеты")
 	}
 
-	vacancy, err := i.vacancyStore.GetByID(spaceID, vacancyID)
+	isSucess := false
+	//TODO принятие решения о прохождении
+	//Если кандидат подходит, то переходить к шагу 1
+	// ---- удалить когда будет алгоритм принятия
+	if len(rec.Step0.Answers) > 4 || rec.Step0.Answers[2].Answer == "да" {
+		isSucess = true
+	}
+	// ----
+	if isSucess {
+		rec.Status = dbmodels.VkStep0Done
+	} else {
+		rec.Status = dbmodels.VkStep0Refuse
+	}
+	_, err = i.vkStore.Save(*rec)
+	if err != nil {
+		return result, errors.Wrap(err, "ошибка сохранения анкеты")
+	}
+	if isSucess {
+		result = surveyapimodels.VkStep0SurveyResult{
+			Success: true,
+			Message: Step0SucessMsg,
+		}
+		hMsg, err := applicant.Instance.UpdateStatus(rec.SpaceID, rec.ApplicantID, "", models.NegotiationStatusAccepted)
+		if err != nil {
+			i.getLogger(rec.SpaceID, rec.ApplicantID).
+				WithError(err).
+				Error("ВК. Шаг 0. Ошибка обновления статуса кандидата после успешного прохождения опроса")
+		}
+		if hMsg != "" {
+			i.getLogger(rec.SpaceID, rec.ApplicantID).
+				WithField("h_msg", hMsg).
+				Error("ВК. Шаг 0. Ошибка обновления статуса кандидата после успешного прохождения опроса")
+		}
+		return result, nil
+	}
+	result = surveyapimodels.VkStep0SurveyResult{
+		Success: false,
+		Message: Step0FailMsg,
+	}
+	hMsg, err := applicant.Instance.UpdateStatus(rec.SpaceID, rec.ApplicantID, "", models.NegotiationStatusRejected)
+	if err != nil {
+		i.getLogger(rec.SpaceID, rec.ApplicantID).
+			WithError(err).
+			Error("ВК. Шаг 0. Ошибка обновления статуса кандидата после провального прохождения опроса")
+	}
+	if hMsg != "" {
+		i.getLogger(rec.SpaceID, rec.ApplicantID).
+			WithField("h_msg", hMsg).
+			Error("ВК. Шаг 0. Ошибка обновления статуса кандидата после провального прохождения опроса")
+	}
+	return result, nil
+}
+
+func (i impl) RunStep1(applicant dbmodels.Applicant) (ok bool, err error) {
+	// получение вакансии
+	vacancy, err := i.vacancyStore.GetByID(applicant.SpaceID, applicant.VacancyID)
 	if err != nil {
 		return false, errors.Wrap(err, "ошибка получения вакансии")
 	}
-	if vacancy == nil || vacancy.HRSurvey == nil {
+	if vacancy == nil {
 		return false, nil
 	}
 
@@ -198,39 +249,50 @@ func (i impl) RunStep1(spaceID, vacancyID, applicantID string) (ok bool, err err
 		return false, err
 	}
 
-	applicantInfo, err := surveyapimodels.GetApplicantDataContent(applicantRec.Applicant)
+	// получение данных кандидата для промта
+	applicantInfo, err := surveyapimodels.GetApplicantDataContent(applicant)
+	if err != nil {
+		return false, err
+	}
+	// получение вопросов для промта
+	questions, err := getQuestionsStep0().Content()
 	if err != nil {
 		return false, err
 	}
 
-	hrSurvey, err := surveyapimodels.GetHRDataContent(*vacancy.HRSurvey)
+	rec, err := i.vkStore.GetByID(applicant.ApplicantVkStep.ID)
 	if err != nil {
 		return false, err
 	}
-	applicantAnswers, err := surveyapimodels.GetApplicantAnswersContent(*applicantRec.ApplicantSurvey)
-	resp, err := gpthandler.Instance.VkStep1(vacancy.SpaceID, vacancy.ID, vacancyInfo, applicantInfo, hrSurvey, applicantAnswers)
+	// получение ответов кандидата для промта
+	applicantAnswers, err := applicant.ApplicantVkStep.Step0.AnswerContent()
 	if err != nil {
+		return false, err
+	}
+	// запуск ИИ
+
+	resp, err := i.vkAiProvider.VkStep1(vacancy.SpaceID, vacancy.ID, vacancyInfo, applicantInfo, questions, applicantAnswers)
+	if err != nil {
+		i.step1Fail(applicant, *rec)
 		return false, errors.Wrap(err, "ошибка вызова ИИ при генерации черновика скрипта")
 	}
-	vkStep1 := dbmodels.VkStep1{}
-	err = json.Unmarshal([]byte(resp.Description), &vkStep1)
-	if err != nil {
-		return false, errors.Wrapf(err, "ошибка декодирования json в структуру оценки кандидата, json: %v", resp.Description)
-	}
 
-	rec := dbmodels.ApplicantVkStep{
-		BaseSpaceModel: dbmodels.BaseSpaceModel{SpaceID: spaceID},
-		ApplicantID:    applicantID,
-		VkStep1:        vkStep1,
-
-		// BaseSpaceModel:  dbmodels.BaseSpaceModel{SpaceID: spaceID},
-		// VacancySurveyID: vacancyRec.HRSurvey.ID,
-		// ApplicantID:     applicantID,
-		// Survey:          dbmodels.ApplicantSurveyQuestions{Questions: surveyData.Questions},
-		// IsFilledOut:     false,
-		// HrThreshold:     vacancyRec.HRSurvey.Survey.GetThreshold(),
+	rec.Step1 = dbmodels.VkStep1{
+		Questions:   []dbmodels.VkStep1Question{},
+		ScriptIntro: resp.ScriptIntro,
+		ScriptOutro: resp.ScriptOutro,
+		Comments:    resp.Comments,
 	}
-	_, err = i.vkStore.Save(rec)
+	for _, q := range resp.Questions {
+		rec.Step1.Questions = append(rec.Step1.Questions, dbmodels.VkStep1Question{
+			ID:      q.ID,
+			Text:    q.Text,
+			Type:    q.Type,
+			Options: q.Options,
+		})
+	}
+	rec.Status = dbmodels.VkStep1Draft
+	_, err = i.vkStore.Save(*rec)
 	if err != nil {
 		return false, errors.Wrap(err, "ошибка сохранения черновика скрипта")
 	}
@@ -286,4 +348,44 @@ func (i impl) sendToEmail(emailFrom, mailTo, companyName, link string, logger *l
 		return false
 	}
 	return true
+}
+
+func getQuestionsStep0() surveyapimodels.VkStep0SurveyView {
+	return surveyapimodels.VkStep0SurveyView{
+		Questions: []surveyapimodels.VkStep0Question{
+			{
+				QuestionID:   "1",
+				QuestionText: TypicalQuestion1,
+			},
+			{
+				QuestionID:   "2",
+				QuestionText: TypicalQuestion2,
+				Answers:      Question2Answers,
+			},
+			{
+				QuestionID:   "3",
+				QuestionText: TypicalQuestion3,
+				Answers:      Question3Answers,
+			},
+			{
+				QuestionID:   "4",
+				QuestionText: TypicalQuestion4,
+			},
+			{
+				QuestionID:   "5",
+				QuestionText: TypicalQuestion5,
+				Answers:      Question5Answers,
+			},
+			// TODO Добавить типовые вопросы
+		},
+	}
+}
+
+func (i impl) step1Fail(applicant dbmodels.Applicant, rec dbmodels.ApplicantVkStep) {
+	rec.Status = dbmodels.VkStep1DraftFail
+	_, err := i.vkStore.Save(rec)
+	if err != nil {
+		i.getLogger(applicant.SpaceID, applicant.ID).
+			WithError(err).Error("ВК. Шаг 1. Ошибка изменения статуса")
+	}
 }
