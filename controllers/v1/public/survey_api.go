@@ -107,9 +107,9 @@ func (c *publicsurveyApiController) getVkStep0Survey(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(resp))
 }
 
-// @Summary Сохранение ответов
-// @Tags Анкета кандидата
-// @Description Сохранение ответов
+// @Summary ВК. Шаг 0. cохранение ответов по анкете
+// @Tags ВК
+// @Description ВК. Шаг 0. cохранение ответов по анкете
 // @Param   id          		path    string  true         "Идентификатор ID"
 // @Param	body body	 surveyapimodels.VkStep0SurveyAnswers	true	"request body"
 // @Success 200 {object} apimodels.Response
