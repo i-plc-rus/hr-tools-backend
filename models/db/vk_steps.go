@@ -16,8 +16,35 @@ const (
 	VkStep0Refuse    = 30 //"Шаг0. Кандидат не прошел"
 	VkStep0Done      = 40 //"Шаг0. Кандидат прошел"
 	VkStep1Draft     = 50 //"Шаг1. Получен черновика скрипта"
-	VkStep1DraftFail = 60 //"Шаг1. ошибка понучения черновика скрипта"
+	VkStep1DraftFail = 60 //"Шаг1. Ошибка получения черновика скрипта"
+	VkStep1Regen     = 70 //"Шаг1. Перегенерация"
+	VkStep1Approved  = 80 //"Шаг1. Список вопросов подтвержден"
 )
+
+func (s StepStatus) String() string {
+	switch s {
+	case VkStep0NotSent:
+		return "Шаг0. Ссылка на анкету с типовыми вопросами не отправлена"
+	case VkStep0Sent:
+		return "Шаг0. Ссылка на анкету с типовыми вопросами отправлена кандидату"
+	case VkStep0Answered:
+		return "Шаг0. Кандидат ответил на анкету"
+	case VkStep0Refuse:
+		return "Шаг0. Кандидат не прошел отбор"
+	case VkStep0Done:
+		return "Шаг0. Кандидат прошел отбор"
+	case VkStep1Draft:
+		return "Шаг1. Получен черновика скрипта"
+	case VkStep1DraftFail:
+		return "Шаг1. Не удалось получить черновик скрипта"
+	case VkStep1Regen:
+		return "Шаг1. Перегенерация списка вопросов"
+	case VkStep1Approved:
+		return "Шаг1. Список вопросов подтвержден"
+	default:
+		return "Не известный статус"
+	}
+}
 
 type ApplicantVkStep struct {
 	BaseSpaceModel
@@ -76,8 +103,9 @@ type VkStep1 struct {
 }
 
 type VkStep1Question struct {
-	ID      string   `json:"id"`      // Идентификатор вопроса
-	Text    string   `json:"text"`    // Текст вопроса
-	Type    string   `json:"type"`    // Тип вопроса
-	Options []string `json:"options"` // Варианты ответов
+	ID                string `json:"id"`   // Идентификатор вопроса
+	Text              string `json:"text"` // Текст вопроса
+	Order             int    `json:"order"`
+	NotSuitable       bool   `json:"not_suitable"`        // не подходит
+	NotSuitableReason string `json:"not_suitable_reason"` // причина по которой вопрос не подходит
 }

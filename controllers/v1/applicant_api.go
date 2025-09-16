@@ -8,9 +8,11 @@ import (
 	filestorage "hr-tools-backend/lib/file-storage"
 	messagetemplate "hr-tools-backend/lib/message-template"
 	"hr-tools-backend/lib/utils/helpers"
+	"hr-tools-backend/lib/vk"
 	"hr-tools-backend/middleware"
 	apimodels "hr-tools-backend/models/api"
 	applicantapimodels "hr-tools-backend/models/api/applicant"
+	surveyapimodels "hr-tools-backend/models/api/survey"
 	dbmodels "hr-tools-backend/models/db"
 	"io"
 	"time"
@@ -54,6 +56,8 @@ func InitApplicantApiRouters(app *fiber.App) {
 			idRouter.Put("changes", controller.changes)
 			idRouter.Put("note", controller.note)
 			idRouter.Put("reject", controller.reject)
+			idRouter.Put("survey", controller.surveyUpdate)
+			idRouter.Put("survey_regen", controller.surveyRegen)
 		})
 	})
 }
@@ -838,4 +842,78 @@ func (c *applicantApiController) multiExportXls(ctx *fiber.Ctx) error {
 	ctx.Set("Content-Type", "application/vnd.ms-excel")
 	ctx.Set(fiber.HeaderContentDisposition, `attachment; filename="`+fileName+`"`)
 	return ctx.SendStream(data)
+}
+
+// @Summary Обновить/утвердить вопросы для интервью
+// @Tags Кандидат
+// @Description  Обновить/утвердить вопросы для интервью
+// @Param   Authorization	 header		string	true	"Authorization token"
+// @Param   id          	 path    	string  true    "Идентификатор кандидата"
+// @Param	body body	 applicantapimodels.RejectRequest	true	"request body"
+// @Success 200 {object} apimodels.Response{data=surveyapimodels.VkStep1}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/{id}/survey [put]
+func (c *applicantApiController) surveyUpdate(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	var payload surveyapimodels.VkStep1Update
+	if err = c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	if err = payload.Validate(); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	hMsg, err := vk.Instance.UpdateStep1(spaceID, id, payload)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка обновления вопросов для интервью")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Отправить вопросы для интервью на перерегенерацию
+// @Tags Кандидат
+// @Description  Обновить вопросы для интервью на перерегенерацию
+// @Param   Authorization	 header		string	true	"Authorization token"
+// @Param   id          	 path    	string  true    "Идентификатор кандидата"
+// @Param	body body	 applicantapimodels.RejectRequest	true	"request body"
+// @Success 200 {object} apimodels.Response{data=surveyapimodels.VkStep1}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/{id}/survey_regen [put]
+func (c *applicantApiController) surveyRegen(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	var payload surveyapimodels.VkStep1Regen
+	if err = c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	if err = payload.Validate(); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	hMsg, err := vk.Instance.RegenStep1(spaceID, id, payload)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка отправки вопросов для интервью на повторную генерацию")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }

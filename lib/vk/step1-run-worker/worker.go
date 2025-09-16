@@ -74,23 +74,41 @@ func (i impl) handle() {
 		if applicant.Status != models.ApplicantStatusInProcess {
 			continue
 		}
-		if applicant.ApplicantVkStep == nil || applicant.ApplicantVkStep.Status != dbmodels.VkStep0Done {
+		if applicant.ApplicantVkStep == nil {
 			continue
 		}
-
-		ok, err := vk.Instance.RunStep1(applicant)
-		if err != nil {
-			logger.WithError(err).
-				WithField("space_id", applicant.SpaceID).
-				WithField("applicant_id", applicant.ID).
-				Error("ВК. Шаг 1. Ошибка генерации черновика скрипта")
-			continue
-		}
-		if ok {
-			logger.
-				WithField("space_id", applicant.SpaceID).
-				WithField("applicant_id", applicant.ID).
-				Info("ВК. Шаг 1. Черновик скрипта сгенерирован")
+		if applicant.ApplicantVkStep.Status == dbmodels.VkStep0Done {
+			// первичная генерация вопросов
+			ok, err := vk.Instance.RunStep1(applicant)
+			if err != nil {
+				logger.WithError(err).
+					WithField("space_id", applicant.SpaceID).
+					WithField("applicant_id", applicant.ID).
+					Error("ВК. Шаг 1. Ошибка генерации черновика скрипта")
+				continue
+			}
+			if ok {
+				logger.
+					WithField("space_id", applicant.SpaceID).
+					WithField("applicant_id", applicant.ID).
+					Info("ВК. Шаг 1. Черновик скрипта сгенерирован")
+			}
+		} else if applicant.ApplicantVkStep.Status == dbmodels.VkStep1Regen {
+			// перегенерация вопросов
+			ok, err := vk.Instance.RunRegenStep1(applicant)
+			if err != nil {
+				logger.WithError(err).
+					WithField("space_id", applicant.SpaceID).
+					WithField("applicant_id", applicant.ID).
+					Error("ВК. Шаг 1. Ошибка перегенерации черновика скрипта")
+				continue
+			}
+			if ok {
+				logger.
+					WithField("space_id", applicant.SpaceID).
+					WithField("applicant_id", applicant.ID).
+					Info("ВК. Шаг 1. Черновик скрипта перегенерирован")
+			}
 		}
 	}
 }

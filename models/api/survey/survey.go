@@ -216,36 +216,3 @@ func GetApplicantAnswersContent(rec dbmodels.ApplicantSurvey) (string, error) {
 	}
 	return string(body), nil
 }
-
-type VkStep0SurveyView struct {
-	Questions []VkStep0Question `json:"questions"`
-}
-
-func (v VkStep0SurveyView) Content() (string, error) {
-	body, err := json.Marshal(v)
-	if err != nil {
-		return "", errors.Wrap(err, "ошибка десериализации структуры вопросов шага 0")
-	}
-	return string(body), nil
-}
-
-type VkStep0Question struct {
-	QuestionID   string   `json:"question_id"`   // Идентификатор вопроса
-	QuestionText string   `json:"question_text"` // Текст вопроса
-	QuestionType string   `json:"question_type"` // Тип вопроса
-	Answers      []string `json:"answers"`       // Варианты ответов
-}
-
-type VkStep0SurveyAnswers struct {
-	Answers []VkStep0Answer `json:"answers"`
-}
-
-type VkStep0Answer struct {
-	QuestionID string `json:"question_id"` // Идентификатор вопроса
-	Answer     string `json:"answer"`      // Варианты ответов
-}
-
-type VkStep0SurveyResult struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-}
