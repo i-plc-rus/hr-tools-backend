@@ -81,7 +81,6 @@ const (
 1. Сгенерировать комментарий для каждого вопроса, объясняющий оценку, с учётом приоритетов HR и данных кандидата.
 2. Сгенерировать итоговый комментарий, суммирующий соответствие кандидата вакансии.
 3. Формат: {"details": [ { "question_id": "", "score": <число>, "comment": "<текст>" } ], "comment": "<итоговый текст>" }`
-
 )
 
 func (i impl) GenerateVacancyDescription(spaceID, text string) (resp gptmodels.GenVacancyDescResponse, err error) {
@@ -211,7 +210,7 @@ func (i impl) getYaClient() yagptclient.Provider {
 		return yagptclient.NewFakeClient("", "")
 	}
 	return yagptclient.
-		NewClient(config.Conf.YandexGPT.IAMToken, config.Conf.YandexGPT.CatalogID)
+		NewClient(config.Conf.AI.YandexGPT.IAMToken, config.Conf.AI.YandexGPT.CatalogID)
 }
 
 func (i impl) saveLog(spaceID, vacancyID, sysPromt, userPromt, answer string, reqType dbmodels.AiReqestType) {

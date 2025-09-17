@@ -60,6 +60,38 @@ services:
   #     - /etc/letsencrypt/archive/:/etc/letsencrypt/archive/
   #   networks:
   #     - backend
+  
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    platform: linux/arm64
+    restart: unless-stopped
+    # загрузка моделей
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      
+  ollama-setup:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    volumes:
+      - ollama_data:/root/.ollama
+    command: >
+      sh -c "sleep 10 &&
+             ollama pull deepseek-r1:8b &&
+             echo 'Модели загружены успешно'"
+    restart: "no"
+
 networks:
   dokploy-network:
     external: true
@@ -67,3 +99,4 @@ networks:
 volumes:
   db-data: {}
   minio_data: {}
+  ollama_data:
