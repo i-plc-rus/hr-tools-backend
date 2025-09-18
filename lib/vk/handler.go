@@ -3,9 +3,6 @@ package vk
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/config"
 	"hr-tools-backend/db"
 	"hr-tools-backend/lib/applicant"
@@ -22,6 +19,11 @@ import (
 	surveyapimodels "hr-tools-backend/models/api/survey"
 	dbmodels "hr-tools-backend/models/db"
 	"sort"
+	"strconv"
+
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 type Provider interface {
@@ -38,8 +40,8 @@ var Instance Provider
 
 const (
 	defaultCompanyName = "HR-Tools"
-	Step0SucessMsg     = "Ваша анкета успешно сформирована, с вами свяжутся для информирования о результатах"  //TODO нужен текст ответа
-	Step0FailMsg       = "Ваша анкета успешно сформирована, с вами свяжутся для информирования о результатах." //TODO нужен текст ответа
+	Step0SucessMsg     = "Ваша анкета была успешно заполнена, и с вами свяжутся, чтобы сообщить о результатах"
+	Step0FailMsg       = "Ваша анкета была успешно заполнена, и с вами свяжутся, чтобы сообщить о результатах."
 )
 
 func NewHandler() {
@@ -153,7 +155,15 @@ func (i impl) GetSurveyStep0(id string) (*surveyapimodels.VkStep0SurveyView, err
 	if rec == nil {
 		return nil, errors.New("анкета не найдена")
 	}
-	result := surveyapimodels.QuestionsStep0
+	_, vacancy, err := i.getVacancyAndApplicant(rec.SpaceID, rec.ApplicantID)
+	if err != nil {
+		return nil, err
+	}
+	jobTitle := ""
+	if vacancy.JobTitle != nil {
+		jobTitle = vacancy.JobTitle.Name
+	}
+	result := surveyapimodels.GetQuestionsStep0(jobTitle)
 	return &result, nil
 }
 
@@ -164,6 +174,10 @@ func (i impl) HandleSurveyStep0(id string, request surveyapimodels.VkStep0Survey
 	}
 	if rec == nil {
 		return result, errors.New("анкета не найдена")
+	}
+	_, vacancyRec, err := i.getVacancyAndApplicant(rec.SpaceID, rec.ApplicantID)
+	if err != nil {
+		return result, err
 	}
 	rec.Step0 = dbmodels.VkStep0{
 		Answers: []dbmodels.VkStep0Answer{},
@@ -182,13 +196,11 @@ func (i impl) HandleSurveyStep0(id string, request surveyapimodels.VkStep0Survey
 	}
 
 	isSucess := false
-	//TODO принятие решения о прохождении
-	//Если кандидат подходит, то переходить к шагу 1
-	// ---- удалить когда будет алгоритм принятия
-	if len(rec.Step0.Answers) > 4 || rec.Step0.Answers[2].Answer == "да" {
+	points := i.step0CalcPoints(vacancyRec, request)
+	if points > 60 {
 		isSucess = true
 	}
-	// ----
+	//Если кандидат подходит, то переходить к шагу 1
 	if isSucess {
 		rec.Status = dbmodels.VkStep0Done
 	} else {
@@ -380,8 +392,6 @@ func (i impl) RunRegenStep1(applicant dbmodels.Applicant) (ok bool, err error) {
 		return false, errors.Wrap(err, "ошибка вызова ИИ при перегенерации черновика скрипта")
 	}
 
-	// maps.Copy(rec.Step1.Comments, comments)
-
 	questionResult := []dbmodels.VkStep1Question{}
 	for k, question := range rec.Step1.Questions {
 		// вопросы без изменений
@@ -493,7 +503,11 @@ func (i impl) getStep1Data(applicant dbmodels.Applicant, vacancy dbmodels.Vacanc
 		return "", "", "", "", "", err
 	}
 	// получение вопросов для промта
-	questions, err = surveyapimodels.QuestionsStep0.Content()
+	jobTitle := ""
+	if vacancy.JobTitle != nil {
+		jobTitle = vacancy.JobTitle.Name
+	}
+	questions, err = surveyapimodels.GetQuestionsStep0(jobTitle).Content()
 	if err != nil {
 		return "", "", "", "", "", err
 	}
@@ -512,4 +526,76 @@ func (i impl) getStep1Data(applicant dbmodels.Applicant, vacancy dbmodels.Vacanc
 		generated = string(body)
 	}
 	return vacancyInfo, applicantInfo, questions, applicantAnswers, generated, nil
+}
+
+func (i impl) getVacancyAndApplicant(spaceID, applicantID string) (applicant *dbmodels.ApplicantExt, vacancy *dbmodels.Vacancy, err error) {
+	applicant, err = i.applicantStore.GetByID(spaceID, applicantID)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "ошибка получения данных кандидата")
+	}
+	if applicant == nil {
+		return nil, nil, errors.New("кандидат не найден")
+	}
+	vacancy, err = i.vacancyStore.GetByID(applicant.SpaceID, applicant.VacancyID)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "ошибка получения вакансии")
+	}
+	if vacancy == nil {
+		return nil, nil, errors.New("вакансия не найдена")
+	}
+	return applicant, vacancy, nil
+}
+
+func (i impl) step0CalcPoints(vacancy *dbmodels.Vacancy, request surveyapimodels.VkStep0SurveyAnswers) (points float64) {
+	for _, answer := range request.Answers {
+		switch answer.QuestionID {
+		case "1":
+			if answer.Answer != "да" {
+				return 0
+			}
+		case "2":
+			expectedSalary, _ := strconv.Atoi(answer.Answer) //валидировали через (v VkStep0SurveyAnswers) Validate()
+			v := 0
+			if vacancy.Salary.InHand > 0 {
+				v = vacancy.Salary.InHand
+			} else if vacancy.Salary.ByResult > 0 {
+				v = vacancy.Salary.ByResult
+			} else if vacancy.Salary.To > 0 {
+				v = vacancy.Salary.To
+			} else if vacancy.Salary.From > 0 {
+				v = vacancy.Salary.From
+			} else {
+				points += 35
+				continue
+			}
+			if expectedSalary <= v {
+				points += 35
+				continue
+			}
+			b := 0.1
+			if v < expectedSalary && float64(expectedSalary) <= float64(v)*(float64(1)+b) {
+				points += 24.5
+				continue
+			}
+			if float64(expectedSalary) <= float64(v)*(float64(1)+2*b) {
+				points += 14
+				continue
+			}
+		case "3":
+			if vacancy.Employment.ToString() == answer.Answer {
+				points += 20
+			}
+		case "4":
+			if vacancy.Schedule.ToString() == answer.Answer {
+				points += 20
+			}
+		case "5":
+			fmt.Println(vacancy.Experience.ToPoint())
+			fmt.Println(models.ExperienceFromDescr(answer.Answer).ToPoint())
+			if vacancy.Experience.ToPoint() <= models.ExperienceFromDescr(answer.Answer).ToPoint() {
+				points += 25
+			}
+		}
+	}
+	return points
 }

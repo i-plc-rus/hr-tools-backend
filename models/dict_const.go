@@ -156,6 +156,10 @@ func (e Employment) ToString() string {
 	return ""
 }
 
+func EmploymentSlice() []string {
+	return []string{"Временная", "Полная", "Стажировка", "Частичная", "Волонтерство"}
+}
+
 type Experience string
 
 const (
@@ -180,6 +184,41 @@ func (s Experience) ToString() string {
 		return "Более 10 лет"
 	}
 	return ""
+}
+func ExperienceFromDescr(s string) Experience {
+	switch s {
+	case "Без опыта":
+		return ExperienceNoMatter
+	case "Более 1 года":
+		return ExperienceMoreThan1
+	case "Более 3 лет":
+		return ExperienceMoreThan3
+	case "Более 5 лет":
+		return ExperienceMoreThan5
+	case "Более 10 лет":
+		return ExperienceMoreThan10
+	}
+	return ""
+}
+
+func (s Experience) ToPoint() int {
+	switch s {
+	case ExperienceNoMatter:
+		return 1
+	case ExperienceMoreThan1:
+		return 2
+	case ExperienceMoreThan3:
+		return 3
+	case ExperienceMoreThan5:
+		return 4
+	case ExperienceMoreThan10:
+		return 5
+	}
+	return 0
+}
+
+func ExperienceSlice() []string {
+	return []string{"Без опыта", "Более 1 года", "Более 3 лет", "Более 5 лет", "Более 10 лет"}
 }
 
 type Schedule string
@@ -206,6 +245,10 @@ func (s Schedule) ToString() string {
 		return "Сменный"
 	}
 	return ""
+}
+
+func ScheduleSlice() []string {
+	return []string{"Вахта", "Неполный день", "Полный день", "Гибкий", "Сменный"}
 }
 
 type ApplicantStatus string
