@@ -1,9 +1,9 @@
 package applicantapimodels
 
 import (
-	"hr-tools-backend/config"
 	"hr-tools-backend/models"
 	apimodels "hr-tools-backend/models/api"
+	surveyapimodels "hr-tools-backend/models/api/survey"
 	dbmodels "hr-tools-backend/models/db"
 	"time"
 
@@ -26,15 +26,14 @@ type ApplicantView struct {
 	VacancyName        string                 `json:"vacancy_name"`         // Название вакансии
 	FIO                string                 `json:"fio"`                  // ФИО кандидата
 	Age                int                    `json:"age"`                  // возраст
-	Survey             ApplicantSurvey        `json:"survey"`               // анкета для кандидата
+	Survey             ApplicantVkSurvey      `json:"survey"`               // Анкета для кандидата
 }
 
-type ApplicantSurvey struct {
-	Url         string // Ссылка на анкету для кандидата
-	IsFilledOut bool   // Анкета заполнена кандидатом и может использоваться для оценки
-	IsScored    bool   // Анкета получила оценку от нейросети
-	HrThreshold int    // Порог адаптивного фильтра
-	Score       int    // Итоговая оцена кандидата
+type ApplicantVkSurvey struct {
+	Status            int
+	StatusDescription string
+	Step0             surveyapimodels.VkStep0 // ВК. Шаг 0. анкета и ответы кандидата на типовые вопросы
+	Step1             surveyapimodels.VkStep1 // ВК. Шаг 1. Генерация черновика скрипта (15 вопросов и текст сценария для интервью)
 }
 
 type ApplicantViewExt struct {
@@ -148,17 +147,23 @@ func ApplicantConvert(rec dbmodels.Applicant) ApplicantView {
 	if !rec.StartDate.IsZero() {
 		result.StartDate = rec.StartDate.Format("02.01.2006")
 	}
+	jobTitle := ""
+	if rec.Vacancy != nil {
+		result.VacancyName = rec.Vacancy.VacancyName
+		if rec.Vacancy.JobTitle != nil {
+			jobTitle = rec.Vacancy.JobTitle.Name
+		}
+	}
+
 	if rec.Vacancy != nil {
 		result.VacancyName = rec.Vacancy.VacancyName
 	}
 	result.FIO = rec.GetFIO()
-	if rec.ApplicantSurvey != nil {
-		result.Survey.Url = config.Conf.UIParams.SurveyPath + rec.ApplicantSurvey.ID
-		result.Survey.IsFilledOut = rec.ApplicantSurvey.IsFilledOut
-		result.Survey.IsFilledOut = rec.ApplicantSurvey.IsScored
-		result.Survey.HrThreshold = rec.ApplicantSurvey.HrThreshold
-		result.Survey.Score = rec.ApplicantSurvey.ScoreAI.Score
-
+	if rec.ApplicantVkStep != nil {
+		result.Survey.Status = int(rec.ApplicantVkStep.Status)
+		result.Survey.StatusDescription = rec.ApplicantVkStep.Status.String()
+		result.Survey.Step0 = surveyapimodels.VkStep0Convert(*rec.ApplicantVkStep, jobTitle)
+		result.Survey.Step1 = surveyapimodels.VkStep1Convert(*rec.ApplicantVkStep)
 	}
 	return result
 }

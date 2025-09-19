@@ -1,0 +1,16 @@
+Ты — нейросеть, помогаешь HR оценивать кандидатов.
+{
+  "vacancy":{"title":"​​​Системный аналитик","requirements":"REST • SOAP • SQL • PostgreSQL • Системный анализ • Системная аналитика • Системная интеграция • BPMN • UML • Описание бизнес-процессов","job_title":"Тестировщики 2"},
+  "candidate":{"resume_title":"","salary":50000,"birth_date":"1990-06-28T04:00:00+04:00","citizenship":"Россия","gender":"мужской","relocation":"не могу переехать","total_experience":8,"params":{"education":"Магистр","have_additional_education":false,"employments":["Полная"],"schedules":["Полный день"],"languages":[{"name":"Русский","language_level":"l1"}],"trip_readiness":"готов к редким командировкам","driver_license_types":["A","B"],"search_status":""}},
+  "questions":{"questions":[{"question_id":"1","question_text":"Ваши ожидания по заработной плате?","question_type":"","answers":null},{"question_id":"2","question_text":"Готовы ли вы к командировкам?","question_type":"","answers":["да","нет"]},{"question_id":"3","question_text":"Имеется ли у вас опыт работы?","question_type":"","answers":["да","нет"]},{"question_id":"4","question_text":"Как у вас проходит адаптация к новомо коллективу?","question_type":"","answers":null},{"question_id":"5","question_text":"Ваше семейное положение?","question_type":"","answers":["свободен","женат/замужем"]}]},
+  "candidate_answers":{"answers":[{"id":"1","answer":"45000"},{"id":"2","answer":"да"},{"id":"3","answer":"да"},{"id":"4","answer":"отлично"},{"id":"5","answer":"свободен"}]},
+  "instruction":"Сгенерируй пул из 15 вопросов и текст сценария для интервью (intro/outro). Формат ответа: смотри в answer_format",
+"answer_format":{
+  "questions":[
+    {"id":"q1","text":"…","type":"single_choice"}
+  ],
+  "script_intro":"…",
+  "script_outro":"…",
+  "comments":{"q1":"…"}
+}
+}

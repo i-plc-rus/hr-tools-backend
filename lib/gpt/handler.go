@@ -1,7 +1,6 @@
 package gpthandler
 
 import (
-	"errors"
 	"fmt"
 	"hr-tools-backend/config"
 	"hr-tools-backend/db"
@@ -12,6 +11,7 @@ import (
 	gptmodels "hr-tools-backend/models/api/gpt"
 	dbmodels "hr-tools-backend/models/db"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -33,6 +33,14 @@ var Instance Provider
 
 func NewHandler(useFakeAi bool) {
 	Instance = impl{
+		spaceSettingsStore: spacesettingsstore.NewInstance(db.DB),
+		logStore:           ailogstore.NewInstance(db.DB),
+		useFakeAi:          useFakeAi,
+	}
+}
+
+func GetHandler(useFakeAi bool) *impl {
+	return &impl{
 		spaceSettingsStore: spacesettingsstore.NewInstance(db.DB),
 		logStore:           ailogstore.NewInstance(db.DB),
 		useFakeAi:          useFakeAi,
@@ -73,6 +81,7 @@ const (
 1. Сгенерировать комментарий для каждого вопроса, объясняющий оценку, с учётом приоритетов HR и данных кандидата.
 2. Сгенерировать итоговый комментарий, суммирующий соответствие кандидата вакансии.
 3. Формат: {"details": [ { "question_id": "", "score": <число>, "comment": "<текст>" } ], "comment": "<итоговый текст>" }`
+
 )
 
 func (i impl) GenerateVacancyDescription(spaceID, text string) (resp gptmodels.GenVacancyDescResponse, err error) {

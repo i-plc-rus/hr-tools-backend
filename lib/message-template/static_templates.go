@@ -10,8 +10,8 @@ import (
 	"strings"
 )
 
-const(
-	licenceRenewTitle = "Продление лицензии"
+const (
+	licenceRenewTitle  = "Продление лицензии"
 	survaySuggestTitle = "Пройти тестирование"
 )
 
@@ -96,4 +96,28 @@ func getTplFile(filePath string) ([]byte, error) {
 		return nil, errors.Wrapf(err, "ошибка чтения файла шаблона %v", filePath)
 	}
 	return body, nil
+}
+
+func GetSurvayStep0SuggestMessage(companyName, link string, isHtml bool) (msg string, err error) {
+	var tpl *template.Template
+	if isHtml {
+		filePath := "static/applicant_survey_suggest.html" //TODO добавить шаблон для шага 0
+		tpl, err = getTemplate(filePath, isHtml)
+	} else {
+		filePath := "static/applicant_survey_suggest.txt" //TODO добавить шаблон для шага 0
+		tpl, err = getTemplate(filePath, isHtml)
+	}
+	if err != nil {
+		return "", err
+	}
+	data := models.SurvaySuggestTemplateData{
+		CompanyName: companyName,
+		SurvayLink:  link,
+	}
+	buf := new(bytes.Buffer)
+	err = tpl.Execute(buf, data)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
