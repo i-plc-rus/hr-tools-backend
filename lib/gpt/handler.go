@@ -81,6 +81,7 @@ const (
 1. Сгенерировать комментарий для каждого вопроса, объясняющий оценку, с учётом приоритетов HR и данных кандидата.
 2. Сгенерировать итоговый комментарий, суммирующий соответствие кандидата вакансии.
 3. Формат: {"details": [ { "question_id": "", "score": <число>, "comment": "<текст>" } ], "comment": "<итоговый текст>" }`
+
 )
 
 func (i impl) GenerateVacancyDescription(spaceID, text string) (resp gptmodels.GenVacancyDescResponse, err error) {

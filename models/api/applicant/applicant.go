@@ -147,6 +147,14 @@ func ApplicantConvert(rec dbmodels.Applicant) ApplicantView {
 	if !rec.StartDate.IsZero() {
 		result.StartDate = rec.StartDate.Format("02.01.2006")
 	}
+	jobTitle := ""
+	if rec.Vacancy != nil {
+		result.VacancyName = rec.Vacancy.VacancyName
+		if rec.Vacancy.JobTitle != nil {
+			jobTitle = rec.Vacancy.JobTitle.Name
+		}
+	}
+
 	if rec.Vacancy != nil {
 		result.VacancyName = rec.Vacancy.VacancyName
 	}
@@ -154,7 +162,7 @@ func ApplicantConvert(rec dbmodels.Applicant) ApplicantView {
 	if rec.ApplicantVkStep != nil {
 		result.Survey.Status = int(rec.ApplicantVkStep.Status)
 		result.Survey.StatusDescription = rec.ApplicantVkStep.Status.String()
-		result.Survey.Step0 = surveyapimodels.VkStep0Convert(*rec.ApplicantVkStep)
+		result.Survey.Step0 = surveyapimodels.VkStep0Convert(*rec.ApplicantVkStep, jobTitle)
 		result.Survey.Step1 = surveyapimodels.VkStep1Convert(*rec.ApplicantVkStep)
 	}
 	return result

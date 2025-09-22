@@ -95,6 +95,15 @@ type Configuration struct {
 		SurveyStep0Path string `default:"https://s.hr-tools.pro/public/survey/step0/" env:"PUBLIC_SURVEY_STEP0_UI_URL"`
 		SurveyPath      string `default:"https://s.hr-tools.pro/public/survey/" env:"PUBLIC_SURVEY_UI_URL"`
 	}
+	Survey struct {
+		VkStep0 struct {
+			Question1 string `default:"Вы интересуетесь специальностью %v?" env:"SURVEY_VK_STEP0_Q1"`
+			Question2 string `default:"Укажите ожидаемую месячную зарплату" env:"SURVEY_VK_STEP0_Q2"`
+			Question3 string `default:"Предпочтительный формат занятости" env:"SURVEY_VK_STEP0_Q3"`
+			Question4 string `default:"Удобная модель работы" env:"SURVEY_VK_STEP0_Q4"`
+			Question5 string `default:"Стаж по выбранной специальности" env:"SURVEY_VK_STEP0_Q5"`
+		}
+	}
 }
 
 func configFiles() []string {

@@ -127,6 +127,10 @@ func (c *publicsurveyApiController) setVkStep0Survey(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 
+	err = payload.Validate()
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
 	result, err := vk.Instance.HandleSurveyStep0(id, payload)
 	if err != nil {
 		logger := log.WithField("survey_id", id)
