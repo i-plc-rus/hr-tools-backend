@@ -136,6 +136,10 @@ func AutoMigrateDB() error {
 		return errors.Wrap(err, "ошибка создания структуры ApplicantVkStep")
 	}
 
+	if err := DB.AutoMigrate(&dbmodels.QuestionHistory{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры QuestionHistory")
+	}
+
 	log.Info("Миграция прошла успешно")
 	return nil
 }
