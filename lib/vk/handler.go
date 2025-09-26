@@ -405,9 +405,23 @@ func (i impl) RunRegenStep1(applicant dbmodels.Applicant) (ok bool, err error) {
 	}
 
 	questionResult := []dbmodels.VkStep1Question{}
+	var newQuestion surveyapimodels.VkStep1Question
+	haveNewQuestion := false
+
+	qCount := 0
 	for k, question := range rec.Step1.Questions {
+		qCount = k
+		if !haveNewQuestion && len(newQuestions) > 0 {
+			newQuestion = newQuestions[0]
+			if len(newQuestions) > 1 {
+				newQuestions = newQuestions[1:]
+			} else {
+				newQuestions = []surveyapimodels.VkStep1Question{}
+			}
+			haveNewQuestion = true
+		}
 		// вопросы без изменений
-		if !question.NotSuitable {
+		if !question.NotSuitable || !haveNewQuestion {
 			questionRec := dbmodels.VkStep1Question{
 				ID:                question.ID,
 				Text:              question.Text,
@@ -420,8 +434,6 @@ func (i impl) RunRegenStep1(applicant dbmodels.Applicant) (ok bool, err error) {
 		}
 		currentQID := question.ID
 		// обновленнные вопросы
-		newQuestion := newQuestions[0]
-		newQuestions = newQuestions[1:]
 		questionRec := dbmodels.VkStep1Question{
 			ID:                currentQID,
 			Text:              newQuestion.Text,
@@ -431,6 +443,37 @@ func (i impl) RunRegenStep1(applicant dbmodels.Applicant) (ok bool, err error) {
 		}
 		questionResult = append(questionResult, questionRec)
 		rec.Step1.Comments[currentQID] = comments[newQuestion.ID]
+		haveNewQuestion = false
+	}
+	// добавляем вопросы, если их меньше 15
+	if len(questionResult) < 15 && haveNewQuestion {
+		qCount++
+		qID := fmt.Sprintf("q%v", qCount+1)
+		questionResult = append(questionResult, dbmodels.VkStep1Question{
+			ID:                qID,
+			Text:              newQuestion.Text,
+			Order:             qCount,
+			NotSuitable:       false,
+			NotSuitableReason: "",
+		})
+		rec.Step1.Comments[qID] = comments[newQuestion.ID]
+	}
+	if len(questionResult) < 15 {
+		for _, q := range newQuestions {
+			qCount++
+			qID := fmt.Sprintf("q%v", qCount+1)
+			questionResult = append(questionResult, dbmodels.VkStep1Question{
+				ID:                qID,
+				Text:              q.Text,
+				Order:             qCount,
+				NotSuitable:       false,
+				NotSuitableReason: "",
+			})
+			rec.Step1.Comments[qID] = comments[q.ID]
+			if len(questionResult) >= 15 {
+				break
+			}
+		}
 	}
 
 	rec.Step1.Questions = questionResult
