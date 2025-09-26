@@ -61,8 +61,14 @@ type Configuration struct {
 			CatalogID string `default:"" env:"YANDEXGPT_CATALOG_ID"`
 		}
 		Ollama struct {
-			OllamaURL   string `default:"http://localhost:11434/api/generate" env:"OLLAMA_URL"`
-			OllamaModel string `default:"deepseek-r1:8b" env:"OLLAMA_MODEL"` //deepseek-r1:8b/llama3 //https://ollama.com/search
+			OllamaURL     string  `default:"http://localhost:11434/api/generate" env:"OLLAMA_URL"`
+			OllamaModel   string  `default:"deepseek-r1:8b" env:"OLLAMA_MODEL"` //deepseek-r1:8b/llama3 //https://ollama.com/search
+			NumThread     int     `default:"14" env:"OLLAMA_NUM_THREAD"`
+			Temperature   float64 `default:"0.7" env:"OLLAMA_TEMPERATURE"`
+			TopP          float64 `default:"0.9" env:"OLLAMA_TOP_P"`
+			TopK          int     `default:"40" env:"OLLAMA_TOP_K"`
+			NumPredict    int     `default:"6144" env:"OLLAMA_NUM_PREDICT"`
+			RepeatPenalty float64 `default:"1.1" env:"OLLAMA_REPEAT_PENALTY"`
 		}
 	}
 	HH struct {

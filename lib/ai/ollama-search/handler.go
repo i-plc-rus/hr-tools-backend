@@ -22,6 +22,7 @@ type impl struct {
 }
 
 func GetHandler() *impl {
+	log.Infof("Инициализация ИИ: %v, модель: %v", config.Conf.AI.Ollama.OllamaURL, config.Conf.AI.Ollama.OllamaModel)
 	return &impl{
 		ollamaURL:   config.Conf.AI.Ollama.OllamaURL,
 		ollamaModel: config.Conf.AI.Ollama.OllamaModel,
@@ -33,16 +34,16 @@ func (i impl) getLogger() *log.Entry {
 		WithField("model", i.ollamaModel)
 }
 
-func (i impl) VkStep1(spaceID, vacancyID, vacancyInfo, applicantInfo, questions, applicantAnswers string) (resp surveyapimodels.VkStep1, err error) {
+func (i impl) VkStep1(spaceID, vacancyID string, aiData surveyapimodels.AiData) (resp surveyapimodels.VkStep1, err error) {
 	err = i.checkConfig()
 	if err != nil {
 		return resp, err
 	}
-	vk1Questions, vk1Comments, err := i.genVk1Questions(vacancyInfo, applicantInfo)
+	vk1Questions, vk1Comments, err := i.genVk1Questions(aiData)
 	if err != nil {
 		return resp, err
 	}
-	intro, outro, err := i.genVk1IntroOutro(vacancyInfo, applicantInfo)
+	intro, outro, err := i.genVk1IntroOutro(aiData)
 	if err != nil {
 		return resp, err
 	}
@@ -55,12 +56,12 @@ func (i impl) VkStep1(spaceID, vacancyID, vacancyInfo, applicantInfo, questions,
 	return resp, nil
 }
 
-func (i impl) VkStep1Regen(spaceID, vacancyID, vacancyInfo, applicantInfo, questions, applicantAnswers string, generated string) (newQuestions []surveyapimodels.VkStep1Question, comments map[string]string, err error) {
-	prompt := fmt.Sprintf(step1QRegenPattern, vacancyInfo, applicantInfo, generated)
+func (i impl) VkStep1Regen(spaceID, vacancyID string, aiData surveyapimodels.AiData) (newQuestions []surveyapimodels.VkStep1Question, comments map[string]string, err error) {
+	prompt := fmt.Sprintf(step1QRegenPattern, aiData.VacancyInfo, aiData.ApplicantInfo, aiData.GeneratedQuestions)
 
 	now := time.Now()
 	// запрос к локальной модели
-	response, err := i.queryOllama(prompt)
+	response, err := i.QueryOllama(prompt)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "ошибка получения пула с новыми вопросами")
 	}
@@ -83,12 +84,12 @@ func (i impl) checkConfig() error {
 	return nil
 }
 
-func (i impl) genVk1Questions(vacancyInfo, applicantInfo string) (questions []surveyapimodels.VkStep1Question, comments map[string]string, err error) {
-	prompt := fmt.Sprintf(step1QPattern, vacancyInfo, applicantInfo)
+func (i impl) genVk1Questions(aiData surveyapimodels.AiData) (questions []surveyapimodels.VkStep1Question, comments map[string]string, err error) {
+	prompt := fmt.Sprintf(step1QPattern, aiData.VacancyInfo, aiData.Requirements, aiData.ApplicantInfo, aiData.Questions, aiData.ApplicantAnswers)
 
 	now := time.Now()
 	// запрос к локальной модели
-	response, err := i.queryOllama(prompt)
+	response, err := i.QueryOllama(prompt)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "ошибка получения пула вопросов")
 	}
@@ -101,12 +102,12 @@ func (i impl) genVk1Questions(vacancyInfo, applicantInfo string) (questions []su
 	return ParseVk1QuestionsAIResponse(response)
 }
 
-func (i impl) genVk1IntroOutro(vacancyInfo, applicantInfo string) (intro, outro string, err error) {
-	prompt := fmt.Sprintf(step1IntroOutroPattern, vacancyInfo, applicantInfo)
+func (i impl) genVk1IntroOutro(aiData surveyapimodels.AiData) (intro, outro string, err error) {
+	prompt := fmt.Sprintf(step1IntroOutroPattern, aiData.VacancyInfo, aiData.ApplicantInfo)
 
 	now := time.Now()
 	// запрос к локальной модели
-	response, err := i.queryOllama(prompt)
+	response, err := i.QueryOllama(prompt)
 	if err != nil {
 		return "", "", errors.Wrap(err, "ошибка получения текстов сценария intro/outro")
 	}
@@ -120,7 +121,7 @@ func (i impl) genVk1IntroOutro(vacancyInfo, applicantInfo string) (intro, outro 
 	return ParseVk1IntroOutroAIResponse(response)
 }
 
-func (i impl) queryOllama(prompt string) (string, error) {
+func (i impl) QueryOllama(prompt string) (string, error) {
 	request := ollamamodels.OllamaRequest{
 		Model:   i.ollamaModel,
 		Prompt:  prompt,
