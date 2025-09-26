@@ -43,6 +43,7 @@ const (
 	defaultCompanyName = "HR-Tools"
 	Step0SucessMsg     = "Ваша анкета была успешно заполнена, с вами свяжутся, чтобы сообщить о результатах"
 	Step0FailMsg       = "Ваша анкета была успешно заполнена, с вами свяжутся, чтобы сообщить о результатах."
+	Step0Done          = "Ваша анкета успешно заполнена, спасибо за уделенное время."
 )
 
 func NewHandler() {
@@ -177,6 +178,13 @@ func (i impl) HandleSurveyStep0(id string, request surveyapimodels.VkStep0Survey
 	}
 	if rec == nil {
 		return result, errors.New("анкета не найдена")
+	}
+	if rec.Status >= dbmodels.VkStep0Answered {
+		result = surveyapimodels.VkStep0SurveyResult{
+			Success: true,
+			Message: Step0Done,
+		}
+		return result, nil
 	}
 	_, vacancyRec, err := i.getVacancyAndApplicant(rec.SpaceID, rec.ApplicantID)
 	if err != nil {
