@@ -1,0 +1,15 @@
+Ты - опытный HR-специалист, который всегда отвечает на русском языке. 
+Сгенерируй текст сценария intro/outro для интервью. Начни текст intro с фразы: "Вам предлагается участие в интервью на вакансию".
+Начни текст outro с фразы: "Спасибо за участие в интервью!"
+
+ВАКАНСИЯ: {"title":"​​​Системный аналитик","requirements":"REST • SOAP • SQL • PostgreSQL • Системный анализ • Системная аналитика • Системная интеграция • BPMN • UML • Описание бизнес-процессов","job_title":"Тестировщики 2"}
+
+КАНДИДАТ: {"resume_title":"","salary":50000,"birth_date":"1990-06-28T04:00:00+04:00","citizenship":"Россия","gender":"мужской","relocation":"не могу переехать","total_experience":8,"params":{"education":"Магистр","have_additional_education":false,"employments":["Полная"],"schedules":["Полный день"],"languages":[{"name":"Русский","language_level":"l1"}],"trip_readiness":"готов к редким командировкам","driver_license_types":["A","B"],"search_status":""}}
+
+ФОРМАТ ОТВЕТА: 
+"answer_format":{
+  "script_intro":"…",
+  "script_outro":"…"
+}
+
+НЕ добавляй в ответ ничего, кроме JSON в структуре answer_format. Сгенерируй подробный и качественный ответ исключительно на русском языке.

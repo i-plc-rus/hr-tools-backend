@@ -7,8 +7,8 @@ import (
 )
 
 type VkAiProvider interface {
-	VkStep1(spaceID, vacancyID, vacancyInfo, applicantInfo, questions, applicantAnswers string) (resp VkStep1, err error)
-	VkStep1Regen(spaceID, vacancyID, vacancyInfo, applicantInfo, questions, applicantAnswers, generated string) (newQuestions []VkStep1Question, comments map[string]string, err error)
+	VkStep1(spaceID, vacancyID string, aiData AiData) (resp VkStep1, err error)
+	VkStep1Regen(spaceID, vacancyID string, aiData AiData) (newQuestions []VkStep1Question, comments map[string]string, err error)
 }
 
 type VkStep1 struct {

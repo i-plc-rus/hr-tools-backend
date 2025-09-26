@@ -211,7 +211,7 @@ func (i impl) getYaClient() yagptclient.Provider {
 		return yagptclient.NewFakeClient("", "")
 	}
 	return yagptclient.
-		NewClient(config.Conf.YandexGPT.IAMToken, config.Conf.YandexGPT.CatalogID)
+		NewClient(config.Conf.AI.YandexGPT.IAMToken, config.Conf.AI.YandexGPT.CatalogID)
 }
 
 func (i impl) saveLog(spaceID, vacancyID, sysPromt, userPromt, answer string, reqType dbmodels.AiReqestType) {
