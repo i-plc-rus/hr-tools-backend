@@ -15,6 +15,7 @@ import (
 	"hr-tools-backend/lib/smtp"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	applicantvkstore "hr-tools-backend/lib/vk/applicant-vk-store"
+	questionhistorystore "hr-tools-backend/lib/vk/question-history-store"
 	"hr-tools-backend/models"
 	negotiationapimodels "hr-tools-backend/models/api/negotiation"
 	surveyapimodels "hr-tools-backend/models/api/survey"
@@ -43,6 +44,7 @@ const (
 	defaultCompanyName = "HR-Tools"
 	Step0SucessMsg     = "Ваша анкета была успешно заполнена, с вами свяжутся, чтобы сообщить о результатах"
 	Step0FailMsg       = "Ваша анкета была успешно заполнена, с вами свяжутся, чтобы сообщить о результатах."
+	Step0Done          = "Ваша анкета успешно заполнена, спасибо за уделенное время."
 )
 
 func NewHandler() {
@@ -53,6 +55,7 @@ func NewHandler() {
 		negotiationChatHandler: negotiationchathandler.Instance,
 		companyStore:           companystore.NewInstance(db.DB),
 		messageTemplate:        messagetemplate.Instance,
+		questionHistoryStore:   questionhistorystore.NewInstance(db.DB),
 	}
 	if config.Conf.AI.VkStep1AI == "Ollama" {
 		i.vkAiProvider = ollamasearchhandler.GetHandler()
@@ -70,6 +73,7 @@ type impl struct {
 	companyStore           companystore.Provider
 	messageTemplate        messagetemplate.Provider
 	vkAiProvider           surveyapimodels.VkAiProvider // при необходимости поменяем пакет имплементации, пока через настройку config.Conf.AI.VkStep1AI
+	questionHistoryStore   questionhistorystore.Provider
 }
 
 func (i impl) getLogger(spaceID, applicantID string) *logrus.Entry {
@@ -180,6 +184,13 @@ func (i impl) HandleSurveyStep0(id string, request surveyapimodels.VkStep0Survey
 	}
 	if rec == nil {
 		return result, errors.New("анкета не найдена")
+	}
+	if rec.Status >= dbmodels.VkStep0Answered {
+		result = surveyapimodels.VkStep0SurveyResult{
+			Success: true,
+			Message: Step0Done,
+		}
+		return result, nil
 	}
 	_, vacancyRec, err := i.getVacancyAndApplicant(rec.SpaceID, rec.ApplicantID)
 	if err != nil {
@@ -336,6 +347,10 @@ func (i impl) UpdateStep1(spaceID, applicantID string, stepData surveyapimodels.
 	_, err = i.vkStore.Save(*rec)
 	if err != nil {
 		return "", errors.Wrap(err, "ошибка сохранения черновика скрипта")
+	}
+	if rec.Status == dbmodels.VkStep1Approved {
+		// сохраняем подтвержденные вопросы для будущего использования
+		i.storeQuestions(*rec)
 	}
 	return "", nil
 }
@@ -659,4 +674,38 @@ func (i impl) step0CalcPoints(vacancy *dbmodels.Vacancy, request surveyapimodels
 		}
 	}
 	return points
+}
+
+func (i impl) storeQuestions(approvedRec dbmodels.ApplicantVkStep) {
+	logger := i.getLogger(approvedRec.SpaceID, approvedRec.ApplicantID)
+	applicant, err := i.applicantStore.GetByID(approvedRec.SpaceID, approvedRec.ApplicantID)
+	if err != nil {
+		logger.WithError(err).Warn("ошибка сохранения подтвержденных вопросов для интервью, не удалось получить данные кандидата")
+		return
+	}
+	if applicant == nil {
+		logger.Warn("ошибка сохранения подтвержденных вопросов для интервью, данные кандидата не найдены")
+		return
+	}
+
+	for _, q := range approvedRec.Step1.Questions {
+		rec := dbmodels.QuestionHistory{
+			VacancyID:    applicant.VacancyID,
+			JobTitleName: "",
+			VacancyName:  "",
+			Text:         q.Text,
+			Comment:      approvedRec.Step1.Comments[q.ID],
+		}
+		if applicant.Vacancy != nil {
+			rec.VacancyName = applicant.Vacancy.VacancyName
+			if applicant.Vacancy.JobTitle != nil {
+				rec.JobTitleName = applicant.Vacancy.JobTitle.Name
+			}
+		}
+		err = i.questionHistoryStore.Save(rec)
+		if err != nil {
+			logger.WithError(err).Warn("ошибка сохранения подтвержденных вопросов для интервью в бд")
+			return
+		}
+	}
 }
