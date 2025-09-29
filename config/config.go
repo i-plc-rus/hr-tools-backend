@@ -54,9 +54,22 @@ type Configuration struct {
 		PhoneNumber string `default:"" env:"SUPER_ADMIN_PHONE"`
 		Password    string `default:"123hygAS" env:"SUPER_ADMIN_PASSWORD"`
 	}
-	YandexGPT struct {
-		IAMToken  string `default:"" env:"YANDEXGPT_IAM_TOKEN"`
-		CatalogID string `default:"" env:"YANDEXGPT_CATALOG_ID"`
+	AI struct {
+		VkStep1AI string `default:"Ollama" env:"AI_VK_STEP1"` //Ollama | YandexGPT
+		YandexGPT struct {
+			IAMToken  string `default:"" env:"YANDEXGPT_IAM_TOKEN"`
+			CatalogID string `default:"" env:"YANDEXGPT_CATALOG_ID"`
+		}
+		Ollama struct {
+			OllamaURL     string  `default:"http://localhost:11434/api/generate" env:"OLLAMA_URL"`
+			OllamaModel   string  `default:"deepseek-r1:8b" env:"OLLAMA_MODEL"` //deepseek-r1:8b/llama3 //https://ollama.com/search
+			NumThread     int     `default:"14" env:"OLLAMA_NUM_THREAD"`
+			Temperature   float64 `default:"0.7" env:"OLLAMA_TEMPERATURE"`
+			TopP          float64 `default:"0.9" env:"OLLAMA_TOP_P"`
+			TopK          int     `default:"40" env:"OLLAMA_TOP_K"`
+			NumPredict    int     `default:"6144" env:"OLLAMA_NUM_PREDICT"`
+			RepeatPenalty float64 `default:"1.1" env:"OLLAMA_REPEAT_PENALTY"`
+		}
 	}
 	HH struct {
 		RedirectUri string `default:"https://a.hr-tools.pro/api/v1/oauth/callback/hh" env:"HH_REDIRECT"`

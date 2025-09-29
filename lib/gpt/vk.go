@@ -47,7 +47,7 @@ const (
 `
 )
 
-func (i impl) VkStep1(spaceID, vacancyID, vacancyInfo, applicantInfo, questions, applicantAnswers string) (resp surveyapimodels.VkStep1, err error) {
+func (i impl) VkStep1(spaceID, vacancyID string, aiData surveyapimodels.AiData) (resp surveyapimodels.VkStep1, err error) {
 	/*
 			Ожидаемый ответ:
 		{
@@ -66,7 +66,7 @@ func (i impl) VkStep1(spaceID, vacancyID, vacancyInfo, applicantInfo, questions,
 		    }
 		}
 	*/
-	userPromt := fmt.Sprintf(VkStep1Template, vacancyInfo, applicantInfo, questions, applicantAnswers)
+	userPromt := fmt.Sprintf(VkStep1Template, aiData.VacancyInfo, aiData.ApplicantInfo, aiData.Questions, aiData.ApplicantAnswers)
 	description, err := i.getYaClient().
 		GenerateByPromtAndText(VkStep1SysPromt, userPromt)
 	if err != nil {
@@ -85,8 +85,8 @@ func (i impl) VkStep1(spaceID, vacancyID, vacancyInfo, applicantInfo, questions,
 	return resp, nil
 }
 
-func (i impl) VkStep1Regen(spaceID, vacancyID, vacancyInfo, applicantInfo, questions, applicantAnswers string, generated string) (newQuestions []surveyapimodels.VkStep1Question, comments map[string]string, err error) {
-	userPromt := fmt.Sprintf(VkStep1RegenTemplate, vacancyInfo, applicantInfo, questions, applicantAnswers, generated)
+func (i impl) VkStep1Regen(spaceID, vacancyID string, aiData surveyapimodels.AiData) (newQuestions []surveyapimodels.VkStep1Question, comments map[string]string, err error) {
+	userPromt := fmt.Sprintf(VkStep1RegenTemplate, aiData.VacancyInfo, aiData.ApplicantInfo, aiData.Questions, aiData.ApplicantAnswers, aiData.GeneratedQuestions)
 	description, err := i.getYaClient().
 		GenerateByPromtAndText(VkStep1RegenSysPromt, userPromt)
 	if err != nil {
@@ -105,4 +105,3 @@ func (i impl) VkStep1Regen(spaceID, vacancyID, vacancyInfo, applicantInfo, quest
 	}
 	return resp.Questions, resp.Comments, nil
 }
- 

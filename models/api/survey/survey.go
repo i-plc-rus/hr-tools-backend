@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"hr-tools-backend/models"
 	dbmodels "hr-tools-backend/models/db"
+	"html"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -122,6 +124,45 @@ func GetVacancyDataContent(rec dbmodels.Vacancy) (string, error) {
 	return string(body), nil
 }
 
+type VacancyAiData struct {
+	Title      string `json:"title"`
+	Employment string `json:"employment,omitempty"`
+	Experience string `json:"experience,omitempty"`
+	Schedule   string `json:"schedule,omitempty"`
+	SalaryFrom int    `json:"salary_from,omitempty"`
+	SalaryTo   int    `json:"salary_to,omitempty"`
+	JobTitle   string `json:"job_title,omitempty"`
+}
+
+func GetVacancyAiDataContent(rec dbmodels.Vacancy) (string, string, error) {
+	requirements := html.UnescapeString(rec.Requirements)
+	requirements = strings.ReplaceAll(requirements, "\u00a0", " ")
+
+	result := VacancyAiData{
+		Employment: rec.Employment.ToString(),
+		Experience: rec.Experience.ToString(),
+		Schedule:   rec.Schedule.ToString(),
+		Title:      rec.VacancyName,
+	}
+	if rec.JobTitle != nil {
+		result.JobTitle = rec.JobTitle.Name
+	}
+
+	if rec.Salary.From != 0 || rec.Salary.To != 0 {
+		result.SalaryFrom = rec.From
+		result.SalaryTo = rec.To
+	} else if rec.Salary.InHand != 0 {
+		result.SalaryFrom = rec.Salary.InHand
+		result.SalaryTo = rec.Salary.InHand
+
+	}
+	body, err := json.Marshal(result)
+	if err != nil {
+		return "", "", errors.Wrap(err, "ошибка десериализации структуры вакансии")
+	}
+	return string(body), requirements, nil
+}
+
 func GetApplicantDataContent(rec dbmodels.Applicant) (string, error) {
 	result := ApplicantPubData{
 		ResumeTitle:     rec.ResumeTitle,
@@ -215,4 +256,13 @@ func GetApplicantAnswersContent(rec dbmodels.ApplicantSurvey) (string, error) {
 		return "", errors.Wrap(err, "ошибка десериализации структуры опросника HR")
 	}
 	return string(body), nil
+}
+
+type AiData struct {
+	VacancyInfo        string
+	Requirements       string
+	ApplicantInfo      string
+	Questions          string
+	ApplicantAnswers   string
+	GeneratedQuestions string
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"hr-tools-backend/config"
 	"hr-tools-backend/db"
+	ollamasearchhandler "hr-tools-backend/lib/ai/ollama-search"
 	"hr-tools-backend/lib/applicant"
 	applicantstore "hr-tools-backend/lib/applicant/store"
 	companystore "hr-tools-backend/lib/dicts/company/store"
@@ -47,16 +48,21 @@ const (
 )
 
 func NewHandler() {
-	Instance = impl{
+	i := impl{
 		vacancyStore:           vacancystore.NewInstance(db.DB),
 		applicantStore:         applicantstore.NewInstance(db.DB),
 		vkStore:                applicantvkstore.NewInstance(db.DB),
 		negotiationChatHandler: negotiationchathandler.Instance,
 		companyStore:           companystore.NewInstance(db.DB),
 		messageTemplate:        messagetemplate.Instance,
-		vkAiProvider:           gpthandler.GetHandler(false),
 		questionHistoryStore:   questionhistorystore.NewInstance(db.DB),
 	}
+	if config.Conf.AI.VkStep1AI == "Ollama" {
+		i.vkAiProvider = ollamasearchhandler.GetHandler()
+	} else {
+		i.vkAiProvider = gpthandler.GetHandler(false)
+	}
+	Instance = i
 }
 
 type impl struct {
@@ -269,12 +275,13 @@ func (i impl) RunStep1(applicant dbmodels.Applicant) (ok bool, err error) {
 	if err != nil {
 		return false, err
 	}
-	vacancyInfo, applicantInfo, questions, applicantAnswers, _, err := i.getStep1Data(applicant, *vacancy, nil)
+	aiData, err := i.getStep1Data(applicant, *vacancy, nil)
 	if err != nil {
 		return false, err
 	}
+
 	// запуск ИИ
-	resp, err := i.vkAiProvider.VkStep1(vacancy.SpaceID, vacancy.ID, vacancyInfo, applicantInfo, questions, applicantAnswers)
+	resp, err := i.vkAiProvider.VkStep1(vacancy.SpaceID, vacancy.ID, aiData)
 	if err != nil {
 		i.step1Fail(applicant, *rec)
 		return false, errors.Wrap(err, "ошибка вызова ИИ при генерации черновика скрипта")
@@ -395,22 +402,41 @@ func (i impl) RunRegenStep1(applicant dbmodels.Applicant) (ok bool, err error) {
 		return false, nil
 	}
 
-	vacancyInfo, applicantInfo, questions, applicantAnswers, generated, err := i.getStep1Data(applicant, *vacancy, applicant.ApplicantVkStep.Step1.Questions)
+	aiData, err := i.getStep1Data(applicant, *vacancy, applicant.ApplicantVkStep.Step1.Questions)
 	if err != nil {
 		return false, err
 	}
-	// запуск ИИ
+
 	rec := *applicant.ApplicantVkStep
-	newQuestions, comments, err := i.vkAiProvider.VkStep1Regen(vacancy.SpaceID, vacancy.ID, vacancyInfo, applicantInfo, questions, applicantAnswers, generated)
+	if aiData.GeneratedQuestions == "" {
+		i.step1Fail(applicant, rec)
+		return false, errors.Wrap(err, "ошибка вызова ИИ при перегенерации черновика скрипта, вопросы не найдены")
+	}
+	// запуск ИИ
+	newQuestions, comments, err := i.vkAiProvider.VkStep1Regen(vacancy.SpaceID, vacancy.ID, aiData)
 	if err != nil {
 		i.step1Fail(applicant, rec)
 		return false, errors.Wrap(err, "ошибка вызова ИИ при перегенерации черновика скрипта")
 	}
 
 	questionResult := []dbmodels.VkStep1Question{}
+	var newQuestion surveyapimodels.VkStep1Question
+	haveNewQuestion := false
+
+	qCount := 0
 	for k, question := range rec.Step1.Questions {
+		qCount = k
+		if !haveNewQuestion && len(newQuestions) > 0 {
+			newQuestion = newQuestions[0]
+			if len(newQuestions) > 1 {
+				newQuestions = newQuestions[1:]
+			} else {
+				newQuestions = []surveyapimodels.VkStep1Question{}
+			}
+			haveNewQuestion = true
+		}
 		// вопросы без изменений
-		if !question.NotSuitable {
+		if !question.NotSuitable || !haveNewQuestion {
 			questionRec := dbmodels.VkStep1Question{
 				ID:                question.ID,
 				Text:              question.Text,
@@ -423,8 +449,6 @@ func (i impl) RunRegenStep1(applicant dbmodels.Applicant) (ok bool, err error) {
 		}
 		currentQID := question.ID
 		// обновленнные вопросы
-		newQuestion := newQuestions[0]
-		newQuestions = newQuestions[1:]
 		questionRec := dbmodels.VkStep1Question{
 			ID:                currentQID,
 			Text:              newQuestion.Text,
@@ -434,6 +458,37 @@ func (i impl) RunRegenStep1(applicant dbmodels.Applicant) (ok bool, err error) {
 		}
 		questionResult = append(questionResult, questionRec)
 		rec.Step1.Comments[currentQID] = comments[newQuestion.ID]
+		haveNewQuestion = false
+	}
+	// добавляем вопросы, если их меньше 15
+	if len(questionResult) < 15 && haveNewQuestion {
+		qCount++
+		qID := fmt.Sprintf("q%v", qCount+1)
+		questionResult = append(questionResult, dbmodels.VkStep1Question{
+			ID:                qID,
+			Text:              newQuestion.Text,
+			Order:             qCount,
+			NotSuitable:       false,
+			NotSuitableReason: "",
+		})
+		rec.Step1.Comments[qID] = comments[newQuestion.ID]
+	}
+	if len(questionResult) < 15 {
+		for _, q := range newQuestions {
+			qCount++
+			qID := fmt.Sprintf("q%v", qCount+1)
+			questionResult = append(questionResult, dbmodels.VkStep1Question{
+				ID:                qID,
+				Text:              q.Text,
+				Order:             qCount,
+				NotSuitable:       false,
+				NotSuitableReason: "",
+			})
+			rec.Step1.Comments[qID] = comments[q.ID]
+			if len(questionResult) >= 15 {
+				break
+			}
+		}
 	}
 
 	rec.Step1.Questions = questionResult
@@ -505,42 +560,48 @@ func (i impl) step1Fail(applicant dbmodels.Applicant, rec dbmodels.ApplicantVkSt
 	}
 }
 
-func (i impl) getStep1Data(applicant dbmodels.Applicant, vacancy dbmodels.Vacancy, stepQuestions []dbmodels.VkStep1Question) (vacancyInfo, applicantInfo, questions, applicantAnswers, generated string, err error) {
-
-	vacancyInfo, err = surveyapimodels.GetVacancyDataContent(vacancy)
+func (i impl) getStep1Data(applicant dbmodels.Applicant, vacancy dbmodels.Vacancy, stepQuestions []dbmodels.VkStep1Question) (aiData surveyapimodels.AiData, err error) {
+	vacancyInfo, requirements, err := surveyapimodels.GetVacancyAiDataContent(vacancy)
 	if err != nil {
-		return "", "", "", "", "", err
+		return surveyapimodels.AiData{}, err
 	}
 
 	// получение данных кандидата для промта
-	applicantInfo, err = surveyapimodels.GetApplicantDataContent(applicant)
+	applicantInfo, err := surveyapimodels.GetApplicantDataContent(applicant)
 	if err != nil {
-		return "", "", "", "", "", err
+		return surveyapimodels.AiData{}, err
 	}
 	// получение вопросов для промта
 	jobTitle := ""
 	if vacancy.JobTitle != nil {
 		jobTitle = vacancy.JobTitle.Name
 	}
-	questions, err = surveyapimodels.GetQuestionsStep0(jobTitle).Content()
+	questions, err := surveyapimodels.GetQuestionsStep0(jobTitle).Content()
 	if err != nil {
-		return "", "", "", "", "", err
+		return surveyapimodels.AiData{}, err
 	}
 
 	// получение ответов кандидата для промта
-	applicantAnswers, err = applicant.ApplicantVkStep.Step0.AnswerContent()
+	applicantAnswers, err := applicant.ApplicantVkStep.Step0.AnswerContent()
 	if err != nil {
-		return "", "", "", "", "", err
+		return surveyapimodels.AiData{}, err
 	}
-	generated = ""
+	aiData = surveyapimodels.AiData{
+		VacancyInfo:        vacancyInfo,
+		Requirements:       requirements,
+		ApplicantInfo:      applicantInfo,
+		Questions:          questions,
+		ApplicantAnswers:   applicantAnswers,
+		GeneratedQuestions: "",
+	}
 	if len(stepQuestions) != 0 {
 		body, err := json.Marshal(stepQuestions)
 		if err != nil {
-			return "", "", "", "", "", errors.Wrap(err, "ошибка десериализации структуры вопросов на нерегенерацию шага 1")
+			return surveyapimodels.AiData{}, errors.Wrap(err, "ошибка десериализации структуры вопросов на нерегенерацию шага 1")
 		}
-		generated = string(body)
+		aiData.GeneratedQuestions = string(body)
 	}
-	return vacancyInfo, applicantInfo, questions, applicantAnswers, generated, nil
+	return aiData, nil
 }
 
 func (i impl) getVacancyAndApplicant(spaceID, applicantID string) (applicant *dbmodels.ApplicantExt, vacancy *dbmodels.Vacancy, err error) {
