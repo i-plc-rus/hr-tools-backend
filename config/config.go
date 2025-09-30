@@ -98,8 +98,9 @@ type Configuration struct {
 		Email string `default:"info@it-tech.group" env:"SALES_EMAIL"` // sales@hr.tools.pro - previous one
 	}
 	UIParams struct {
-		SurveyStep0Path string `default:"https://s.hr-tools.pro/public/survey/step0/" env:"PUBLIC_SURVEY_STEP0_UI_URL"`
-		SurveyPath      string `default:"https://s.hr-tools.pro/public/survey/" env:"PUBLIC_SURVEY_UI_URL"`
+		SurveyStep0Path     string `default:"https://s.hr-tools.pro/public/survey/step0/" env:"PUBLIC_SURVEY_STEP0_UI_URL"`
+		VideoSurveyStepPath string `default:"https://s.hr-tools.pro/public/survey/video-interview/" env:"PUBLIC_VIDEO_SURVEY_UI_URL"`
+		SurveyPath          string `default:"https://s.hr-tools.pro/public/survey/" env:"PUBLIC_SURVEY_UI_URL"`
 	}
 	Survey struct {
 		VkStep0 struct {

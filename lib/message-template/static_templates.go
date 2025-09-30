@@ -121,3 +121,31 @@ func GetSurvayStep0SuggestMessage(companyName, link string, isHtml bool) (msg st
 	}
 	return buf.String(), nil
 }
+
+func GetVideoSurvaySuggestMessage(applicantRec dbmodels.Applicant, companyName, link, supportEmail string, isHtml bool) (msg string, err error) {
+	var tpl *template.Template
+	if isHtml {
+		filePath := "static/applicant_video_survey_suggest.html"
+		tpl, err = getTemplate(filePath, isHtml)
+	} else {
+		filePath := "static/applicant_video_survey_suggest.txt"
+		tpl, err = getTemplate(filePath, isHtml)
+	}
+	if err != nil {
+		return "", err
+	}
+	data := models.SurvaySuggestTemplateData{
+		CompanyName:  companyName,
+		SurvayLink:   link,
+		FirstName:    applicantRec.FirstName,
+		LastName:     applicantRec.LastName,
+		MiddleName:   applicantRec.MiddleName,
+		SupportEmail: supportEmail,
+	}
+	buf := new(bytes.Buffer)
+	err = tpl.Execute(buf, data)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}

@@ -41,6 +41,10 @@ type SalesTemplateData struct {
 }
 
 type SurvaySuggestTemplateData struct {
-	SurvayLink  string
-	CompanyName string
+	SurvayLink   string
+	CompanyName  string
+	FirstName    string
+	LastName     string
+	MiddleName   string
+	SupportEmail string
 }

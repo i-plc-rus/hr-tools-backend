@@ -13,6 +13,7 @@ import (
 	gpthandler "hr-tools-backend/lib/gpt"
 	messagetemplate "hr-tools-backend/lib/message-template"
 	"hr-tools-backend/lib/smtp"
+	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	applicantvkstore "hr-tools-backend/lib/vk/applicant-vk-store"
 	questionhistorystore "hr-tools-backend/lib/vk/question-history-store"
@@ -22,6 +23,7 @@ import (
 	dbmodels "hr-tools-backend/models/db"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -56,6 +58,7 @@ func NewHandler() {
 		companyStore:           companystore.NewInstance(db.DB),
 		messageTemplate:        messagetemplate.Instance,
 		questionHistoryStore:   questionhistorystore.NewInstance(db.DB),
+		spaceSettingsStore:     spacesettingsstore.NewInstance(db.DB),
 	}
 	if config.Conf.AI.VkStep1AI == "Ollama" {
 		i.vkAiProvider = ollamasearchhandler.GetHandler()
@@ -74,6 +77,7 @@ type impl struct {
 	messageTemplate        messagetemplate.Provider
 	vkAiProvider           surveyapimodels.VkAiProvider // при необходимости поменяем пакет имплементации, пока через настройку config.Conf.AI.VkStep1AI
 	questionHistoryStore   questionhistorystore.Provider
+	spaceSettingsStore     spacesettingsstore.Provider
 }
 
 func (i impl) getLogger(spaceID, applicantID string) *logrus.Entry {
@@ -109,36 +113,25 @@ func (i impl) RunStep0(applicantRec dbmodels.Applicant) (ok bool, err error) {
 
 	// отправка ссылки на анкету
 	logger := i.getLogger(applicantRec.SpaceID, applicantRec.ID)
-	isChatAvailable := false
-	availability, err := i.negotiationChatHandler.IsVailable(applicantRec.SpaceID, applicantRec.ID)
+	link := config.Conf.UIParams.SurveyStep0Path + rec.ID
+	companyName := i.getCompanyName(applicantRec.SpaceID, applicantRec.Vacancy.CompanyID)
+
+	chatText, err := messagetemplate.GetSurvayStep0SuggestMessage(companyName, link, false)
 	if err != nil {
 		logger.
 			WithError(err).
-			Warn("ошибка проверки доступности чата с кандидатом")
-	} else {
-		isChatAvailable = availability.IsAvailable
+			Warn("ошибка получения сообщения со ссылкой на анкету для отправки кандидату через чат")
+		chatText = ""
 	}
-
-	companyName := i.getCompanyName(applicantRec.SpaceID, applicantRec.Vacancy.CompanyID)
-	link := config.Conf.UIParams.SurveyStep0Path + rec.ID
-	isSend := false
-	if isChatAvailable {
-		if i.sendToChat(applicantRec.SpaceID, applicantRec.ID, companyName, link, logger) {
-			isSend = true
-		}
+	emailText, err := messagetemplate.GetSurvaySuggestMessage(companyName, link, true)
+	if err != nil {
+		logger.
+			WithError(err).
+			Warn("ошибка получения сообщения со ссылкой на анкету для отправки кандидату через email")
+		emailText = ""
 	}
-	if applicantRec.Email != "" {
-		emailFrom, err := i.messageTemplate.GetSenderEmail(applicantRec.SpaceID)
-		if err != nil {
-			logger.
-				WithError(err).
-				Warn("ошибка получения почты компании для отправки сообщения с ссылкой на анкету на email кандидату")
-		} else if emailFrom != "" {
-			if i.sendToEmail(emailFrom, applicantRec.Email, companyName, link, logger) {
-				isSend = true
-			}
-		}
-	}
+	title := messagetemplate.GetSurvaySuggestTitle()
+	isSend := i.sendLink(applicantRec, chatText, emailText, title)
 	if isSend {
 		rec = &dbmodels.ApplicantVkStep{
 			BaseSpaceModel: dbmodels.BaseSpaceModel{SpaceID: applicantRec.SpaceID},
@@ -321,7 +314,8 @@ func (i impl) UpdateStep1(spaceID, applicantID string, stepData surveyapimodels.
 		return "анкета не найдена", nil
 	}
 	if rec.Status != dbmodels.VkStep1Draft &&
-		rec.Status != dbmodels.VkStep1DraftFail {
+		rec.Status != dbmodels.VkStep1DraftFail &&
+		rec.Status != dbmodels.VkStep1Approved {
 		return "невозможно отредактировать анкету", nil
 	}
 	rec.Step1.ScriptIntro = stepData.ScriptIntro
@@ -351,6 +345,15 @@ func (i impl) UpdateStep1(spaceID, applicantID string, stepData surveyapimodels.
 	if rec.Status == dbmodels.VkStep1Approved {
 		// сохраняем подтвержденные вопросы для будущего использования
 		i.storeQuestions(*rec)
+		// отправляем приглашение на видео интервью
+		if i.sendVideoSurvaySuggest(*rec) {
+			rec.Status = dbmodels.VkStepVideoSuggestSent
+			rec.VideoInterviewInviteDate = time.Now()
+			_, err = i.vkStore.Save(*rec)
+			if err != nil {
+				return "", errors.Wrap(err, "ошибка обновления статуса анкеты, при отправке кандидату приглашения на видео интервью")
+			}
+		}
 	}
 	return "", nil
 }
@@ -500,23 +503,51 @@ func (i impl) RunRegenStep1(applicant dbmodels.Applicant) (ok bool, err error) {
 	return false, nil
 }
 
-func (i impl) sendToChat(spaceID, applicantID, companyName, link string, logger *log.Entry) bool {
-	text, err := messagetemplate.GetSurvayStep0SuggestMessage(companyName, link, false)
-	if err != nil {
-		logger.
-			WithError(err).
-			Warn("ошибка получения сообщения с ссылкой на анкету для отправки кандидату через чат")
-		return false
+func (i impl) sendLink(applicantRec dbmodels.Applicant, chatText, emailText, emailTitle string) (isSend bool) {
+	logger := i.getLogger(applicantRec.SpaceID, applicantRec.ID)
+	if chatText != "" {
+		isChatAvailable := false
+		availability, err := i.negotiationChatHandler.IsVailable(applicantRec.SpaceID, applicantRec.ID)
+		if err != nil {
+			logger.
+				WithError(err).
+				Warn("ошибка проверки доступности чата с кандидатом")
+		} else {
+			isChatAvailable = availability.IsAvailable
+		}
+
+		isSend = false
+		if isChatAvailable {
+			if i.sendToChat(applicantRec.SpaceID, applicantRec.ID, chatText, logger) {
+				isSend = true
+			}
+		}
 	}
+	if applicantRec.Email != "" && emailText != "" {
+		emailFrom, err := i.messageTemplate.GetSenderEmail(applicantRec.SpaceID)
+		if err != nil {
+			logger.
+				WithError(err).
+				Warn("ошибка получения почты компании для отправки сообщения с ссылкой на анкету на email кандидату")
+		} else if emailFrom != "" {
+			if i.sendToEmail(emailFrom, applicantRec.Email, emailText, emailTitle, logger) {
+				isSend = true
+			}
+		}
+	}
+	return isSend
+}
+
+func (i impl) sendToChat(spaceID, applicantID, text string, logger *log.Entry) bool {
 	req := negotiationapimodels.NewMessageRequest{
 		ApplicantID: applicantID,
 		Text:        text,
 	}
-	err = i.negotiationChatHandler.SendMessage(spaceID, req)
+	err := i.negotiationChatHandler.SendMessage(spaceID, req)
 	if err != nil {
 		logger.
 			WithError(err).
-			Warn("ошибка отправки сообщения с ссылкой на анкету в чат с кандидатом")
+			Warn("ошибка отправки сообщения в чат с кандидатом")
 		return false
 	}
 	return true
@@ -532,20 +563,12 @@ func (i impl) getCompanyName(spaceID string, companyID *string) string {
 	return defaultCompanyName
 }
 
-func (i impl) sendToEmail(emailFrom, mailTo, companyName, link string, logger *log.Entry) bool {
-	text, err := messagetemplate.GetSurvaySuggestMessage(companyName, link, true)
+func (i impl) sendToEmail(emailFrom, mailTo, text, title string, logger *log.Entry) bool {
+	err := smtp.Instance.SendHtmlEMail(emailFrom, mailTo, text, title, nil)
 	if err != nil {
 		logger.
 			WithError(err).
-			Warn("ошибка получения сообщения с ссылкой на анкету для отправки кандидату через email")
-		return false
-	}
-	title := messagetemplate.GetSurvaySuggestTitle()
-	err = smtp.Instance.SendHtmlEMail(emailFrom, mailTo, text, title, nil)
-	if err != nil {
-		logger.
-			WithError(err).
-			Warn("ошибка отправки сообщения с ссылкой на анкету на email кандидату")
+			Warn("ошибка отправки сообщения на email кандидату")
 		return false
 	}
 	return true
@@ -708,4 +731,54 @@ func (i impl) storeQuestions(approvedRec dbmodels.ApplicantVkStep) {
 			return
 		}
 	}
+}
+
+func (i impl) sendVideoSurvaySuggest(approvedRec dbmodels.ApplicantVkStep) (isSend bool) {
+	// отправка приглашения на видео интервью
+	logger := i.getLogger(approvedRec.SpaceID, approvedRec.ApplicantID)
+	applicant, err := i.applicantStore.GetByID(approvedRec.SpaceID, approvedRec.ApplicantID)
+	if err != nil {
+		logger.WithError(err).Warn("ошибка отправки приглашения на видео интервью, не удалось получить данные кандидата")
+		return
+	}
+	if applicant == nil {
+		logger.Warn("ошибка отправки приглашения на видео интервью, данные кандидата не найдены")
+		return
+	}
+
+	link := config.Conf.UIParams.VideoSurveyStepPath + approvedRec.ID
+	companyName := i.getCompanyName(applicant.SpaceID, applicant.Vacancy.CompanyID)
+
+	supportEmail, err := i.getSupportEmail(approvedRec.SpaceID)
+	if err != nil {
+		logger.
+			WithError(err).
+			Warn("ошибка получения почты тех поддержки для шаблона приглашения на видео интервью")
+		supportEmail = ""
+	}
+
+	chatText, err := messagetemplate.GetVideoSurvaySuggestMessage(applicant.Applicant, companyName, link, supportEmail, false)
+	if err != nil {
+		logger.
+			WithError(err).
+			Warn("ошибка получения текста приглашения на видео интервью для отправки кандидату через чат")
+		chatText = ""
+	}
+	emailText, err := messagetemplate.GetVideoSurvaySuggestMessage(applicant.Applicant, companyName, link, supportEmail, true)
+	if err != nil {
+		logger.
+			WithError(err).
+			Warn("ошибка получения текста приглашения на видео интервью для отправки кандидату через email")
+		emailText = ""
+	}
+	title := messagetemplate.GetSurvaySuggestTitle()
+	return i.sendLink(applicant.Applicant, chatText, emailText, title)
+}
+
+func (i impl) getSupportEmail(spaceID string) (string, error) {
+	email, err := i.spaceSettingsStore.GetValueByCode(spaceID, models.SpaceSenderEmail)
+	if err != nil {
+		return "", errors.Wrap(err, "ошибка получения почты тех поддержки")
+	}
+	return email, nil
 }

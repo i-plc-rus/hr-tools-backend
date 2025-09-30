@@ -3,6 +3,7 @@ package dbmodels
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -10,15 +11,16 @@ import (
 type StepStatus int
 
 const (
-	VkStep0NotSent   = 0  //"Шаг0. Вопросы не отправлены"
-	VkStep0Sent      = 10 //"Шаг0. Вопросы отправлены"
-	VkStep0Answered  = 20 //"Шаг0. Получены ответы"
-	VkStep0Refuse    = 30 //"Шаг0. Кандидат не прошел"
-	VkStep0Done      = 40 //"Шаг0. Кандидат прошел"
-	VkStep1Draft     = 50 //"Шаг1. Получен черновика скрипта"
-	VkStep1DraftFail = 60 //"Шаг1. Ошибка получения черновика скрипта"
-	VkStep1Regen     = 70 //"Шаг1. Перегенерация"
-	VkStep1Approved  = 80 //"Шаг1. Список вопросов подтвержден"
+	VkStep0NotSent         = 0  //"Шаг0. Вопросы не отправлены"
+	VkStep0Sent            = 10 //"Шаг0. Вопросы отправлены"
+	VkStep0Answered        = 20 //"Шаг0. Получены ответы"
+	VkStep0Refuse          = 30 //"Шаг0. Кандидат не прошел"
+	VkStep0Done            = 40 //"Шаг0. Кандидат прошел"
+	VkStep1Draft           = 50 //"Шаг1. Получен черновика скрипта"
+	VkStep1DraftFail       = 60 //"Шаг1. Ошибка получения черновика скрипта"
+	VkStep1Regen           = 70 //"Шаг1. Перегенерация"
+	VkStep1Approved        = 80 //"Шаг1. Список вопросов подтвержден"
+	VkStepVideoSuggestSent = 90 //"Шаг7. Приглашение на видео интервью отправлено кандидату"
 )
 
 func (s StepStatus) String() string {
@@ -41,6 +43,8 @@ func (s StepStatus) String() string {
 		return "Шаг1. Перегенерация списка вопросов"
 	case VkStep1Approved:
 		return "Шаг1. Список вопросов подтвержден"
+	case VkStepVideoSuggestSent:
+		return "Шаг7. Приглашение на видео интервью отправлено кандидату"
 	default:
 		return "Не известный статус"
 	}
@@ -48,10 +52,11 @@ func (s StepStatus) String() string {
 
 type ApplicantVkStep struct {
 	BaseSpaceModel
-	ApplicantID string `gorm:"type:varchar(36);index"`
-	Status      StepStatus
-	Step0       VkStep0 `gorm:"type:jsonb"`
-	Step1       VkStep1 `gorm:"type:jsonb"`
+	ApplicantID              string `gorm:"type:varchar(36);index"`
+	Status                   StepStatus
+	Step0                    VkStep0 `gorm:"type:jsonb"`
+	Step1                    VkStep1 `gorm:"type:jsonb"`
+	VideoInterviewInviteDate time.Time
 }
 
 func (j VkStep0) Value() (driver.Value, error) {
