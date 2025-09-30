@@ -85,7 +85,7 @@ func VkStep1Convert(rec dbmodels.ApplicantVkStep) VkStep1View {
 			ScriptOutro: rec.Step1.ScriptOutro,
 			Comments:    rec.Step1.Comments,
 		},
-		Url: config.Conf.UIParams.VideoSurveyStepPath + rec.ID,
+		Url: rec.GetVideoSurveyUrl(config.Conf),
 	}
 	for _, question := range rec.Step1.Questions {
 		result.Questions = append(result.Questions, VkStep1Question{

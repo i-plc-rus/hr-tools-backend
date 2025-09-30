@@ -131,7 +131,7 @@ type VkStep0 struct {
 
 func VkStep0Convert(rec dbmodels.ApplicantVkStep, jobTitle string) VkStep0 {
 	result := VkStep0{
-		Url:       config.Conf.UIParams.SurveyStep0Path + rec.ID,
+		Url:       rec.GetStep0SurveyUrl(config.Conf),
 		Questions: GetQuestionsStep0(jobTitle).Questions,
 		Answers:   []VkStep0Answer{},
 	}

@@ -3,6 +3,7 @@ package dbmodels
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"hr-tools-backend/config"
 	"time"
 
 	"github.com/pkg/errors"
@@ -113,4 +114,12 @@ type VkStep1Question struct {
 	Order             int    `json:"order"`
 	NotSuitable       bool   `json:"not_suitable"`        // не подходит
 	NotSuitableReason string `json:"not_suitable_reason"` // причина по которой вопрос не подходит
+}
+
+func (r ApplicantVkStep) GetStep0SurveyUrl(conf *config.Configuration) string {
+	return conf.UIParams.SurveyStep0Path + r.ID
+}
+
+func (r ApplicantVkStep) GetVideoSurveyUrl(conf *config.Configuration) string {
+	return conf.UIParams.VideoSurveyStepPath + r.ID
 }

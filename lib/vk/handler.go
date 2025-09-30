@@ -113,7 +113,7 @@ func (i impl) RunStep0(applicantRec dbmodels.Applicant) (ok bool, err error) {
 
 	// отправка ссылки на анкету
 	logger := i.getLogger(applicantRec.SpaceID, applicantRec.ID)
-	link := config.Conf.UIParams.SurveyStep0Path + rec.ID
+	link := rec.GetStep0SurveyUrl(config.Conf)
 	companyName := i.getCompanyName(applicantRec.SpaceID, applicantRec.Vacancy.CompanyID)
 
 	chatText, err := messagetemplate.GetSurvayStep0SuggestMessage(companyName, link, false)
@@ -746,7 +746,7 @@ func (i impl) sendVideoSurvaySuggest(approvedRec dbmodels.ApplicantVkStep) (isSe
 		return
 	}
 
-	link := config.Conf.UIParams.VideoSurveyStepPath + approvedRec.ID
+	link := approvedRec.GetVideoSurveyUrl(config.Conf)
 	companyName := i.getCompanyName(applicant.SpaceID, applicant.Vacancy.CompanyID)
 
 	supportEmail, err := i.getSupportEmail(approvedRec.SpaceID)
