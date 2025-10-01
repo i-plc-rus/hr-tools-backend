@@ -21,7 +21,9 @@ type Provider interface {
 	GetDocList(ctx context.Context, applicantID string) ([]filesapimodels.FileView, error)
 	GetFileByType(ctx context.Context, spaceID, applicantID string, fileType dbmodels.FileType) ([]byte, *dbmodels.FileStorage, error)
 	GetFile(ctx context.Context, spaceID, fileID string) ([]byte, error)
+	GetFileObject(ctx context.Context, spaceID string, fileID string) (*minio.Object, error)
 	Upload(ctx context.Context, spaceID, applicantID string, file []byte, fileName string, fileType dbmodels.FileType, contentType string) error
+	UploadObject(ctx context.Context, fileInfo dbmodels.UploadFileInfo, reader io.Reader, fileSize int) (fileID string, err error)
 	DeleteFile(ctx context.Context, spaceID, fileID string) error
 	DeleteFileByType(ctx context.Context, spaceID, applicantID string, fileType dbmodels.FileType) error
 	MakeSpaceBucket(ctx context.Context, spaceID string) error
@@ -84,37 +86,69 @@ func (i impl) GetFile(ctx context.Context, spaceID string, fileID string) ([]byt
 	return body, nil
 }
 
+func (i impl) GetFileObject(ctx context.Context, spaceID string, fileID string) (*minio.Object, error) {
+	s3file, err := i.s3client.GetObject(ctx, i.getSpaceBucketName(spaceID), fileID, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, errors.Wrap(err, "ошибка получения файла из S3")
+	}
+	return s3file, nil
+}
+
 func (i impl) Upload(ctx context.Context, spaceID, applicantID string, file []byte, fileName string, fileType dbmodels.FileType, contentType string) error {
+	fileInfo := dbmodels.UploadFileInfo{
+		SpaceID:        spaceID,
+		ApplicantID:    applicantID,
+		FileName:       fileName,
+		FileType:       fileType,
+		ContentType:    contentType,
+		IsUniqueByName: false,
+	}
+	_, err := i.UploadObject(ctx, fileInfo, bytes.NewReader(file), len(file))
+	return err
+}
+
+func (i impl) UploadObject(ctx context.Context, fileInfo dbmodels.UploadFileInfo, reader io.Reader, fileSize int) (fileID string, err error) {
 	logger := log.WithFields(log.Fields{
-		"space_id":     spaceID,
-		"applicant_id": applicantID,
-		"file_name":    fileName,
-		"file_type":    fileType,
+		"space_id":     fileInfo.SpaceID,
+		"applicant_id": fileInfo.ApplicantID,
+		"file_name":    fileInfo.FileName,
+		"file_type":    fileInfo.FileType,
 	})
-	err := db.DB.Transaction(func(tx *gorm.DB) error {
+	err = db.DB.Transaction(func(tx *gorm.DB) error {
 		fileDB := filesdbstorage.NewInstance(tx)
-		removedID, err := i.deletingIrrelevantFile(fileDB, spaceID, applicantID, fileType)
-		if err != nil {
-			logger.
-				WithError(err).
-				Error("ошибка удаления информации о существующем файле")
-			removedID = ""
+		removedID := ""
+		if fileInfo.IsUniqueByName {
+			removedID, err = i.deletingIrrelevantFileByName(fileDB, fileInfo.SpaceID, fileInfo.ApplicantID, fileInfo.FileType, fileInfo.FileName)
+			if err != nil {
+				logger.
+					WithError(err).
+					Error("ошибка удаления информации о существующем файле")
+				removedID = ""
+			}
+		} else {
+			removedID, err = i.deletingIrrelevantFile(fileDB, fileInfo.SpaceID, fileInfo.ApplicantID, fileInfo.FileType)
+			if err != nil {
+				logger.
+					WithError(err).
+					Error("ошибка удаления информации о существующем файле")
+				removedID = ""
+			}
 		}
 		rec := dbmodels.FileStorage{
 			BaseSpaceModel: dbmodels.BaseSpaceModel{
-				SpaceID: spaceID,
+				SpaceID: fileInfo.SpaceID,
 			},
-			Name:        fileName,
-			ApplicantID: applicantID,
-			Type:        fileType,
-			ContentType: contentType,
+			Name:        fileInfo.FileName,
+			ApplicantID: fileInfo.ApplicantID,
+			Type:        fileInfo.FileType,
+			ContentType: fileInfo.ContentType,
 		}
-		fileID, err := fileDB.SaveFile(rec)
+		fileID, err = fileDB.SaveFile(rec)
 		if err != nil {
 			return errors.Wrap(err, "ошибка сохранения информации о файле")
 		}
-		bucketName := i.getSpaceBucketName(spaceID)
-		err = i.uploadFile(ctx, bucketName, fileID, bytes.NewReader(file), len(file))
+		bucketName := i.getSpaceBucketName(fileInfo.SpaceID)
+		err = i.uploadFile(ctx, bucketName, fileID, reader, fileSize)
 		if err != nil {
 			return errors.Wrap(err, "ошибка сохранения файла в S3")
 		}
@@ -130,9 +164,9 @@ func (i impl) Upload(ctx context.Context, spaceID, applicantID string, file []by
 		return nil
 	})
 	if err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return fileID, nil
 }
 
 func (i impl) DeleteFile(ctx context.Context, spaceID, fileID string) error {
@@ -236,4 +270,29 @@ func (i impl) deletingIrrelevantFile(fileDB filesdbstorage.Provider, spaceID, ap
 	}
 
 	return file.ID, nil
+}
+
+func (i impl) deletingIrrelevantFileByName(fileDB filesdbstorage.Provider, spaceID, applicantID string, fileType dbmodels.FileType, fileName string) (removedID string, err error) {
+	if fileType == dbmodels.ApplicantDoc {
+		return "", nil
+	}
+	list, err := fileDB.GetFileListByType(applicantID, fileType)
+	if err != nil {
+		return "", errors.Wrap(err, "ошибка получения информации о существующем файле")
+	}
+	if len(list) == 0 {
+		return "", nil
+	}
+	for _, file := range list {
+		if file.Name == fileName {
+			_, err = fileDB.DeleteFile(file.ID, spaceID)
+			if err != nil {
+				return "", errors.Wrap(err, "ошибка удаления информации о существующем файле")
+			}
+
+			return file.ID, nil
+		}
+	}
+
+	return "", nil
 }

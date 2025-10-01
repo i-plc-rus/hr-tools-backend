@@ -23,12 +23,22 @@ func (f FileStorage) ToModel() filesapimodels.FileView {
 type FileType string
 
 const (
-	ApplicantResume     FileType = "applicant_resume"
-	ApplicantDoc        FileType = "applicant_doc"
-	ApplicantPhoto      FileType = "applicant_photo"
-	UserProfilePhoto    FileType = "user_profile_photo"
-	CompanyProfilePhoto FileType = "company_profile_photo"
-	CompanyLogo         FileType = "company_logo"
-	CompanySign         FileType = "company_sign"
-	CompanyStamp        FileType = "company_stamp"
+	ApplicantResume         FileType = "applicant_resume"
+	ApplicantDoc            FileType = "applicant_doc"
+	ApplicantPhoto          FileType = "applicant_photo"
+	UserProfilePhoto        FileType = "user_profile_photo"
+	ApplicantVideoInterview FileType = "applicant_video_interview"
+	CompanyProfilePhoto     FileType = "company_profile_photo"
+	CompanyLogo             FileType = "company_logo"
+	CompanySign             FileType = "company_sign"
+	CompanyStamp            FileType = "company_stamp"
 )
+
+type UploadFileInfo struct {
+	SpaceID        string
+	ApplicantID    string
+	FileName       string
+	FileType       FileType
+	ContentType    string
+	IsUniqueByName bool
+}

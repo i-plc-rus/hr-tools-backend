@@ -143,3 +143,15 @@ func VkStep0Convert(rec dbmodels.ApplicantVkStep, jobTitle string) VkStep0 {
 	}
 	return result
 }
+
+type VkStep1SurveyView struct {
+	Questions   []VkStep1SurveyQuestion `json:"questions"`
+	ScriptIntro string                  `json:"script_intro"`
+	ScriptOutro string                  `json:"script_outro"`
+}
+
+type VkStep1SurveyQuestion struct {
+	ID    string `json:"id"`    // Идентификатор вопроса
+	Text  string `json:"text"`  // Текст вопроса
+	Order int    `json:"order"` //Порядковый номер
+}
