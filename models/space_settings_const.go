@@ -8,5 +8,6 @@ const (
 	HhClientSecretSetting    SpaceSettingCode = "HHClientSecret"
 	AvitoClientIDSetting     SpaceSettingCode = "AvitoClientID"
 	AvitoClientSecretSetting SpaceSettingCode = "AvitoClientSecret"
-	SpaceSenderEmail         SpaceSettingCode = "SpaceSenderEmail" // почта, с которой отправляются письма кандидатам
+	SpaceSenderEmail         SpaceSettingCode = "SpaceSenderEmail"  // почта, с которой отправляются письма кандидатам
+	SpaceSupportEmail        SpaceSettingCode = "SpaceSupportEmail" // почта, тех поддержки
 )

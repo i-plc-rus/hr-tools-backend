@@ -32,8 +32,8 @@ type ApplicantView struct {
 type ApplicantVkSurvey struct {
 	Status            int
 	StatusDescription string
-	Step0             surveyapimodels.VkStep0 // ВК. Шаг 0. анкета и ответы кандидата на типовые вопросы
-	Step1             surveyapimodels.VkStep1 // ВК. Шаг 1. Генерация черновика скрипта (15 вопросов и текст сценария для интервью)
+	Step0             surveyapimodels.VkStep0     // ВК. Шаг 0. анкета и ответы кандидата на типовые вопросы
+	Step1             surveyapimodels.VkStep1View // ВК. Шаг 1. Генерация черновика скрипта (15 вопросов и текст сценария для интервью)
 }
 
 type ApplicantViewExt struct {

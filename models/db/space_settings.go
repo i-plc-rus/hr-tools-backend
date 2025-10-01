@@ -59,6 +59,13 @@ var DefaultSpaceSenderEmail = SpaceSetting{
 	Value:   "",
 }
 
+var DefaultSpaceSupportEmail = SpaceSetting{
+	SpaceID: "",
+	Name:    "почта, тех поддержки",
+	Code:    models.SpaceSupportEmail,
+	Value:   "",
+}
+
 var DefaultSettinsMap = map[models.SpaceSettingCode]SpaceSetting{
 	models.HhClientIDSetting:        DefaultHhClientIDSetting,
 	models.HhClientSecretSetting:    DefaultHhClientSecretSetting,
