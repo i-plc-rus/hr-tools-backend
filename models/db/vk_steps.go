@@ -55,8 +55,9 @@ type ApplicantVkStep struct {
 	BaseSpaceModel
 	ApplicantID              string `gorm:"type:varchar(36);index"`
 	Status                   StepStatus
-	Step0                    VkStep0 `gorm:"type:jsonb"`
-	Step1                    VkStep1 `gorm:"type:jsonb"`
+	Step0                    VkStep0        `gorm:"type:jsonb"`
+	Step1                    VkStep1        `gorm:"type:jsonb"`
+	VideoInterview           VideoInterview `gorm:"type:jsonb"`
 	VideoInterviewInviteDate time.Time
 }
 
@@ -122,4 +123,25 @@ func (r ApplicantVkStep) GetStep0SurveyUrl(conf *config.Configuration) string {
 
 func (r ApplicantVkStep) GetVideoSurveyUrl(conf *config.Configuration) string {
 	return conf.UIParams.VideoSurveyStepPath + r.ID
+}
+
+type VideoInterview struct {
+	Answers map[string]VkVideoAnswer `json:"answers"` // map[questionID]VkVideoAnswer
+}
+
+type VkVideoAnswer struct {
+	FileID         string `json:"file_id"`         // Идентификатор файла
+	TranscriptText string `json:"transcript_text"` // Текст ответа
+}
+
+func (j VideoInterview) Value() (driver.Value, error) {
+	valueString, err := json.Marshal(j)
+	return string(valueString), err
+}
+
+func (j *VideoInterview) Scan(value interface{}) error {
+	if err := json.Unmarshal(value.([]byte), &j); err != nil {
+		return err
+	}
+	return nil
 }

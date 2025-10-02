@@ -1,6 +1,7 @@
 package vk
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"hr-tools-backend/config"
@@ -10,10 +11,12 @@ import (
 	applicantstore "hr-tools-backend/lib/applicant/store"
 	companystore "hr-tools-backend/lib/dicts/company/store"
 	negotiationchathandler "hr-tools-backend/lib/external-services/negotiation-chat"
+	filestorage "hr-tools-backend/lib/file-storage"
 	gpthandler "hr-tools-backend/lib/gpt"
 	messagetemplate "hr-tools-backend/lib/message-template"
 	"hr-tools-backend/lib/smtp"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
+	"hr-tools-backend/lib/utils/helpers"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	applicantvkstore "hr-tools-backend/lib/vk/applicant-vk-store"
 	questionhistorystore "hr-tools-backend/lib/vk/question-history-store"
@@ -21,8 +24,11 @@ import (
 	negotiationapimodels "hr-tools-backend/models/api/negotiation"
 	surveyapimodels "hr-tools-backend/models/api/survey"
 	dbmodels "hr-tools-backend/models/db"
+	"io"
+	"mime/multipart"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -38,6 +44,9 @@ type Provider interface {
 	UpdateStep1(spaceID, applicantID string, stepData surveyapimodels.VkStep1Update) (hMsg string, err error)
 	RegenStep1(spaceID, applicantID string, stepData surveyapimodels.VkStep1Regen) (hMsg string, err error)
 	RunRegenStep1(applicant dbmodels.Applicant) (ok bool, err error)
+	GetVideoSurvey(id string) (*surveyapimodels.VkStep1SurveyView, error)
+	UploadVideoAnswer(ctx context.Context, id, questionID string, fileHeader *multipart.FileHeader) error
+	GetVideoAnswer(ctx context.Context, id, questionID string) (reader io.Reader, err error)
 }
 
 var Instance Provider
@@ -503,6 +512,98 @@ func (i impl) RunRegenStep1(applicant dbmodels.Applicant) (ok bool, err error) {
 	return false, nil
 }
 
+func (i impl) GetVideoSurvey(id string) (*surveyapimodels.VkStep1SurveyView, error) {
+	rec, err := i.vkStore.GetByID(id)
+	if err != nil {
+		return nil, errors.Wrap(err, "ошибка получения анкеты кандидата")
+	}
+	if rec == nil {
+		return nil, errors.New("анкета не найдена")
+	}
+	result := surveyapimodels.VkStep1SurveyView{
+		Questions:   []surveyapimodels.VkStep1SurveyQuestion{},
+		ScriptIntro: rec.Step1.ScriptIntro,
+		ScriptOutro: rec.Step1.ScriptOutro,
+	}
+	for _, q := range rec.Step1.Questions {
+		result.Questions = append(result.Questions,
+			surveyapimodels.VkStep1SurveyQuestion{
+				ID:    q.ID,
+				Text:  q.Text,
+				Order: q.Order,
+			})
+	}
+	return &result, nil
+}
+
+func (i impl) UploadVideoAnswer(ctx context.Context, id, questionID string, fileHeader *multipart.FileHeader) error {
+	rec, err := i.vkStore.GetByID(id)
+	if err != nil {
+		return errors.Wrap(err, "ошибка получения анкеты кандидата")
+	}
+	if rec == nil {
+		return errors.New("анкета не найдена")
+	}
+
+	// Проверяем тип файла
+	contentType := helpers.GetFileContentType(fileHeader)
+	if !strings.HasPrefix(contentType, "video/") {
+		return errors.New("Ожидается файл с видео")
+	}
+	// Открываем загруженный файл
+	buffer, err := fileHeader.Open()
+	if err != nil {
+		return errors.Wrap(err, "Не удалось открыть файл")
+	}
+	defer buffer.Close()
+
+	fileInfo := dbmodels.UploadFileInfo{
+		SpaceID:        rec.SpaceID,
+		ApplicantID:    rec.ApplicantID,
+		FileName:       questionID,
+		FileType:       dbmodels.ApplicantVideoInterview,
+		ContentType:    contentType,
+		IsUniqueByName: true,
+	}
+	fileID, err := filestorage.Instance.UploadObject(ctx, fileInfo, buffer, int(fileHeader.Size))
+	if err != nil {
+		return err
+	}
+	if rec.VideoInterview.Answers == nil {
+		rec.VideoInterview = dbmodels.VideoInterview{
+			Answers: map[string]dbmodels.VkVideoAnswer{},
+		}
+	}
+	rec.VideoInterview.Answers[questionID] = dbmodels.VkVideoAnswer{
+		FileID: fileID,
+	}
+	_, err = i.vkStore.Save(*rec)
+	if err != nil {
+		i.getLogger(rec.SpaceID, rec.ApplicantID).
+			WithError(err).
+			WithField("question_id", questionID).
+			WithField("file_id", fileID).
+			Error("ошибка добваления информации о видео файле в базу")
+	}
+	return nil
+}
+
+func (i impl) GetVideoAnswer(ctx context.Context, id, questionID string) (reader io.Reader, err error) {
+	rec, err := i.vkStore.GetByID(id)
+	if err != nil {
+		return nil, errors.Wrap(err, "ошибка получения анкеты кандидата")
+	}
+	if rec == nil {
+		return nil, errors.New("анкета не найдена")
+	}
+	answer, ok := rec.VideoInterview.Answers[questionID]
+	if ok {
+		return filestorage.Instance.GetFileObject(ctx, rec.SpaceID, answer.FileID)
+	}
+	// если файла нет
+	return nil, nil
+}
+
 func (i impl) sendLink(applicantRec dbmodels.Applicant, chatText, emailText, emailTitle string) (isSend bool) {
 	logger := i.getLogger(applicantRec.SpaceID, applicantRec.ID)
 	if chatText != "" {
@@ -781,4 +882,8 @@ func (i impl) getSupportEmail(spaceID string) (string, error) {
 		return "", errors.Wrap(err, "ошибка получения почты тех поддержки")
 	}
 	return email, nil
+}
+
+func GetVideoAnswerFileName(applicantID, questionID string) string {
+	return fmt.Sprintf("%v_%v", applicantID, questionID)
 }
