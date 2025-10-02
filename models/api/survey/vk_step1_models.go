@@ -3,6 +3,7 @@ package surveyapimodels
 import (
 	"hr-tools-backend/config"
 	dbmodels "hr-tools-backend/models/db"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -77,7 +78,7 @@ type VkStep1QuestionUpdate struct {
 	Order int    `json:"order"` // Порядковый номер
 }
 
-func VkStep1Convert(rec dbmodels.ApplicantVkStep) VkStep1View {
+func VkStep1Convert(rec dbmodels.ApplicantVkStep, location *time.Location) VkStep1View {
 	result := VkStep1View{
 		VkStep1: VkStep1{
 			Questions:   []VkStep1Question{},
@@ -96,7 +97,11 @@ func VkStep1Convert(rec dbmodels.ApplicantVkStep) VkStep1View {
 	}
 
 	if !rec.VideoInterviewInviteDate.IsZero() {
-		result.DateOfInvitation = rec.VideoInterviewInviteDate.Format("02.01.2006 15:04:05")
+		inviteDate := rec.VideoInterviewInviteDate
+		if location != nil {
+			inviteDate = inviteDate.In(location)
+		}
+		result.DateOfInvitation = inviteDate.Format("02.01.2006 15:04:05")
 	}
 	return result
 }
