@@ -81,6 +81,7 @@ func (i impl) GetByID(spaceID, id string) (*dbmodels.ApplicantExt, error) {
 		Where("applicants.space_id = ?", spaceID).
 		Preload(clause.Associations).
 		Preload("Vacancy.JobTitle").
+		Preload("Vacancy.Space").
 		First(&rec).
 		Error
 	if err != nil {
@@ -137,6 +138,7 @@ func (i impl) ListOfApplicant(spaceID string, filter applicantapimodels.Applican
 	i.setPage(tx, page, limit)
 	err = tx.Preload(clause.Associations).
 		Preload("Vacancy.JobTitle").
+		Preload("Vacancy.Space").
 		Find(&list).Error
 
 	if err != nil {

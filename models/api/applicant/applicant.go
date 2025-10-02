@@ -163,7 +163,20 @@ func ApplicantConvert(rec dbmodels.Applicant) ApplicantView {
 		result.Survey.Status = int(rec.ApplicantVkStep.Status)
 		result.Survey.StatusDescription = rec.ApplicantVkStep.Status.String()
 		result.Survey.Step0 = surveyapimodels.VkStep0Convert(*rec.ApplicantVkStep, jobTitle)
-		result.Survey.Step1 = surveyapimodels.VkStep1Convert(*rec.ApplicantVkStep)
+
+		var (
+			location *time.Location
+			err      error
+		)
+		if rec.Vacancy != nil && rec.Vacancy.Space != nil && rec.Vacancy.Space.TimeZone != "" {
+			timeZone := rec.Vacancy.Space.TimeZone
+			location, err = time.LoadLocation(timeZone)
+			if err != nil {
+				location = nil
+			}
+		}
+
+		result.Survey.Step1 = surveyapimodels.VkStep1Convert(*rec.ApplicantVkStep, location)
 	}
 	return result
 }
