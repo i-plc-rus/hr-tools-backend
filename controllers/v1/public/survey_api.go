@@ -117,7 +117,7 @@ func (c *publicsurveyApiController) getVkStep0Survey(ctx *fiber.Ctx) error {
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/v1/public/survey/{id} [put]
+// @router /api/v1/public/survey/step0/{id} [put]
 func (c *publicsurveyApiController) setVkStep0Survey(ctx *fiber.Ctx) error {
 	id, err := c.GetID(ctx)
 	if err != nil {
@@ -149,7 +149,7 @@ func (c *publicsurveyApiController) setVkStep0Survey(ctx *fiber.Ctx) error {
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/v1/public/survey/step0/{id} [get]
+// @router /api/v1/public/survey/video-interview/{id} [get]
 func (c *publicsurveyApiController) getVideoSurveyData(ctx *fiber.Ctx) error {
 	id, err := c.GetID(ctx)
 	if err != nil {

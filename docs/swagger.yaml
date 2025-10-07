@@ -4631,6 +4631,70 @@ paths:
       tags:
       - Анкета кандидата
     put:
+      description: Сохранение ответов
+      parameters:
+      - description: Идентификатор анкеты
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/surveyapimodels.ApplicantSurveyResponses'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Сохранение ответов
+      tags:
+      - Анкета кандидата
+  /api/v1/public/survey/step0/{id}:
+    get:
+      description: ВК. Шаг 0. Получение анкеты c типовыми вопросами
+      parameters:
+      - description: Идентификатор анкеты
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/surveyapimodels.VkStep0SurveyView'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: ВК. Шаг 0. Получение анкеты c типовыми вопросами
+      tags:
+      - ВК
+    put:
       description: ВК. Шаг 0. cохранение ответов по анкете
       parameters:
       - description: Идентификатор анкеты
@@ -4662,7 +4726,7 @@ paths:
       summary: ВК. Шаг 0. cохранение ответов по анкете
       tags:
       - ВК
-  /api/v1/public/survey/step0/{id}:
+  /api/v1/public/survey/video-interview/{id}:
     get:
       description: ВК. Шаг 8. Прохождение видео-интервью (Данные для интервью)
       parameters:

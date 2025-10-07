@@ -2540,6 +2540,107 @@ const docTemplate = `{
         },
         "/api/v1/public/survey/step0/{id}": {
             "get": {
+                "description": "ВК. Шаг 0. Получение анкеты c типовыми вопросами",
+                "tags": [
+                    "ВК"
+                ],
+                "summary": "ВК. Шаг 0. Получение анкеты c типовыми вопросами",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Идентификатор анкеты",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/surveyapimodels.VkStep0SurveyView"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "ВК. Шаг 0. cохранение ответов по анкете",
+                "tags": [
+                    "ВК"
+                ],
+                "summary": "ВК. Шаг 0. cохранение ответов по анкете",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Идентификатор анкеты",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/surveyapimodels.VkStep0SurveyAnswers"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/public/survey/video-interview/{id}": {
+            "get": {
                 "description": "ВК. Шаг 8. Прохождение видео-интервью (Данные для интервью)",
                 "tags": [
                     "ВК"
@@ -2644,11 +2745,11 @@ const docTemplate = `{
                 }
             },
             "put": {
-                "description": "ВК. Шаг 0. cохранение ответов по анкете",
+                "description": "Сохранение ответов",
                 "tags": [
-                    "ВК"
+                    "Анкета кандидата"
                 ],
-                "summary": "ВК. Шаг 0. cохранение ответов по анкете",
+                "summary": "Сохранение ответов",
                 "parameters": [
                     {
                         "type": "string",
@@ -2663,7 +2764,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/surveyapimodels.VkStep0SurveyAnswers"
+                            "$ref": "#/definitions/surveyapimodels.ApplicantSurveyResponses"
                         }
                     }
                 ],
