@@ -296,24 +296,6 @@ definitions:
         - $ref: '#/definitions/applicantapimodels.SourceData'
         description: Общая статистика
     type: object
-  applicantapimodels.ApplicantSurvey:
-    properties:
-      hrThreshold:
-        description: Порог адаптивного фильтра
-        type: integer
-      isFilledOut:
-        description: Анкета заполнена кандидатом и может использоваться для оценки
-        type: boolean
-      isScored:
-        description: Анкета получила оценку от нейросети
-        type: boolean
-      score:
-        description: Итоговая оцена кандидата
-        type: integer
-      url:
-        description: Ссылка на анкету для кандидата
-        type: string
-    type: object
   applicantapimodels.ApplicantView:
     properties:
       accept_date:
@@ -404,8 +386,8 @@ definitions:
         description: Статус кандидата
       survey:
         allOf:
-        - $ref: '#/definitions/applicantapimodels.ApplicantSurvey'
-        description: анкета для кандидата
+        - $ref: '#/definitions/applicantapimodels.ApplicantVkSurvey'
+        description: Анкета для кандидата
       total_experience:
         description: Опыт работ в месяцах
         type: integer
@@ -515,8 +497,8 @@ definitions:
         description: Статус кандидата
       survey:
         allOf:
-        - $ref: '#/definitions/applicantapimodels.ApplicantSurvey'
-        description: анкета для кандидата
+        - $ref: '#/definitions/applicantapimodels.ApplicantVkSurvey'
+        description: Анкета для кандидата
       tags:
         items:
           type: string
@@ -530,6 +512,22 @@ definitions:
       vacancy_name:
         description: Название вакансии
         type: string
+    type: object
+  applicantapimodels.ApplicantVkSurvey:
+    properties:
+      status:
+        type: integer
+      statusDescription:
+        type: string
+      step0:
+        allOf:
+        - $ref: '#/definitions/surveyapimodels.VkStep0'
+        description: ВК. Шаг 0. анкета и ответы кандидата на типовые вопросы
+      step1:
+        allOf:
+        - $ref: '#/definitions/surveyapimodels.VkStep1View'
+        description: ВК. Шаг 1. Генерация черновика скрипта (15 вопросов и текст сценария
+          для интервью)
     type: object
   applicantapimodels.MultiChangeStageRequest:
     properties:
@@ -1378,9 +1376,11 @@ definitions:
     - AvitoClientID
     - AvitoClientSecret
     - SpaceSenderEmail
+    - SpaceSupportEmail
     type: string
     x-enum-comments:
       SpaceSenderEmail: почта, с которой отправляются письма кандидатам
+      SpaceSupportEmail: почта, тех поддержки
       YandexGPTPromtSetting: Инструкции для Yandex GPT при генерации описания вакансии
     x-enum-varnames:
     - YandexGPTPromtSetting
@@ -1389,6 +1389,7 @@ definitions:
     - AvitoClientIDSetting
     - AvitoClientSecretSetting
     - SpaceSenderEmail
+    - SpaceSupportEmail
   models.TemplateType:
     enum:
     - Письмо
@@ -1892,6 +1893,9 @@ definitions:
       internal_phone_number:
         description: Внутренний номер
         type: string
+      job_title_id:
+        description: Идентификатор должности
+        type: string
       last_name:
         description: Фамилия
         type: string
@@ -1922,6 +1926,9 @@ definitions:
       is_email_verified:
         description: Email подтвержден
         type: boolean
+      job_title_id:
+        description: Идентификатор должности
+        type: string
       job_title_name:
         description: Должность
         type: string
@@ -2041,6 +2048,107 @@ definitions:
           $ref: '#/definitions/dbmodels.HRSurveyQuestion'
         type: array
     type: object
+  surveyapimodels.VkStep0:
+    properties:
+      answers:
+        items:
+          $ref: '#/definitions/surveyapimodels.VkStep0Answer'
+        type: array
+      questions:
+        items:
+          $ref: '#/definitions/surveyapimodels.VkStep0Question'
+        type: array
+      url:
+        description: Ссылка на анкету c типовыми вопросами для кандидата
+        type: string
+    type: object
+  surveyapimodels.VkStep0Answer:
+    properties:
+      answer:
+        description: Варианты ответов
+        type: string
+      question_id:
+        description: Идентификатор вопроса
+        type: string
+    type: object
+  surveyapimodels.VkStep0Question:
+    properties:
+      answers:
+        description: Варианты ответов
+        items:
+          type: string
+        type: array
+      question_id:
+        description: Идентификатор вопроса
+        type: string
+      question_text:
+        description: Текст вопроса
+        type: string
+      question_type:
+        description: Тип вопроса
+        type: string
+    type: object
+  surveyapimodels.VkStep0SurveyAnswers:
+    properties:
+      answers:
+        items:
+          $ref: '#/definitions/surveyapimodels.VkStep0Answer'
+        type: array
+    type: object
+  surveyapimodels.VkStep0SurveyView:
+    properties:
+      questions:
+        items:
+          $ref: '#/definitions/surveyapimodels.VkStep0Question'
+        type: array
+    type: object
+  surveyapimodels.VkStep1:
+    properties:
+      comments:
+        additionalProperties:
+          type: string
+        type: object
+      questions:
+        items:
+          $ref: '#/definitions/surveyapimodels.VkStep1Question'
+        type: array
+      script_intro:
+        type: string
+      script_outro:
+        type: string
+    type: object
+  surveyapimodels.VkStep1Question:
+    properties:
+      id:
+        description: Идентификатор вопроса
+        type: string
+      order:
+        type: integer
+      text:
+        description: Текст вопроса
+        type: string
+    type: object
+  surveyapimodels.VkStep1View:
+    properties:
+      comments:
+        additionalProperties:
+          type: string
+        type: object
+      date_of_invitation:
+        description: Дата отправки приглашения
+        type: string
+      questions:
+        items:
+          $ref: '#/definitions/surveyapimodels.VkStep1Question'
+        type: array
+      script_intro:
+        type: string
+      script_outro:
+        type: string
+      url:
+        description: Ссылка на анкету для видео интервью
+        type: string
+    type: object
   vacancyapimodels.ApprovalStageData:
     properties:
       approval_status:
@@ -2070,6 +2178,17 @@ definitions:
     type: object
   vacancyapimodels.Comment:
     properties:
+      author_id:
+        type: string
+      comment:
+        type: string
+      date:
+        type: string
+    type: object
+  vacancyapimodels.CommentView:
+    properties:
+      author_fio:
+        type: string
       author_id:
         type: string
       comment:
@@ -2589,6 +2708,10 @@ definitions:
       city_id:
         description: ид города
         type: string
+      comments:
+        items:
+          $ref: '#/definitions/vacancyapimodels.CommentView'
+        type: array
       company_id:
         description: ид компании
         type: string
@@ -2714,7 +2837,7 @@ definitions:
         type: string
       comments:
         items:
-          $ref: '#/definitions/vacancyapimodels.Comment'
+          $ref: '#/definitions/vacancyapimodels.CommentView'
         type: array
       company_id:
         description: ид компании
@@ -4479,7 +4602,7 @@ paths:
     get:
       description: Получение анкеты
       parameters:
-      - description: Идентификатор ID
+      - description: Идентификатор анкеты
         in: path
         name: id
         required: true
@@ -4508,9 +4631,9 @@ paths:
       tags:
       - Анкета кандидата
     put:
-      description: Сохранение ответов
+      description: ВК. Шаг 0. cохранение ответов по анкете
       parameters:
-      - description: Идентификатор ID
+      - description: Идентификатор анкеты
         in: path
         name: id
         required: true
@@ -4520,7 +4643,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/surveyapimodels.ApplicantSurveyResponses'
+          $ref: '#/definitions/surveyapimodels.VkStep0SurveyAnswers'
       responses:
         "200":
           description: OK
@@ -4536,9 +4659,79 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apimodels.Response'
-      summary: Сохранение ответов
+      summary: ВК. Шаг 0. cохранение ответов по анкете
       tags:
-      - Анкета кандидата
+      - ВК
+  /api/v1/public/survey/step0/{id}:
+    get:
+      description: ВК. Шаг 8. Прохождение видео-интервью (Данные для интервью)
+      parameters:
+      - description: Идентификатор анкеты
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/surveyapimodels.VkStep0SurveyView'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: ВК. Шаг 8. Прохождение видео-интервью (Данные для интервью)
+      tags:
+      - ВК
+  /api/v1/public/upload-answer/{id}/{question_id}:
+    post:
+      description: ВК. Шаг 8. Прохождение видео-интервью (загрузка видео ответа на
+        сервер)
+      parameters:
+      - description: Идентификатор анкеты
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Идентификатор вопроса
+        in: path
+        name: question_id
+        required: true
+        type: string
+      - description: Видео
+        in: formData
+        name: file
+        required: true
+        type: file
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: ВК. Шаг 8. Прохождение видео-интервью (загрузка видео ответа на сервер)
+      tags:
+      - ВК
   /api/v1/space/analytics/source:
     put:
       description: Источники кандидатов
@@ -5116,6 +5309,92 @@ paths:
           schema:
             $ref: '#/definitions/apimodels.Response'
       summary: Скачать резюме кандидата
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/{id}/survey:
+    put:
+      description: Обновить/утвердить вопросы для интервью
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Идентификатор кандидата
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/applicantapimodels.RejectRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/surveyapimodels.VkStep1'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Обновить/утвердить вопросы для интервью
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/{id}/survey_regen:
+    put:
+      description: Обновить вопросы для интервью на перерегенерацию
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Идентификатор кандидата
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/applicantapimodels.RejectRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/surveyapimodels.VkStep1'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Отправить вопросы для интервью на перерегенерацию
       tags:
       - Кандидат
   /api/v1/space/applicant/{id}/tag:
@@ -7239,7 +7518,7 @@ paths:
       - Вакансия
   /api/v1/space/vacancy/{id}/comment:
     post:
-      description: Добавить комментарий
+      description: Добавить комментарий к вакансии
       parameters:
       - description: Authorization token
         in: header
@@ -7272,7 +7551,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apimodels.Response'
-      summary: Добавить комментарий
+      summary: Добавить комментарий к вакансии
       tags:
       - Вакансия
   /api/v1/space/vacancy/{id}/favorite:
@@ -8072,6 +8351,44 @@ paths:
           schema:
             $ref: '#/definitions/apimodels.Response'
       summary: Отменить заявку
+      tags:
+      - Заявка
+  /api/v1/space/vacancy_request/{id}/comment:
+    post:
+      description: Добавить комментарий к заявке
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/vacancyapimodels.Comment'
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Добавить комментарий к заявке
       tags:
       - Заявка
   /api/v1/space/vacancy_request/{id}/favorite:

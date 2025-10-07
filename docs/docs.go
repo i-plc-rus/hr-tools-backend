@@ -2538,6 +2538,59 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/public/survey/step0/{id}": {
+            "get": {
+                "description": "ВК. Шаг 8. Прохождение видео-интервью (Данные для интервью)",
+                "tags": [
+                    "ВК"
+                ],
+                "summary": "ВК. Шаг 8. Прохождение видео-интервью (Данные для интервью)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Идентификатор анкеты",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/surveyapimodels.VkStep0SurveyView"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/public/survey/{id}": {
             "get": {
                 "description": "Получение анкеты",
@@ -2548,7 +2601,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Идентификатор ID",
+                        "description": "Идентификатор анкеты",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -2591,15 +2644,15 @@ const docTemplate = `{
                 }
             },
             "put": {
-                "description": "Сохранение ответов",
+                "description": "ВК. Шаг 0. cохранение ответов по анкете",
                 "tags": [
-                    "Анкета кандидата"
+                    "ВК"
                 ],
-                "summary": "Сохранение ответов",
+                "summary": "ВК. Шаг 0. cохранение ответов по анкете",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Идентификатор ID",
+                        "description": "Идентификатор анкеты",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -2610,8 +2663,63 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/surveyapimodels.ApplicantSurveyResponses"
+                            "$ref": "#/definitions/surveyapimodels.VkStep0SurveyAnswers"
                         }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/public/upload-answer/{id}/{question_id}": {
+            "post": {
+                "description": "ВК. Шаг 8. Прохождение видео-интервью (загрузка видео ответа на сервер)",
+                "tags": [
+                    "ВК"
+                ],
+                "summary": "ВК. Шаг 8. Прохождение видео-интервью (загрузка видео ответа на сервер)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Идентификатор анкеты",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Идентификатор вопроса",
+                        "name": "question_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Видео",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -3873,6 +3981,144 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/applicant/{id}/survey": {
+            "put": {
+                "description": "Обновить/утвердить вопросы для интервью",
+                "tags": [
+                    "Кандидат"
+                ],
+                "summary": "Обновить/утвердить вопросы для интервью",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Идентификатор кандидата",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/applicantapimodels.RejectRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/surveyapimodels.VkStep1"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/applicant/{id}/survey_regen": {
+            "put": {
+                "description": "Обновить вопросы для интервью на перерегенерацию",
+                "tags": [
+                    "Кандидат"
+                ],
+                "summary": "Отправить вопросы для интервью на перерегенерацию",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Идентификатор кандидата",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/applicantapimodels.RejectRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/surveyapimodels.VkStep1"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     },
                     "400": {
                         "description": "Bad Request",
@@ -6854,11 +7100,11 @@ const docTemplate = `{
         },
         "/api/v1/space/vacancy/{id}/comment": {
             "post": {
-                "description": "Добавить комментарий",
+                "description": "Добавить комментарий к вакансии",
                 "tags": [
                     "Вакансия"
                 ],
-                "summary": "Добавить комментарий",
+                "summary": "Добавить комментарий к вакансии",
                 "parameters": [
                     {
                         "type": "string",
@@ -8109,6 +8355,63 @@ const docTemplate = `{
                         "name": "Authorization",
                         "in": "header",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "rec ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/vacancy_request/{id}/comment": {
+            "post": {
+                "description": "Добавить комментарий к заявке",
+                "tags": [
+                    "Заявка"
+                ],
+                "summary": "Добавить комментарий к заявке",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/vacancyapimodels.Comment"
+                        }
                     },
                     {
                         "type": "string",
@@ -9702,31 +10005,6 @@ const docTemplate = `{
                 }
             }
         },
-        "applicantapimodels.ApplicantSurvey": {
-            "type": "object",
-            "properties": {
-                "hrThreshold": {
-                    "description": "Порог адаптивного фильтра",
-                    "type": "integer"
-                },
-                "isFilledOut": {
-                    "description": "Анкета заполнена кандидатом и может использоваться для оценки",
-                    "type": "boolean"
-                },
-                "isScored": {
-                    "description": "Анкета получила оценку от нейросети",
-                    "type": "boolean"
-                },
-                "score": {
-                    "description": "Итоговая оцена кандидата",
-                    "type": "integer"
-                },
-                "url": {
-                    "description": "Ссылка на анкету для кандидата",
-                    "type": "string"
-                }
-            }
-        },
         "applicantapimodels.ApplicantView": {
             "type": "object",
             "properties": {
@@ -9859,10 +10137,10 @@ const docTemplate = `{
                     ]
                 },
                 "survey": {
-                    "description": "анкета для кандидата",
+                    "description": "Анкета для кандидата",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/applicantapimodels.ApplicantSurvey"
+                            "$ref": "#/definitions/applicantapimodels.ApplicantVkSurvey"
                         }
                     ]
                 },
@@ -10027,10 +10305,10 @@ const docTemplate = `{
                     ]
                 },
                 "survey": {
-                    "description": "анкета для кандидата",
+                    "description": "Анкета для кандидата",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/applicantapimodels.ApplicantSurvey"
+                            "$ref": "#/definitions/applicantapimodels.ApplicantVkSurvey"
                         }
                     ]
                 },
@@ -10051,6 +10329,33 @@ const docTemplate = `{
                 "vacancy_name": {
                     "description": "Название вакансии",
                     "type": "string"
+                }
+            }
+        },
+        "applicantapimodels.ApplicantVkSurvey": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "integer"
+                },
+                "statusDescription": {
+                    "type": "string"
+                },
+                "step0": {
+                    "description": "ВК. Шаг 0. анкета и ответы кандидата на типовые вопросы",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/surveyapimodels.VkStep0"
+                        }
+                    ]
+                },
+                "step1": {
+                    "description": "ВК. Шаг 1. Генерация черновика скрипта (15 вопросов и текст сценария для интервью)",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/surveyapimodels.VkStep1View"
+                        }
+                    ]
                 }
             }
         },
@@ -11240,10 +11545,12 @@ const docTemplate = `{
                 "HHClientSecret",
                 "AvitoClientID",
                 "AvitoClientSecret",
-                "SpaceSenderEmail"
+                "SpaceSenderEmail",
+                "SpaceSupportEmail"
             ],
             "x-enum-comments": {
                 "SpaceSenderEmail": "почта, с которой отправляются письма кандидатам",
+                "SpaceSupportEmail": "почта, тех поддержки",
                 "YandexGPTPromtSetting": "Инструкции для Yandex GPT при генерации описания вакансии"
             },
             "x-enum-varnames": [
@@ -11252,7 +11559,8 @@ const docTemplate = `{
                 "HhClientSecretSetting",
                 "AvitoClientIDSetting",
                 "AvitoClientSecretSetting",
-                "SpaceSenderEmail"
+                "SpaceSenderEmail",
+                "SpaceSupportEmail"
             ]
         },
         "models.TemplateType": {
@@ -11972,6 +12280,10 @@ const docTemplate = `{
                     "description": "Внутренний номер",
                     "type": "string"
                 },
+                "job_title_id": {
+                    "description": "Идентификатор должности",
+                    "type": "string"
+                },
                 "last_name": {
                     "description": "Фамилия",
                     "type": "string"
@@ -12012,6 +12324,10 @@ const docTemplate = `{
                 "is_email_verified": {
                     "description": "Email подтвержден",
                     "type": "boolean"
+                },
+                "job_title_id": {
+                    "description": "Идентификатор должности",
+                    "type": "string"
                 },
                 "job_title_name": {
                     "description": "Должность",
@@ -12185,6 +12501,156 @@ const docTemplate = `{
                 }
             }
         },
+        "surveyapimodels.VkStep0": {
+            "type": "object",
+            "properties": {
+                "answers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/surveyapimodels.VkStep0Answer"
+                    }
+                },
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/surveyapimodels.VkStep0Question"
+                    }
+                },
+                "url": {
+                    "description": "Ссылка на анкету c типовыми вопросами для кандидата",
+                    "type": "string"
+                }
+            }
+        },
+        "surveyapimodels.VkStep0Answer": {
+            "type": "object",
+            "properties": {
+                "answer": {
+                    "description": "Варианты ответов",
+                    "type": "string"
+                },
+                "question_id": {
+                    "description": "Идентификатор вопроса",
+                    "type": "string"
+                }
+            }
+        },
+        "surveyapimodels.VkStep0Question": {
+            "type": "object",
+            "properties": {
+                "answers": {
+                    "description": "Варианты ответов",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "question_id": {
+                    "description": "Идентификатор вопроса",
+                    "type": "string"
+                },
+                "question_text": {
+                    "description": "Текст вопроса",
+                    "type": "string"
+                },
+                "question_type": {
+                    "description": "Тип вопроса",
+                    "type": "string"
+                }
+            }
+        },
+        "surveyapimodels.VkStep0SurveyAnswers": {
+            "type": "object",
+            "properties": {
+                "answers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/surveyapimodels.VkStep0Answer"
+                    }
+                }
+            }
+        },
+        "surveyapimodels.VkStep0SurveyView": {
+            "type": "object",
+            "properties": {
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/surveyapimodels.VkStep0Question"
+                    }
+                }
+            }
+        },
+        "surveyapimodels.VkStep1": {
+            "type": "object",
+            "properties": {
+                "comments": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/surveyapimodels.VkStep1Question"
+                    }
+                },
+                "script_intro": {
+                    "type": "string"
+                },
+                "script_outro": {
+                    "type": "string"
+                }
+            }
+        },
+        "surveyapimodels.VkStep1Question": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "Идентификатор вопроса",
+                    "type": "string"
+                },
+                "order": {
+                    "type": "integer"
+                },
+                "text": {
+                    "description": "Текст вопроса",
+                    "type": "string"
+                }
+            }
+        },
+        "surveyapimodels.VkStep1View": {
+            "type": "object",
+            "properties": {
+                "comments": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "date_of_invitation": {
+                    "description": "Дата отправки приглашения",
+                    "type": "string"
+                },
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/surveyapimodels.VkStep1Question"
+                    }
+                },
+                "script_intro": {
+                    "type": "string"
+                },
+                "script_outro": {
+                    "type": "string"
+                },
+                "url": {
+                    "description": "Ссылка на анкету для видео интервью",
+                    "type": "string"
+                }
+            }
+        },
         "vacancyapimodels.ApprovalStageData": {
             "type": "object",
             "properties": {
@@ -12230,6 +12696,23 @@ const docTemplate = `{
         "vacancyapimodels.Comment": {
             "type": "object",
             "properties": {
+                "author_id": {
+                    "type": "string"
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                }
+            }
+        },
+        "vacancyapimodels.CommentView": {
+            "type": "object",
+            "properties": {
+                "author_fio": {
+                    "type": "string"
+                },
                 "author_id": {
                     "type": "string"
                 },
@@ -13034,6 +13517,12 @@ const docTemplate = `{
                     "description": "ид города",
                     "type": "string"
                 },
+                "comments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/vacancyapimodels.CommentView"
+                    }
+                },
                 "company_id": {
                     "description": "ид компании",
                     "type": "string"
@@ -13221,7 +13710,7 @@ const docTemplate = `{
                 "comments": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/vacancyapimodels.Comment"
+                        "$ref": "#/definitions/vacancyapimodels.CommentView"
                     }
                 },
                 "company_id": {
