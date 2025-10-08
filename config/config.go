@@ -70,6 +70,9 @@ type Configuration struct {
 			NumPredict    int     `default:"6144" env:"OLLAMA_NUM_PREDICT"`
 			RepeatPenalty float64 `default:"1.1" env:"OLLAMA_REPEAT_PENALTY"`
 		}
+		Masai struct{
+			URL     string  `default:"http://127.0.0.1:7860/gradio_api" env:"MASAI_URL"`
+		}
 	}
 	HH struct {
 		RedirectUri string `default:"https://a.hr-tools.pro/api/v1/oauth/callback/hh" env:"HH_REDIRECT"`

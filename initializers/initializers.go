@@ -38,11 +38,13 @@ import (
 	applicantsurveyscoreworker "hr-tools-backend/lib/survey/applicant-survey-score-worker"
 	applicantsurveysuggestworker "hr-tools-backend/lib/survey/applicant-survey-suggest-worker"
 	applicantsurveyworker "hr-tools-backend/lib/survey/applicant-survey-worker"
+	"hr-tools-backend/lib/utils/lock"
 	vacancyhandler "hr-tools-backend/lib/vacancy"
 	vacancyreqhandler "hr-tools-backend/lib/vacancy-req"
 	"hr-tools-backend/lib/vk"
 	vkstep0runworker "hr-tools-backend/lib/vk/step0-run-worker"
 	vkstep1runworker "hr-tools-backend/lib/vk/step1-run-worker"
+	vkstep9runworker "hr-tools-backend/lib/vk/step9-run-worker"
 	connectionhub "hr-tools-backend/lib/ws/hub/connection-hub"
 	"time"
 )
@@ -56,6 +58,7 @@ func InitAllServices(ctx context.Context) {
 	InitS3()
 	InitSmtp()
 	connectionhub.Init()
+	lock.InitResourceLock(ctx)
 	filestorage.NewHandler()
 	cityprovider.NewHandler()
 	pushhandler.NewHandler()
@@ -85,7 +88,7 @@ func InitAllServices(ctx context.Context) {
 	analytics.NewHandler()
 	negotiationchathandler.NewHandler()
 	survey.NewHandler()
-	vk.NewHandler()
+	vk.NewHandler(ctx)
 	supersethandler.NewHandler(config.Conf.Superset.Host, config.Conf.Superset.Username, config.Conf.Superset.Password, config.Conf.Superset.DashboardParams)
 	go initWorkers(ctx)
 }
@@ -94,12 +97,16 @@ func InitAllServices(ctx context.Context) {
 func initWorkers(ctx context.Context) {
 	//Задача проверки статусов модерации/публикации в HH/Avito
 	externalserviceworker.StartWorker(ctx)
-	
+
 	// Задача  ВК. Шаг 0. отправка ссылки на анкету с типовыми вопросами
 	vkstep0runworker.StartWorker(ctx)
 
 	// Задача ВК. Шаг 1. Генерация черновика скрипта
 	vkstep1runworker.StartWorker(ctx)
+
+
+	// Задача ВК. Шаг 9. Транскрибация видео ответов
+	vkstep9runworker.StartWorker(ctx)
 
 	if makeTimeGap(ctx) {
 		//Задача получения откликов по вакансиям из HH/Avito

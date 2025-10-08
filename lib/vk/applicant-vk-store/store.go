@@ -12,6 +12,7 @@ type Provider interface {
 	GetByApplicantID(spaceID, applicantID string) (*dbmodels.ApplicantVkStep, error)
 	Delete(spaceID, id string) error
 	DeleteByApplicantID(spaceID, applicantID string) error
+	GetByStatus(status dbmodels.StepStatus) ([]dbmodels.ApplicantVkStep, error)
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -99,4 +100,16 @@ func (i impl) DeleteByApplicantID(spaceID, applicantID string) error {
 		return err
 	}
 	return nil
+}
+
+func (i impl) GetByStatus(status dbmodels.StepStatus) ([]dbmodels.ApplicantVkStep, error) {
+	list := []dbmodels.ApplicantVkStep{}
+	tx := i.db.
+		Model(dbmodels.ApplicantVkStep{}).
+		Where("status = ?", status)
+	err := tx.Find(&list).Error
+	if err != nil {
+		return nil, err
+	}
+	return list, nil
 }

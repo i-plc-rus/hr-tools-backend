@@ -2,15 +2,17 @@ package vkstep1runworker
 
 import (
 	"context"
-	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
 	applicantstore "hr-tools-backend/lib/applicant/store"
+	"hr-tools-backend/lib/utils/helpers"
 	"hr-tools-backend/lib/vk"
 	applicantvkstore "hr-tools-backend/lib/vk/applicant-vk-store"
 	"hr-tools-backend/models"
 	dbmodels "hr-tools-backend/models/db"
 	"runtime/debug"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Задача ВК. Шаг 1. Генерация черновика скрипта
@@ -55,14 +57,14 @@ func (i impl) run(ctx context.Context) {
 			return
 		case <-time.After(period):
 			logger.Info("Задача запущена")
-			i.handle()
+			i.handle(ctx)
 			logger.Info("Задача выполнена")
 		}
 		period = handlePeriod
 	}
 }
 
-func (i impl) handle() {
+func (i impl) handle(ctx context.Context) {
 	logger := i.getLogger()
 	//Получаем список анкет кандидатов для отпрвыки типовых вопросов
 	list, err := i.applicantStore.ListOfActiveApplicants()
@@ -71,6 +73,9 @@ func (i impl) handle() {
 		return
 	}
 	for _, applicant := range list {
+		if helpers.IsContextDone(ctx) {
+			break
+		}
 		if applicant.Status != models.ApplicantStatusInProcess {
 			continue
 		}
