@@ -12,16 +12,17 @@ import (
 type StepStatus int
 
 const (
-	VkStep0NotSent         = 0  //"Шаг0. Вопросы не отправлены"
-	VkStep0Sent            = 10 //"Шаг0. Вопросы отправлены"
-	VkStep0Answered        = 20 //"Шаг0. Получены ответы"
-	VkStep0Refuse          = 30 //"Шаг0. Кандидат не прошел"
-	VkStep0Done            = 40 //"Шаг0. Кандидат прошел"
-	VkStep1Draft           = 50 //"Шаг1. Получен черновика скрипта"
-	VkStep1DraftFail       = 60 //"Шаг1. Ошибка получения черновика скрипта"
-	VkStep1Regen           = 70 //"Шаг1. Перегенерация"
-	VkStep1Approved        = 80 //"Шаг1. Список вопросов подтвержден"
-	VkStepVideoSuggestSent = 90 //"Шаг7. Приглашение на видео интервью отправлено кандидату"
+	VkStep0NotSent          = 0   //"Шаг0. Вопросы не отправлены"
+	VkStep0Sent             = 10  //"Шаг0. Вопросы отправлены"
+	VkStep0Answered         = 20  //"Шаг0. Получены ответы"
+	VkStep0Refuse           = 30  //"Шаг0. Кандидат не прошел"
+	VkStep0Done             = 40  //"Шаг0. Кандидат прошел"
+	VkStep1Draft            = 50  //"Шаг1. Получен черновика скрипта"
+	VkStep1DraftFail        = 60  //"Шаг1. Ошибка получения черновика скрипта"
+	VkStep1Regen            = 70  //"Шаг1. Перегенерация"
+	VkStep1Approved         = 80  //"Шаг1. Список вопросов подтвержден"
+	VkStepVideoSuggestSent  = 90  //"Шаг7. Приглашение на видео интервью отправлено кандидату"
+	VkStepVideoTranscripted = 100 //"Шаг9. Транскрибация выполнена"
 )
 
 func (s StepStatus) String() string {
@@ -46,6 +47,8 @@ func (s StepStatus) String() string {
 		return "Шаг1. Список вопросов подтвержден"
 	case VkStepVideoSuggestSent:
 		return "Шаг7. Приглашение на видео интервью отправлено кандидату"
+	case VkStepVideoTranscripted:
+		return "Шаг9. Транскрибация видео выполнена"
 	default:
 		return "Не известный статус"
 	}
@@ -130,8 +133,7 @@ type VideoInterview struct {
 }
 
 type VkVideoAnswer struct {
-	FileID         string `json:"file_id"`         // Идентификатор файла
-	TranscriptText string `json:"transcript_text"` // Текст ответа
+	FileID string `json:"file_id"` // Идентификатор файла
 }
 
 func (j VideoInterview) Value() (driver.Value, error) {
@@ -144,4 +146,16 @@ func (j *VideoInterview) Scan(value interface{}) error {
 		return err
 	}
 	return nil
+}
+
+type ApplicantVkVideoSurvey struct {
+	BaseModel
+	ApplicantVkStepID    string
+	QuestionID           string
+	Error                string
+	TranscriptText       string
+	VoiceAmplitudeFileID string
+	FramesFileID         string
+	EmotionFileID        string
+	SentimentFileID      string
 }

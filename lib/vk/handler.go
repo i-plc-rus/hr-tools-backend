@@ -58,8 +58,9 @@ const (
 	Step0Done          = "Ваша анкета успешно заполнена, спасибо за уделенное время."
 )
 
-func NewHandler() {
+func NewHandler(ctx context.Context) {
 	i := impl{
+		ctx:                    ctx,
 		vacancyStore:           vacancystore.NewInstance(db.DB),
 		applicantStore:         applicantstore.NewInstance(db.DB),
 		vkStore:                applicantvkstore.NewInstance(db.DB),
@@ -70,7 +71,7 @@ func NewHandler() {
 		spaceSettingsStore:     spacesettingsstore.NewInstance(db.DB),
 	}
 	if config.Conf.AI.VkStep1AI == "Ollama" {
-		i.vkAiProvider = ollamasearchhandler.GetHandler()
+		i.vkAiProvider = ollamasearchhandler.GetHandler(ctx)
 	} else {
 		i.vkAiProvider = gpthandler.GetHandler(false)
 	}
@@ -78,6 +79,7 @@ func NewHandler() {
 }
 
 type impl struct {
+	ctx                    context.Context
 	vacancyStore           vacancystore.Provider
 	applicantStore         applicantstore.Provider
 	vkStore                applicantvkstore.Provider
@@ -285,6 +287,9 @@ func (i impl) RunStep1(applicant dbmodels.Applicant) (ok bool, err error) {
 	// запуск ИИ
 	resp, err := i.vkAiProvider.VkStep1(vacancy.SpaceID, vacancy.ID, aiData)
 	if err != nil {
+		if helpers.IsContextDone(i.ctx) {
+			return false, nil
+		}
 		i.step1Fail(applicant, *rec)
 		return false, errors.Wrap(err, "ошибка вызова ИИ при генерации черновика скрипта")
 	}
@@ -427,6 +432,9 @@ func (i impl) RunRegenStep1(applicant dbmodels.Applicant) (ok bool, err error) {
 	// запуск ИИ
 	newQuestions, comments, err := i.vkAiProvider.VkStep1Regen(vacancy.SpaceID, vacancy.ID, aiData)
 	if err != nil {
+		if helpers.IsContextDone(i.ctx) {
+			return false, nil
+		}
 		i.step1Fail(applicant, rec)
 		return false, errors.Wrap(err, "ошибка вызова ИИ при перегенерации черновика скрипта")
 	}

@@ -140,6 +140,14 @@ func AutoMigrateDB() error {
 		return errors.Wrap(err, "ошибка создания структуры QuestionHistory")
 	}
 
+	if err := DB.AutoMigrate(&dbmodels.MasaiSession{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры MasaiSession")
+	}
+	
+	if err := DB.AutoMigrate(&dbmodels.ApplicantVkVideoSurvey{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры ApplicantVkVideoSurvey")
+	}
+
 	log.Info("Миграция прошла успешно")
 	return nil
 }

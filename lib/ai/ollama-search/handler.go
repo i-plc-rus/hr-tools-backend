@@ -2,9 +2,11 @@ package ollamasearchhandler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"hr-tools-backend/config"
+	"hr-tools-backend/lib/utils/lock"
 	ollamamodels "hr-tools-backend/models/api/ollama"
 	surveyapimodels "hr-tools-backend/models/api/survey"
 	"io"
@@ -17,17 +19,22 @@ import (
 )
 
 type impl struct {
+	ctx         context.Context
 	ollamaURL   string
 	ollamaModel string
+	ops         ollamamodels.Options
 }
 
-func GetHandler() *impl {
+func GetHandler(ctx context.Context) *impl {
 	log.Infof("Инициализация ИИ: %v, модель: %v", config.Conf.AI.Ollama.OllamaURL, config.Conf.AI.Ollama.OllamaModel)
 	return &impl{
+		ctx:         ctx,
 		ollamaURL:   config.Conf.AI.Ollama.OllamaURL,
 		ollamaModel: config.Conf.AI.Ollama.OllamaModel,
+		ops:         ollamamodels.GetDeepSeekConfig(),
 	}
 }
+
 func (i impl) getLogger() *log.Entry {
 	return log.
 		WithField("ai", "ollama").
@@ -122,11 +129,16 @@ func (i impl) genVk1IntroOutro(aiData surveyapimodels.AiData) (intro, outro stri
 }
 
 func (i impl) QueryOllama(prompt string) (string, error) {
+
+	if !lock.Resource.Acquire(i.ctx, "QueryOllama") {
+		return "", errors.New("ошибка доступа к ресурсам - контекст завершен")
+	}
+	defer lock.Resource.Release("QueryOllama")
 	request := ollamamodels.OllamaRequest{
 		Model:   i.ollamaModel,
 		Prompt:  prompt,
 		Stream:  false,
-		Options: ollamamodels.GetDeepSeekConfig(),
+		Options: i.ops,
 	}
 
 	jsonData, err := json.Marshal(request)
@@ -134,7 +146,13 @@ func (i impl) QueryOllama(prompt string) (string, error) {
 		return "", err
 	}
 
-	resp, err := http.Post(i.ollamaURL, "application/json", bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(i.ctx, "POST", i.ollamaURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
