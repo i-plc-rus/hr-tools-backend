@@ -552,6 +552,9 @@ func (i impl) UploadVideoAnswer(ctx context.Context, id, questionID string, file
 	if rec == nil {
 		return errors.New("анкета не найдена")
 	}
+	if answer, ok := rec.VideoInterview.Answers[questionID]; ok && answer.FileID != "" {
+		return errors.New("ответ уже сохранен")
+	}
 
 	// Проверяем тип файла
 	contentType := helpers.GetFileContentType(fileHeader)
