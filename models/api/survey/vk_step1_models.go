@@ -8,11 +8,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type VkAiProvider interface {
-	VkStep1(spaceID, vacancyID string, aiData AiData) (resp VkStep1, err error)
-	VkStep1Regen(spaceID, vacancyID string, aiData AiData) (newQuestions []VkStep1Question, comments map[string]string, err error)
-}
-
 type VkStep1 struct {
 	Questions   []VkStep1Question `json:"questions"`
 	ScriptIntro string            `json:"script_intro"`

@@ -1,15 +1,18 @@
 package vkvideoanalyzestore
 
 import (
+	dbmodels "hr-tools-backend/models/db"
+
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
-	dbmodels "hr-tools-backend/models/db"
 )
 
 type Provider interface {
 	Save(rec dbmodels.ApplicantVkVideoSurvey) (id string, err error)
 	GetByStepQuestion(applicantVkStepID, questionID string) (*dbmodels.ApplicantVkVideoSurvey, error)
 	GetByApplicantVkStep(applicantVkStepID string) ([]dbmodels.ApplicantVkVideoSurvey, error)
+	GetForScore() ([]dbmodels.ApplicantVkVideoSurvey, error)
+	GetScoredCount(applicantVkStepID string) (int64, error)
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -39,8 +42,6 @@ func (i impl) Save(rec dbmodels.ApplicantVkVideoSurvey) (id string, err error) {
 	return rec.ID, nil
 }
 
-
-
 func (i impl) GetByStepQuestion(applicantVkStepID, questionID string) (*dbmodels.ApplicantVkVideoSurvey, error) {
 	rec := dbmodels.ApplicantVkVideoSurvey{}
 	err := i.db.
@@ -67,4 +68,32 @@ func (i impl) GetByApplicantVkStep(applicantVkStepID string) ([]dbmodels.Applica
 		return nil, err
 	}
 	return list, nil
+}
+
+func (i impl) GetForScore() ([]dbmodels.ApplicantVkVideoSurvey, error) {
+	list := []dbmodels.ApplicantVkVideoSurvey{}
+	tx := i.db.
+		Model(dbmodels.ApplicantVkVideoSurvey{}).
+		Where("is_semantic_evaluated = ?", false).
+		Where("error = ?", "")
+	err := tx.Find(&list).Error
+	if err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (i impl) GetScoredCount(applicantVkStepID string) (int64, error) {
+	var rowCount int64
+	tx := i.db.
+		Model(dbmodels.ApplicantVkVideoSurvey{}).
+		Where("applicant_vk_step_id = ?", applicantVkStepID).
+		Where("is_semantic_evaluated = ?", true)
+
+	err := tx.Count(&rowCount).Error
+	if err != nil {
+		return 0, err
+	}
+	return rowCount, nil
+
 }

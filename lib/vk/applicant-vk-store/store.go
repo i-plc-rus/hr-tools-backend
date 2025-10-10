@@ -1,9 +1,11 @@
 package applicantvkstore
 
 import (
+	dbmodels "hr-tools-backend/models/db"
+
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
-	dbmodels "hr-tools-backend/models/db"
+	"gorm.io/gorm/clause"
 )
 
 type Provider interface {
@@ -46,6 +48,7 @@ func (i impl) GetByID(id string) (*dbmodels.ApplicantVkStep, error) {
 	rec := dbmodels.ApplicantVkStep{}
 	err := i.db.
 		Where("id = ?", id).
+		Preload(clause.Associations).
 		First(&rec).
 		Error
 	if err != nil {
@@ -62,6 +65,7 @@ func (i impl) GetByApplicantID(spaceID, applicantID string) (*dbmodels.Applicant
 	err := i.db.
 		Where("space_id = ?", spaceID).
 		Where("applicant_id = ?", applicantID).
+		Preload(clause.Associations).
 		First(&rec).
 		Error
 	if err != nil {
@@ -106,7 +110,8 @@ func (i impl) GetByStatus(status dbmodels.StepStatus) ([]dbmodels.ApplicantVkSte
 	list := []dbmodels.ApplicantVkStep{}
 	tx := i.db.
 		Model(dbmodels.ApplicantVkStep{}).
-		Where("status = ?", status)
+		Where("status = ?", status).
+		Preload(clause.Associations)
 	err := tx.Find(&list).Error
 	if err != nil {
 		return nil, err

@@ -64,7 +64,7 @@ func (i impl) VkStep1(spaceID, vacancyID string, aiData surveyapimodels.AiData) 
 }
 
 func (i impl) VkStep1Regen(spaceID, vacancyID string, aiData surveyapimodels.AiData) (newQuestions []surveyapimodels.VkStep1Question, comments map[string]string, err error) {
-	prompt := fmt.Sprintf(step1QRegenPattern, aiData.VacancyInfo, aiData.ApplicantInfo, aiData.GeneratedQuestions)
+	prompt := fmt.Sprintf(step1QRegenTemplate, aiData.VacancyInfo, aiData.ApplicantInfo, aiData.GeneratedQuestions)
 
 	now := time.Now()
 	// запрос к локальной модели
@@ -81,6 +81,24 @@ func (i impl) VkStep1Regen(spaceID, vacancyID string, aiData surveyapimodels.AiD
 	return ParseVk1QuestionsAIResponse(response)
 }
 
+func (i impl) VkStep9Score(aiData surveyapimodels.SemanticData) (scoreResult surveyapimodels.VkStep9ScoreResult, err error) {
+	prompt := fmt.Sprintf(step9semanticScoreTemplate, aiData.Question, aiData.Comment, aiData.Answer, "%")
+
+	now := time.Now()
+	// запрос к локальной модели
+	response, err := i.QueryOllama(prompt)
+	if err != nil {
+		return surveyapimodels.VkStep9ScoreResult{}, errors.Wrap(err, "ошибка оценки ответа кандидата")
+	}
+	i.getLogger().
+		WithField("prompt", prompt).
+		WithField("answer", response).
+		WithField("answer_duration_sec", time.Now().Sub(now).Seconds()).
+		Info("Ответ AI на запрос VkStep9Score")
+
+	return ParseVkStep9ScoreAIResponse(response)
+}
+
 func (i impl) checkConfig() error {
 	if i.ollamaURL == "" {
 		return errors.New("не указан url для ollama")
@@ -92,7 +110,7 @@ func (i impl) checkConfig() error {
 }
 
 func (i impl) genVk1Questions(aiData surveyapimodels.AiData) (questions []surveyapimodels.VkStep1Question, comments map[string]string, err error) {
-	prompt := fmt.Sprintf(step1QPattern, aiData.VacancyInfo, aiData.Requirements, aiData.ApplicantInfo, aiData.Questions, aiData.ApplicantAnswers)
+	prompt := fmt.Sprintf(step1QTemplate, aiData.VacancyInfo, aiData.Requirements, aiData.ApplicantInfo, aiData.Questions, aiData.ApplicantAnswers)
 
 	now := time.Now()
 	// запрос к локальной модели
@@ -110,7 +128,7 @@ func (i impl) genVk1Questions(aiData surveyapimodels.AiData) (questions []survey
 }
 
 func (i impl) genVk1IntroOutro(aiData surveyapimodels.AiData) (intro, outro string, err error) {
-	prompt := fmt.Sprintf(step1IntroOutroPattern, aiData.VacancyInfo, aiData.ApplicantInfo)
+	prompt := fmt.Sprintf(step1IntroOutroTemplate, aiData.VacancyInfo, aiData.ApplicantInfo)
 
 	now := time.Now()
 	// запрос к локальной модели
@@ -206,6 +224,16 @@ func ParseVk1QuestionsAIResponse(response string) (questions []surveyapimodels.V
 		comments[question.ID] = question.Comment
 	}
 	return questions, comments, nil
+}
+
+func ParseVkStep9ScoreAIResponse(response string) (scoreResult surveyapimodels.VkStep9ScoreResult, err error) {
+	answer := extractAnswer(response)
+	answer = replaceAnswerFormatTag(answer)
+	err = json.Unmarshal([]byte(answer), &scoreResult)
+	if err != nil {
+		return surveyapimodels.VkStep9ScoreResult{}, err
+	}
+	return scoreResult, nil
 }
 
 func ParseVk1IntroOutroAIResponse(response string) (intro, outro string, err error) {
