@@ -12,17 +12,18 @@ import (
 type StepStatus int
 
 const (
-	VkStep0NotSent          = 0   //"Шаг0. Вопросы не отправлены"
-	VkStep0Sent             = 10  //"Шаг0. Вопросы отправлены"
-	VkStep0Answered         = 20  //"Шаг0. Получены ответы"
-	VkStep0Refuse           = 30  //"Шаг0. Кандидат не прошел"
-	VkStep0Done             = 40  //"Шаг0. Кандидат прошел"
-	VkStep1Draft            = 50  //"Шаг1. Получен черновика скрипта"
-	VkStep1DraftFail        = 60  //"Шаг1. Ошибка получения черновика скрипта"
-	VkStep1Regen            = 70  //"Шаг1. Перегенерация"
-	VkStep1Approved         = 80  //"Шаг1. Список вопросов подтвержден"
-	VkStepVideoSuggestSent  = 90  //"Шаг7. Приглашение на видео интервью отправлено кандидату"
-	VkStepVideoTranscripted = 100 //"Шаг9. Транскрибация выполнена"
+	VkStep0NotSent               = 0   //"Шаг0. Вопросы не отправлены"
+	VkStep0Sent                  = 10  //"Шаг0. Вопросы отправлены"
+	VkStep0Answered              = 20  //"Шаг0. Получены ответы"
+	VkStep0Refuse                = 30  //"Шаг0. Кандидат не прошел"
+	VkStep0Done                  = 40  //"Шаг0. Кандидат прошел"
+	VkStep1Draft                 = 50  //"Шаг1. Получен черновика скрипта"
+	VkStep1DraftFail             = 60  //"Шаг1. Ошибка получения черновика скрипта"
+	VkStep1Regen                 = 70  //"Шаг1. Перегенерация"
+	VkStep1Approved              = 80  //"Шаг1. Список вопросов подтвержден"
+	VkStepVideoSuggestSent       = 90  //"Шаг7. Приглашение на видео интервью отправлено кандидату"
+	VkStepVideoTranscripted      = 100 //"Шаг9. Транскрибация выполнена"
+	VkStepVideoSemanticEvaluated = 110 //"Шаг9. Семантическая оценка расчитана"
 )
 
 func (s StepStatus) String() string {
@@ -49,6 +50,8 @@ func (s StepStatus) String() string {
 		return "Шаг7. Приглашение на видео интервью отправлено кандидату"
 	case VkStepVideoTranscripted:
 		return "Шаг9. Транскрибация видео выполнена"
+	case VkStepVideoSemanticEvaluated:
+		return "Шаг9. Семантическая оценка ответов расчитана"
 	default:
 		return "Не известный статус"
 	}
@@ -56,12 +59,13 @@ func (s StepStatus) String() string {
 
 type ApplicantVkStep struct {
 	BaseSpaceModel
-	ApplicantID              string `gorm:"type:varchar(36);index"`
-	Status                   StepStatus
-	Step0                    VkStep0        `gorm:"type:jsonb"`
-	Step1                    VkStep1        `gorm:"type:jsonb"`
-	VideoInterview           VideoInterview `gorm:"type:jsonb"`
-	VideoInterviewInviteDate time.Time
+	ApplicantID               string `gorm:"type:varchar(36);index"`
+	Status                    StepStatus
+	Step0                     VkStep0                  `gorm:"type:jsonb"`
+	Step1                     VkStep1                  `gorm:"type:jsonb"` // вопросы для видео интервью
+	VideoInterview            VideoInterview           `gorm:"type:jsonb"` // ссылки на файлы с видео ответами
+	VideoInterviewInviteDate  time.Time                // время отправки ссылки на видео интервью
+	VideoInterviewEvaluations []ApplicantVkVideoSurvey `gorm:"foreignKey:ApplicantVkStepID"` // Транскрибация и семантическая оценка ответов видео интервью
 }
 
 func (j VkStep0) Value() (driver.Value, error) {
@@ -158,4 +162,7 @@ type ApplicantVkVideoSurvey struct {
 	FramesFileID         string
 	EmotionFileID        string
 	SentimentFileID      string
+	IsSemanticEvaluated  bool
+	Similarity           int    // совпадение
+	CommentForSimilarity string // краткий комментарий оценки
 }

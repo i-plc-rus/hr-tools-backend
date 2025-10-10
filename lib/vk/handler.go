@@ -20,6 +20,7 @@ import (
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	applicantvkstore "hr-tools-backend/lib/vk/applicant-vk-store"
 	questionhistorystore "hr-tools-backend/lib/vk/question-history-store"
+	vkvideoanalyzestore "hr-tools-backend/lib/vk/vk-video-analyze-store"
 	"hr-tools-backend/models"
 	negotiationapimodels "hr-tools-backend/models/api/negotiation"
 	surveyapimodels "hr-tools-backend/models/api/survey"
@@ -47,6 +48,7 @@ type Provider interface {
 	GetVideoSurvey(id string) (*surveyapimodels.VkStep1SurveyView, error)
 	UploadVideoAnswer(ctx context.Context, id, questionID string, fileHeader *multipart.FileHeader) error
 	GetVideoAnswer(ctx context.Context, id, questionID string) (reader io.Reader, err error)
+	ScoreAnswer(videoSurveyRec dbmodels.ApplicantVkVideoSurvey) (err error)
 }
 
 var Instance Provider
@@ -69,6 +71,7 @@ func NewHandler(ctx context.Context) {
 		messageTemplate:        messagetemplate.Instance,
 		questionHistoryStore:   questionhistorystore.NewInstance(db.DB),
 		spaceSettingsStore:     spacesettingsstore.NewInstance(db.DB),
+		vkVideoAnalyzeStore:    vkvideoanalyzestore.NewInstance(db.DB),
 	}
 	if config.Conf.AI.VkStep1AI == "Ollama" {
 		i.vkAiProvider = ollamasearchhandler.GetHandler(ctx)
@@ -89,6 +92,7 @@ type impl struct {
 	vkAiProvider           surveyapimodels.VkAiProvider // при необходимости поменяем пакет имплементации, пока через настройку config.Conf.AI.VkStep1AI
 	questionHistoryStore   questionhistorystore.Provider
 	spaceSettingsStore     spacesettingsstore.Provider
+	vkVideoAnalyzeStore    vkvideoanalyzestore.Provider
 }
 
 func (i impl) getLogger(spaceID, applicantID string) *logrus.Entry {
@@ -612,6 +616,51 @@ func (i impl) GetVideoAnswer(ctx context.Context, id, questionID string) (reader
 	return nil, nil
 }
 
+func (i impl) ScoreAnswer(videoSurveyRec dbmodels.ApplicantVkVideoSurvey) (err error) {
+	// получаем анкету с вопросами
+	rec, err := i.vkStore.GetByID(videoSurveyRec.ApplicantVkStepID)
+	if err != nil {
+		i.failScoreAnswer(videoSurveyRec, "ошибка получения анкеты кандидата")
+		return errors.Wrap(err, "ошибка получения анкеты кандидата")
+	}
+	// заполняем данные для промта, вопрос/коммент/ответ
+	aiData := surveyapimodels.SemanticData{
+		Answer: videoSurveyRec.TranscriptText,
+	}
+	for _, question := range rec.Step1.Questions {
+		if question.ID == videoSurveyRec.QuestionID {
+			aiData.Question = question.Text
+			break
+		}
+	}
+	if aiData.Question == "" {
+		i.failScoreAnswer(videoSurveyRec, "вопрос не найден")
+		return errors.New("вопрос не найден")
+	}
+	aiData.Comment = rec.Step1.Comments[videoSurveyRec.QuestionID]
+
+	// вызываем ИИ
+	result, err := i.vkAiProvider.VkStep9Score(aiData)
+	if err != nil {
+		i.failScoreAnswer(videoSurveyRec, "ошибка оценки")
+		return errors.Wrap(err, "ошибка оценки")
+	}
+	logger := i.getLogger(rec.SpaceID, rec.ApplicantID).
+		WithField("question_id", videoSurveyRec.QuestionID).
+		WithField("similarity", result.Similarity).
+		WithField("comment_for_similarity", result.Comment)
+
+	logger.Info("получен результат оценки ответа на вопрос")
+	videoSurveyRec.IsSemanticEvaluated = true
+	videoSurveyRec.Similarity = result.Similarity
+	videoSurveyRec.CommentForSimilarity = result.Comment
+	_, err = i.vkVideoAnalyzeStore.Save(videoSurveyRec)
+	if err != nil {
+		return errors.Wrap(err, "ошибка сохранения результата оценки ответа на вопрос")
+	}
+	return nil
+}
+
 func (i impl) sendLink(applicantRec dbmodels.Applicant, chatText, emailText, emailTitle string) (isSend bool) {
 	logger := i.getLogger(applicantRec.SpaceID, applicantRec.ID)
 	if chatText != "" {
@@ -894,4 +943,16 @@ func (i impl) getSupportEmail(spaceID string) (string, error) {
 
 func GetVideoAnswerFileName(applicantID, questionID string) string {
 	return fmt.Sprintf("%v_%v", applicantID, questionID)
+}
+
+func (i impl) failScoreAnswer(rec dbmodels.ApplicantVkVideoSurvey, errMsg string) {
+	rec.Error = errMsg
+	_, err := i.vkVideoAnalyzeStore.Save(rec)
+	if err != nil {
+		log.
+			WithError(err).
+			WithField("vk_step_id", rec.ApplicantVkStepID).
+			WithField("question_id", rec.QuestionID).
+			Error("ошибка сохранения результата оценки ответа")
+	}
 }

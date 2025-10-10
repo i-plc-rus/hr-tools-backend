@@ -20,7 +20,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Задача ВК. Шаг 9. Транскрибация и семантическая оценка
+// Задача ВК. Шаг 9. Транскрибация
 func StartWorker(ctx context.Context) {
 	i := &impl{
 		vkStore:               applicantvkstore.NewInstance(db.DB),
@@ -197,6 +197,7 @@ func (i impl) analyzeVideoAnswer(ctx context.Context, vkStepRec dbmodels.Applica
 		if helpers.IsContextDone(ctx) {
 			return false, nil
 		}
+		i.saveFailAnalize(vkStepRec.ID, questionID, "ошибка анализа видео файла")
 		return true, errors.Wrap(err, "ошибка анализа видео файла")
 	}
 	// анализ заверешен, сохраняем результат
