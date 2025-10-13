@@ -24,6 +24,7 @@ const (
 	VkStepVideoSuggestSent       = 90  //"Шаг7. Приглашение на видео интервью отправлено кандидату"
 	VkStepVideoTranscripted      = 100 //"Шаг9. Транскрибация выполнена"
 	VkStepVideoSemanticEvaluated = 110 //"Шаг9. Семантическая оценка расчитана"
+	VkStep10Filtered             = 120 //"Шаг10. Подсчёт баллов и адаптивный фильтр"
 )
 
 func (s StepStatus) String() string {
@@ -52,6 +53,8 @@ func (s StepStatus) String() string {
 		return "Шаг9. Транскрибация видео выполнена"
 	case VkStepVideoSemanticEvaluated:
 		return "Шаг9. Семантическая оценка ответов расчитана"
+	case VkStep10Filtered:
+		return "Шаг10. Подсчёт баллов завершен"
 	default:
 		return "Не известный статус"
 	}
@@ -66,6 +69,9 @@ type ApplicantVkStep struct {
 	VideoInterview            VideoInterview           `gorm:"type:jsonb"` // ссылки на файлы с видео ответами
 	VideoInterviewInviteDate  time.Time                // время отправки ссылки на видео интервью
 	VideoInterviewEvaluations []ApplicantVkVideoSurvey `gorm:"foreignKey:ApplicantVkStepID"` // Транскрибация и семантическая оценка ответов видео интервью
+	TotalScore                int                      // общий набранный бал за интервью
+	Threshold                 int                      // порог для прохождения
+	Pass                      bool                     // результат: прошел/не прошел
 }
 
 func (j VkStep0) Value() (driver.Value, error) {

@@ -35,15 +35,13 @@ import (
 	spaceusershander "hr-tools-backend/lib/space/users/hander"
 	supersethandler "hr-tools-backend/lib/superset"
 	"hr-tools-backend/lib/survey"
-	applicantsurveyscoreworker "hr-tools-backend/lib/survey/applicant-survey-score-worker"
-	applicantsurveysuggestworker "hr-tools-backend/lib/survey/applicant-survey-suggest-worker"
-	applicantsurveyworker "hr-tools-backend/lib/survey/applicant-survey-worker"
 	"hr-tools-backend/lib/utils/lock"
 	vacancyhandler "hr-tools-backend/lib/vacancy"
 	vacancyreqhandler "hr-tools-backend/lib/vacancy-req"
 	"hr-tools-backend/lib/vk"
 	vkstep0runworker "hr-tools-backend/lib/vk/step0-run-worker"
 	vkstep1runworker "hr-tools-backend/lib/vk/step1-run-worker"
+	vkstep10runworker "hr-tools-backend/lib/vk/step10-run-worker"
 	vkstep9doneworker "hr-tools-backend/lib/vk/step9-done-worker"
 	vkstep9runworker "hr-tools-backend/lib/vk/step9-run-worker"
 	vkstep9scoreworker "hr-tools-backend/lib/vk/step9-score-worker"
@@ -112,6 +110,9 @@ func initWorkers(ctx context.Context) {
 	// Задача ВК. Шаг 9. Cемантическая оценка ответов
 	vkstep9scoreworker.StartWorker(ctx)
 
+	// Задача ВК. Шаг 10. Подсчёт баллов и адаптивный фильтр
+	vkstep10runworker.StartWorker(ctx)
+
 	// Задача ВК. Шаг 9. семантическая оценка для опроса завершена
 	vkstep9doneworker.StartWorker(ctx)
 
@@ -123,18 +124,21 @@ func initWorkers(ctx context.Context) {
 		// Задача получения сообщений из HH/Avito от кандидатов
 		newmsgworker.StartWorker(ctx)
 	}
-	if makeTimeGap(ctx) {
-		// Задача генерации опросов для кандидатов отправивших отклик
-		applicantsurveyworker.StartWorker(ctx)
-	}
-	if makeTimeGap(ctx) {
-		// Задача отправки ссылок на опрос кандидатам
-		applicantsurveysuggestworker.StartWorker(ctx)
-	}
-	if makeTimeGap(ctx) {
-		// Задача оценки кандидатов
-		applicantsurveyscoreworker.StartWorker(ctx)
-	}
+	// Deprecated: используются vkstep
+	/*
+		if makeTimeGap(ctx) {
+			// Задача генерации опросов для кандидатов отправивших отклик
+			applicantsurveyworker.StartWorker(ctx)
+		}
+		if makeTimeGap(ctx) {
+			// Задача отправки ссылок на опрос кандидатам
+			applicantsurveysuggestworker.StartWorker(ctx)
+		}
+		if makeTimeGap(ctx) {
+			// Задача оценки кандидатов
+			applicantsurveyscoreworker.StartWorker(ctx)
+		}
+	*/
 }
 
 func makeTimeGap(ctx context.Context) (canRun bool) {

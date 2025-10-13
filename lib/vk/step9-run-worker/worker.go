@@ -4,39 +4,35 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
 	"hr-tools-backend/db"
 	masaihandler "hr-tools-backend/lib/ai/masai"
 	masaisessionstore "hr-tools-backend/lib/ai/masai/session-store"
 	filestorage "hr-tools-backend/lib/file-storage"
+	baseworker "hr-tools-backend/lib/utils/base-worker"
 	"hr-tools-backend/lib/utils/helpers"
 	applicantvkstore "hr-tools-backend/lib/vk/applicant-vk-store"
 	vkvideoanalyzestore "hr-tools-backend/lib/vk/vk-video-analyze-store"
 	surveyapimodels "hr-tools-backend/models/api/survey"
 	dbmodels "hr-tools-backend/models/db"
-	"runtime/debug"
 	"time"
-
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 )
 
 // Задача ВК. Шаг 9. Транскрибация
 func StartWorker(ctx context.Context) {
 	i := &impl{
+		BaseImpl:              *baseworker.NewInstance("VkStep9Worker", 5*time.Second, 5*time.Minute),
 		vkStore:               applicantvkstore.NewInstance(db.DB),
 		vkAiInterviewProvider: masaihandler.GetHandler(ctx),
 		vkVideoAnalyzeStore:   vkvideoanalyzestore.NewInstance(db.DB),
 		session:               masaisessionstore.NewInstance(db.DB),
 		fileStorage:           filestorage.Instance,
 	}
-	go i.run(ctx)
+	go i.Run(ctx, i.handle)
 }
 
-const (
-	handlePeriod = 5 * time.Minute
-)
-
 type impl struct {
+	baseworker.BaseImpl
 	vkStore               applicantvkstore.Provider
 	vkAiInterviewProvider surveyapimodels.VkAiInterviewProvider
 	vkVideoAnalyzeStore   vkvideoanalyzestore.Provider
@@ -44,39 +40,8 @@ type impl struct {
 	fileStorage           filestorage.Provider
 }
 
-func (i impl) getLogger() *log.Entry {
-	logger := log.
-		WithField("worker_name", "VkStep9Worker")
-	return logger
-}
-
-func (i impl) run(ctx context.Context) {
-	defer func() {
-		if r := recover(); r != nil {
-			i.getLogger().
-				WithField("panic_stack", string(debug.Stack())).
-				Errorf("panic: (%v)", r)
-		}
-	}()
-	period := 5 * time.Second
-	logger := i.getLogger()
-	for {
-		select {
-		// проверяем не завершён ли ещё контекст и выходим, если завершён
-		case <-ctx.Done():
-			logger.Info("Задача остановлена")
-			return
-		case <-time.After(period):
-			logger.Info("Задача запущена")
-			i.handle(ctx)
-			logger.Info("Задача выполнена")
-		}
-		period = handlePeriod
-	}
-}
-
 func (i impl) handle(ctx context.Context) {
-	logger := i.getLogger()
+	logger := i.GetLogger()
 	// Получаем не завершенные запросы
 	sessionRecs, err := i.session.GetAll()
 	if err != nil {
@@ -101,7 +66,7 @@ func (i impl) handle(ctx context.Context) {
 
 			done, err := i.analyzeVideoAnswer(ctx, *vkStepRec, sessionRec.QuestionID, answer)
 			if err != nil {
-				i.getLogger().
+				i.GetLogger().
 					WithError(err).
 					WithField("applicant_id", vkStepRec.ApplicantID).
 					WithField("file_id", answer.FileID).
@@ -150,7 +115,7 @@ func (i impl) analyzeVideoAnswers(ctx context.Context, vkStepRec dbmodels.Applic
 			return false, err
 		}
 		if err != nil {
-			i.getLogger().
+			i.GetLogger().
 				WithError(err).
 				WithField("applicant_id", vkStepRec.ApplicantID).
 				WithField("file_id", answer.FileID).
@@ -208,7 +173,7 @@ func (i impl) analyzeVideoAnswer(ctx context.Context, vkStepRec dbmodels.Applica
 		Error:             "",
 	}
 
-	logger := i.getLogger().
+	logger := i.GetLogger().
 		WithField("applicant_id", vkStepRec.ApplicantID).
 		WithField("question_id", questionID)
 
@@ -262,7 +227,7 @@ func (i impl) saveFailAnalize(vkStepsID, questionID string, errMsg string) {
 	}
 	_, err := i.vkVideoAnalyzeStore.Save(rec)
 	if err != nil {
-		i.getLogger().
+		i.GetLogger().
 			WithError(err).
 			Error("ошибка сохранения результата видео анализа")
 	}
