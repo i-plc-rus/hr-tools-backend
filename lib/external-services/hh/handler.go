@@ -213,7 +213,7 @@ func (i *impl) VacancyUpdate(ctx context.Context, spaceID, vacancyID string) (hM
 	}
 
 	err = i.client.VacancyUpdate(ctx, accessToken, rec.HhID, *request)
-	updMap := map[string]interface{}{
+	updMap := map[string]any{
 		"hh_status": models.VacancyPubStatusModeration,
 	}
 	err = i.vacancyStore.Update(spaceID, vacancyID, updMap)
@@ -552,11 +552,19 @@ func (i *impl) fillAreas(areas []hhapimodels.Area) {
 	}
 }
 
-func (i *impl) getArea(ctx context.Context, city *dbmodels.City) (hhapimodels.DictItem, error) {
+func (i *impl) isCityMapLoaded() (isLoaded bool) {
 	if len(i.cityMap) == 0 {
+		return false
+	}
+	mskID := i.cityMap["Москва"]
+	return mskID != ""
+}
+
+func (i *impl) getArea(ctx context.Context, city *dbmodels.City) (hhapimodels.DictItem, error) {
+	if !i.isCityMapLoaded() {
 		areas, err := i.client.GetAreas(ctx)
 		if err != nil {
-			return hhapimodels.DictItem{}, err
+			return hhapimodels.DictItem{}, errors.Wrap(err, "ошибка получения списка зон из HeadHunter")
 		}
 		for _, area := range areas {
 			if area.Name == "Россия" {
@@ -682,6 +690,11 @@ func (i *impl) fillVacancyData(ctx context.Context, rec *dbmodels.Vacancy) (req 
 	if err != nil {
 		return nil, err.Error()
 	}
+	if area.ID == "" {
+		//сбасываем список городов, возможно не подгрузились все города с ХХ, будет повторная загрузка при следующей публикации
+		i.cityMap = map[string]string{}
+		return nil, "для города публикации не найден идентификатор в HeadHunter"
+	}
 
 	if rec.JobTitle == nil {
 		return nil, "для публикации на HeadHunter, необходимо указать должность"
@@ -702,19 +715,30 @@ func (i *impl) fillVacancyData(ctx context.Context, rec *dbmodels.Vacancy) (req 
 			ID: "open",
 		},
 	}
-	salary := hhapimodels.Salary{Currency: "RUR"}
+	salary := hhapimodels.SalaryRange{
+		Currency: "RUR",
+		Mode: hhapimodels.DictItem{
+			ID: "MONTH",
+		},
+	}
+	employment := rec.Employment.ToHHEmploymentForm()
+	if employment != "" {
+		request.EmploymentFrom = &hhapimodels.DictItem{
+			ID: employment,
+		}
+	}
 	if rec.Salary.InHand != 0 {
-		salary.From = rec.Salary.InHand
-		salary.To = rec.Salary.InHand
+		salary.From = &rec.Salary.InHand
+		salary.To = &rec.Salary.InHand
 		salary.Gross = false
-		request.Salary = &salary
+		request.SalaryRange = &salary
 	} else if rec.Salary.From != 0 || rec.Salary.To != 0 {
-		salary = hhapimodels.Salary{
-			From:  rec.Salary.From,
-			To:    rec.Salary.To,
+		salary = hhapimodels.SalaryRange{
+			From:  &rec.Salary.From,
+			To:    &rec.Salary.To,
 			Gross: true,
 		}
-		request.Salary = &salary
+		request.SalaryRange = &salary
 	}
 	if rec.Schedule != "" {
 		request.Schedule = &hhapimodels.DictItem{ID: string(rec.Schedule)}
