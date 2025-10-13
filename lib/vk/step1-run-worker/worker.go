@@ -4,68 +4,33 @@ import (
 	"context"
 	"hr-tools-backend/db"
 	applicantstore "hr-tools-backend/lib/applicant/store"
+	baseworker "hr-tools-backend/lib/utils/base-worker"
 	"hr-tools-backend/lib/utils/helpers"
 	"hr-tools-backend/lib/vk"
 	applicantvkstore "hr-tools-backend/lib/vk/applicant-vk-store"
 	"hr-tools-backend/models"
 	dbmodels "hr-tools-backend/models/db"
-	"runtime/debug"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // Задача ВК. Шаг 1. Генерация черновика скрипта
 func StartWorker(ctx context.Context) {
 	i := &impl{
+		BaseImpl:       *baseworker.NewInstance("VkStep1Worker", 5*time.Second, 5*time.Minute),
 		applicantStore: applicantstore.NewInstance(db.DB),
 		vkStore:        applicantvkstore.NewInstance(db.DB),
 	}
-	go i.run(ctx)
+	go i.Run(ctx, i.handle)
 }
 
-const (
-	handlePeriod = 5 * time.Minute
-)
-
 type impl struct {
+	baseworker.BaseImpl
 	applicantStore applicantstore.Provider
 	vkStore        applicantvkstore.Provider
 }
 
-func (i impl) getLogger() *log.Entry {
-	logger := log.
-		WithField("worker_name", "VkStep1Worker")
-	return logger
-}
-
-func (i impl) run(ctx context.Context) {
-	defer func() {
-		if r := recover(); r != nil {
-			i.getLogger().
-				WithField("panic_stack", string(debug.Stack())).
-				Errorf("panic: (%v)", r)
-		}
-	}()
-	period := 5 * time.Second
-	logger := i.getLogger()
-	for {
-		select {
-		// проверяем не завершён ли ещё контекст и выходим, если завершён
-		case <-ctx.Done():
-			logger.Info("Задача остановлена")
-			return
-		case <-time.After(period):
-			logger.Info("Задача запущена")
-			i.handle(ctx)
-			logger.Info("Задача выполнена")
-		}
-		period = handlePeriod
-	}
-}
-
 func (i impl) handle(ctx context.Context) {
-	logger := i.getLogger()
+	logger := i.GetLogger()
 	//Получаем список анкет кандидатов для отпрвыки типовых вопросов
 	list, err := i.applicantStore.ListOfActiveApplicants()
 	if err != nil {
