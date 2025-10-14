@@ -156,6 +156,18 @@ func (e Employment) ToString() string {
 	return ""
 }
 
+func (e Employment) ToHHEmploymentForm() string {
+	switch e {
+	case EmploymentTemporary:
+		return "PROJECT"
+	case EmploymentFull:
+		return "FULL"
+	case EmploymentPartial:
+		return "PART"
+	}
+	return ""
+}
+
 func EmploymentSlice() []string {
 	return []string{"Временная", "Полная", "Стажировка", "Частичная", "Волонтерство"}
 }

@@ -34,18 +34,20 @@ func (v VacancyAttach) GetID() (string, error) {
 }
 
 type VacancyPubRequest struct {
+	// required
+	Area              DictItem   `json:"area"`
+	BillingType       DictItem   `json:"billing_type"`
 	Description       string     `json:"description"`
 	Name              string     `json:"name"`
-	Area              DictItem   `json:"area"`
-	Employment        *DictItem  `json:"employment,omitempty"` //Тип занятости
-	Schedule          *DictItem  `json:"schedule,omitempty"`   // График работы
-	Experience        *DictItem  `json:"experience,omitempty"` // Опыт работы
-	Salary            *Salary    `json:"salary,omitempty"`
-	Contacts          *Contacts  `json:"contacts,omitempty"`
-	ProfessionalRoles []DictItem `json:"professional_roles"`
-	BillingType       DictItem   `json:"billing_type"`
 	Type              DictItem   `json:"type"`
-	AllowMessages     bool       `json:"allow_messages"` // Разрешение сообщений
+	ProfessionalRoles []DictItem `json:"professional_roles"`
+	// optional
+	EmploymentFrom *DictItem    `json:"employment_form,omitempty"` //Тип занятости
+	Schedule       *DictItem    `json:"schedule,omitempty"`        // График работы
+	Experience     *DictItem    `json:"experience,omitempty"`      // Опыт работы
+	SalaryRange    *SalaryRange `json:"salary_range,omitempty"`
+	Contacts       *Contacts    `json:"contacts,omitempty"`
+	AllowMessages  bool         `json:"allow_messages"` // Разрешение сообщений
 }
 
 type VacancyResponse struct {
@@ -64,11 +66,22 @@ type Phone struct {
 	Number  string `json:"number"`
 }
 
+// Deprecated: use SalaryRange
 type Salary struct {
 	Currency string `json:"currency"`
 	From     int    `json:"from,omitempty"`
 	To       int    `json:"to,omitempty"`
 	Gross    bool   `json:"gross"`
+}
+
+type SalaryRange struct {
+	// required
+	Currency string   `json:"currency"`
+	Gross    bool     `json:"gross"`
+	Mode     DictItem `json:"mode"`
+	// optional
+	From *int `json:"from,omitempty"`
+	To   *int `json:"to,omitempty"`
 }
 
 type DictItem struct {
