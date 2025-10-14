@@ -225,9 +225,15 @@ func (a ApplicantFilter) GetAddedDay() (time.Time, error) {
 }
 
 type ApplicantSort struct {
-	FioDesc        *bool `json:"fio_desc"`         // ФИО, порядок сортировки false = ASC/ true = DESC / nil = нет
-	SalaryDesc     *bool `json:"salary_desc"`      // ЗП, порядок сортировки false = ASC/ true = DESC / nil = нет
-	AcceptDateDesc *bool `json:"accept_date_desc"` // Дата добавления, порядок сортировки false = ASC/ true = DESC / nil = нет
+	FioDesc             *bool `json:"fio_desc,omitempty"`              // ФИО, порядок сортировки false = ASC / true = DESC / nil = нет
+	SalaryDesc          *bool `json:"salary_desc,omitempty"`           // ЗП, порядок сортировки false = ASC / true = DESC / nil = нет
+	AcceptDateDesc      *bool `json:"accept_date_desc,omitempty"`      // Дата добавления, порядок сортировки false = ASC / true = DESC / nil = нет
+	NegotiationDateDesc *bool `json:"negotiation_date_desc,omitempty"` // Дата отклика, порядок сортировки false = ASC / true = DESC / nil = нет
+	StartDateDesc       *bool `json:"start_date_desc,omitempty"`       // Дата выхода, порядок сортировки false = ASC / true = DESC / nil = нет
+	VacancyNameDesc     *bool `json:"vacancy_name_desc,omitempty"`     // Вакансия, порядок сортировки false = ASC / true = DESC / nil = нет
+	ResumeTitleDesc     *bool `json:"resume_title_desc,omitempty"`     // Должность, порядок сортировки false = ASC / true = DESC / nil = нет
+	SourceDesc          *bool `json:"source_desc,omitempty"`           // Источник, порядок сортировки false = ASC / true = DESC / nil = нет
+	StatusDesc          *bool `json:"status_desc,omitempty"`           // Статус, порядок сортировки false = ASC / true = DESC / nil = нет
 }
 
 type ApplicantNote struct {

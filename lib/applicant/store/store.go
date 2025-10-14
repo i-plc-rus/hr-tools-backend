@@ -542,24 +542,46 @@ func (i impl) setPage(tx *gorm.DB, page, limit int) {
 
 func (i impl) addSort(tx *gorm.DB, sort applicantapimodels.ApplicantSort) {
 	if sort.FioDesc != nil {
-		if *sort.FioDesc {
-			tx = tx.Order("fio desc")
-		} else {
-			tx = tx.Order("fio asc")
-		}
+		specifyOrder(tx, "fio", *sort.FioDesc)
 	}
+
 	if sort.SalaryDesc != nil {
-		if *sort.SalaryDesc {
-			tx = tx.Order("salary desc")
-		} else {
-			tx = tx.Order("salary asc")
-		}
+		specifyOrder(tx, "applicants.salary", *sort.SalaryDesc)
 	}
+
 	if sort.AcceptDateDesc != nil {
-		if *sort.AcceptDateDesc {
-			tx = tx.Order("negotiation_accept_date desc")
-		} else {
-			tx = tx.Order("negotiation_accept_date asc")
-		}
+		specifyOrder(tx, "applicants.negotiation_accept_date", *sort.AcceptDateDesc)
 	}
+
+	if sort.NegotiationDateDesc != nil {
+		specifyOrder(tx, "applicants.negotiation_date", *sort.NegotiationDateDesc)
+	}
+
+	if sort.StartDateDesc != nil {
+		specifyOrder(tx, "applicants.start_date", *sort.StartDateDesc)
+	}
+
+	if sort.VacancyNameDesc != nil {
+		specifyOrder(tx, "v.vacancy_name", *sort.VacancyNameDesc)
+	}
+
+	if sort.ResumeTitleDesc != nil {
+		specifyOrder(tx, "applicants.resume_title", *sort.ResumeTitleDesc)
+	}
+
+	if sort.SourceDesc != nil {
+		specifyOrder(tx, "applicants.source", *sort.SourceDesc)
+	}
+
+	if sort.StatusDesc != nil {
+		specifyOrder(tx, "applicants.status", *sort.StatusDesc)
+	}
+}
+
+func specifyOrder(tx *gorm.DB, fieldName string, isDesc bool) {
+	if isDesc {
+		tx = tx.Order(fmt.Sprintf("%v desc", fieldName))
+		return
+	}
+	tx = tx.Order(fmt.Sprintf("%v  asc", fieldName))
 }

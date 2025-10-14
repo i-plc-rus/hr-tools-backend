@@ -271,14 +271,38 @@ definitions:
   applicantapimodels.ApplicantSort:
     properties:
       accept_date_desc:
-        description: Дата добавления, порядок сортировки false = ASC/ true = DESC
+        description: Дата добавления, порядок сортировки false = ASC / true = DESC
           / nil = нет
         type: boolean
       fio_desc:
-        description: ФИО, порядок сортировки false = ASC/ true = DESC / nil = нет
+        description: ФИО, порядок сортировки false = ASC / true = DESC / nil = нет
+        type: boolean
+      negotiation_date_desc:
+        description: Дата отклика, порядок сортировки false = ASC / true = DESC /
+          nil = нет
+        type: boolean
+      resume_title_desc:
+        description: Должность, порядок сортировки false = ASC / true = DESC / nil
+          = нет
         type: boolean
       salary_desc:
-        description: ЗП, порядок сортировки false = ASC/ true = DESC / nil = нет
+        description: ЗП, порядок сортировки false = ASC / true = DESC / nil = нет
+        type: boolean
+      source_desc:
+        description: Источник, порядок сортировки false = ASC / true = DESC / nil
+          = нет
+        type: boolean
+      start_date_desc:
+        description: Дата выхода, порядок сортировки false = ASC / true = DESC / nil
+          = нет
+        type: boolean
+      status_desc:
+        description: Статус, порядок сортировки false = ASC / true = DESC / nil =
+          нет
+        type: boolean
+      vacancy_name_desc:
+        description: Вакансия, порядок сортировки false = ASC / true = DESC / nil
+          = нет
         type: boolean
     type: object
   applicantapimodels.ApplicantSourceData:
