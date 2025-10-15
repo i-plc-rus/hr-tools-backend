@@ -2152,6 +2152,29 @@ definitions:
         description: Текст вопроса
         type: string
     type: object
+  surveyapimodels.VkStep1SurveyQuestion:
+    properties:
+      id:
+        description: Идентификатор вопроса
+        type: string
+      order:
+        description: Порядковый номер
+        type: integer
+      text:
+        description: Текст вопроса
+        type: string
+    type: object
+  surveyapimodels.VkStep1SurveyView:
+    properties:
+      questions:
+        items:
+          $ref: '#/definitions/surveyapimodels.VkStep1SurveyQuestion'
+        type: array
+      script_intro:
+        type: string
+      script_outro:
+        type: string
+    type: object
   surveyapimodels.VkStep1View:
     properties:
       comments:
@@ -4767,7 +4790,7 @@ paths:
             - $ref: '#/definitions/apimodels.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/surveyapimodels.VkStep0SurveyView'
+                  $ref: '#/definitions/surveyapimodels.VkStep1SurveyView'
               type: object
         "400":
           description: Bad Request
