@@ -4773,39 +4773,7 @@ paths:
       summary: ВК. Шаг 0. cохранение ответов по анкете
       tags:
       - ВК
-  /api/v1/public/survey/video-interview/{id}:
-    get:
-      description: ВК. Шаг 8. Прохождение видео-интервью (Данные для интервью)
-      parameters:
-      - description: Идентификатор анкеты
-        in: path
-        name: id
-        required: true
-        type: string
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/apimodels.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/surveyapimodels.VkStep1SurveyView'
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-      summary: ВК. Шаг 8. Прохождение видео-интервью (Данные для интервью)
-      tags:
-      - ВК
-  /api/v1/public/upload-answer/{id}/{question_id}:
+  /api/v1/public/survey/upload-answer/{id}/{question_id}:
     post:
       description: ВК. Шаг 8. Прохождение видео-интервью (загрузка видео ответа на
         сервер)
@@ -4841,6 +4809,38 @@ paths:
           schema:
             $ref: '#/definitions/apimodels.Response'
       summary: ВК. Шаг 8. Прохождение видео-интервью (загрузка видео ответа на сервер)
+      tags:
+      - ВК
+  /api/v1/public/survey/video-interview/{id}:
+    get:
+      description: ВК. Шаг 8. Прохождение видео-интервью (Данные для интервью)
+      parameters:
+      - description: Идентификатор анкеты
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/surveyapimodels.VkStep1SurveyView'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: ВК. Шаг 8. Прохождение видео-интервью (Данные для интервью)
       tags:
       - ВК
   /api/v1/space/analytics/source:

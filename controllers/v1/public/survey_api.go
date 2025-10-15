@@ -173,7 +173,7 @@ func (c *publicsurveyApiController) getVideoSurveyData(ctx *fiber.Ctx) error {
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/v1/public/upload-answer/{id}/{question_id} [post]
+// @router /api/v1/public/survey/upload-answer/{id}/{question_id} [post]
 func (c *publicsurveyApiController) uploadAnswer(ctx *fiber.Ctx) error {
 	id := ctx.Params("id")
 	if id == "" {
