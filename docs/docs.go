@@ -2667,7 +2667,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/surveyapimodels.VkStep0SurveyView"
+                                            "$ref": "#/definitions/surveyapimodels.VkStep1SurveyView"
                                         }
                                     }
                                 }
@@ -12741,6 +12741,40 @@ const docTemplate = `{
                 },
                 "text": {
                     "description": "Текст вопроса",
+                    "type": "string"
+                }
+            }
+        },
+        "surveyapimodels.VkStep1SurveyQuestion": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "Идентификатор вопроса",
+                    "type": "string"
+                },
+                "order": {
+                    "description": "Порядковый номер",
+                    "type": "integer"
+                },
+                "text": {
+                    "description": "Текст вопроса",
+                    "type": "string"
+                }
+            }
+        },
+        "surveyapimodels.VkStep1SurveyView": {
+            "type": "object",
+            "properties": {
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/surveyapimodels.VkStep1SurveyQuestion"
+                    }
+                },
+                "script_intro": {
+                    "type": "string"
+                },
+                "script_outro": {
                     "type": "string"
                 }
             }

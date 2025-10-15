@@ -145,7 +145,7 @@ func (c *publicsurveyApiController) setVkStep0Survey(ctx *fiber.Ctx) error {
 // @Tags ВК
 // @Description ВК. Шаг 8. Прохождение видео-интервью (Данные для интервью)
 // @Param   id          		path    string  true         "Идентификатор анкеты"
-// @Success 200 {object} apimodels.Response{data=surveyapimodels.VkStep0SurveyView}
+// @Success 200 {object} apimodels.Response{data=surveyapimodels.VkStep1SurveyView}
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
