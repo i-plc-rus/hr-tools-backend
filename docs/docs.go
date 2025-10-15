@@ -2639,6 +2639,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/public/survey/upload-answer/{id}/{question_id}": {
+            "post": {
+                "description": "ВК. Шаг 8. Прохождение видео-интервью (загрузка видео ответа на сервер)",
+                "tags": [
+                    "ВК"
+                ],
+                "summary": "ВК. Шаг 8. Прохождение видео-интервью (загрузка видео ответа на сервер)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Идентификатор анкеты",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Идентификатор вопроса",
+                        "name": "question_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Видео",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/public/survey/video-interview/{id}": {
             "get": {
                 "description": "ВК. Шаг 8. Прохождение видео-интервью (Данные для интервью)",
@@ -2766,61 +2821,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/surveyapimodels.ApplicantSurveyResponses"
                         }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/apimodels.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/apimodels.Response"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden"
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/apimodels.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/public/upload-answer/{id}/{question_id}": {
-            "post": {
-                "description": "ВК. Шаг 8. Прохождение видео-интервью (загрузка видео ответа на сервер)",
-                "tags": [
-                    "ВК"
-                ],
-                "summary": "ВК. Шаг 8. Прохождение видео-интервью (загрузка видео ответа на сервер)",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Идентификатор анкеты",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Идентификатор вопроса",
-                        "name": "question_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "file",
-                        "description": "Видео",
-                        "name": "file",
-                        "in": "formData",
-                        "required": true
                     }
                 ],
                 "responses": {
