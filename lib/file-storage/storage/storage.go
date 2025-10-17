@@ -7,6 +7,7 @@ import (
 )
 
 type Provider interface {
+	GetByID(id string) (rec *dbmodels.FileStorage, err error)
 	SaveFile(rec dbmodels.FileStorage) (id string, err error)
 	DeleteFile(id, spaceID string) (ok bool, err error)
 	GetFileIDByType(applicantID string, fileType dbmodels.FileType) (rec *dbmodels.FileStorage, err error)
@@ -19,6 +20,22 @@ func NewInstance(db *gorm.DB) Provider {
 
 type impl struct {
 	db *gorm.DB
+}
+
+func (i impl) GetByID(id string) (rec *dbmodels.FileStorage, err error) {
+	rec = new(dbmodels.FileStorage)
+	err = i.db.
+		Model(&dbmodels.FileStorage{}).
+		Where("id = ?", id).
+		First(&rec).
+		Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return rec, nil
 }
 
 func (i impl) GetFileListByType(applicantID string, fileType dbmodels.FileType) (list []dbmodels.FileStorage, err error) {

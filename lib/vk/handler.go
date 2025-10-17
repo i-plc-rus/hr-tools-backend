@@ -49,6 +49,7 @@ type Provider interface {
 	UploadVideoAnswer(ctx context.Context, id, questionID string, fileHeader *multipart.FileHeader) error
 	GetVideoAnswer(ctx context.Context, id, questionID string) (reader io.Reader, err error)
 	ScoreAnswer(videoSurveyRec dbmodels.ApplicantVkVideoSurvey) (err error)
+	GenerateReport(vkRec dbmodels.ApplicantVkStep) (ok bool, err error)
 }
 
 var Instance Provider
@@ -662,6 +663,74 @@ func (i impl) ScoreAnswer(videoSurveyRec dbmodels.ApplicantVkVideoSurvey) (err e
 		return errors.Wrap(err, "ошибка сохранения результата оценки ответа на вопрос")
 	}
 	return nil
+}
+
+func (i impl) GenerateReport(vkRec dbmodels.ApplicantVkStep) (ok bool, err error) {
+	applicantRec, err := i.applicantStore.GetByID(vkRec.SpaceID, vkRec.ApplicantID)
+	if err != nil {
+		return false, errors.Wrap(err, "ошибка получения кандидата")
+	}
+
+	vacancy, err := i.vacancyStore.GetByID(applicantRec.SpaceID, applicantRec.VacancyID)
+	if err != nil {
+		return false, errors.Wrap(err, "ошибка получения вакансии")
+	}
+	if vacancy == nil {
+		return false, nil
+	}
+
+	// получение данных кандидата для промта
+	applicantInfo, err := surveyapimodels.GetApplicantDataContent(applicantRec.Applicant)
+	if err != nil {
+		return false, err
+	}
+
+	vacancyInfo, requirements, err := surveyapimodels.GetVacancyAiDataContent(*vacancy)
+	if err != nil {
+		return false, err
+	}
+
+	questions, err := surveyapimodels.GetInterviewQuestionsContent(vkRec)
+	if err != nil {
+		return false, err
+	}
+
+	answers, err := surveyapimodels.GetInterviewAnswersContent(vkRec)
+	if err != nil {
+		return false, err
+	}
+
+	evalutions, err := surveyapimodels.GetInterviewEvalutionsContent(vkRec)
+	if err != nil {
+		return false, err
+	}
+
+	aiReportData := surveyapimodels.ReportRequestData{
+		VacancyInfo:      vacancyInfo,
+		Requirements:     requirements,
+		ApplicantInfo:    applicantInfo,
+		Questions:        questions,
+		ApplicantAnswers: answers,
+		Evalutions:       evalutions,
+		TotalScore:       vkRec.TotalScore,
+		Threshold:        vkRec.Threshold,
+	}
+
+	// запуск ИИ
+	resp, err := i.vkAiProvider.VkStep11Report(vacancy.SpaceID, vacancy.ID, aiReportData)
+	if err != nil {
+		if helpers.IsContextDone(i.ctx) {
+			return false, nil
+		}
+		return false, errors.Wrap(err, "ошибка вызова ИИ при генерации отчета по интервью")
+	}
+	vkRec.OverallComment = resp.OverallComment
+	vkRec.Status = dbmodels.VkStep11Report
+	_, err = i.vkStore.Save(vkRec)
+	if err != nil {
+		return false, errors.Wrap(err, "ошибка сохранения анкеты")
+	}
+	return true, nil
 }
 
 func (i impl) sendLink(applicantRec dbmodels.Applicant, chatText, emailText, emailTitle string) (isSend bool) {
