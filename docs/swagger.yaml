@@ -539,6 +539,10 @@ definitions:
     type: object
   applicantapimodels.ApplicantVkSurvey:
     properties:
+      scoreAI:
+        allOf:
+        - $ref: '#/definitions/applicantapimodels.ScoreAI'
+        description: Отчет по кандидату
       status:
         type: integer
       statusDescription:
@@ -590,6 +594,62 @@ definitions:
         description: Инициатор отказа
       reason:
         description: Причина отказа
+        type: string
+    type: object
+  applicantapimodels.ScoreAI:
+    properties:
+      details:
+        description: Детальная информация по каждому вопросу
+        items:
+          $ref: '#/definitions/applicantapimodels.ScoreDetail'
+        type: array
+      overall_comment:
+        description: Итоговый комментарий
+        type: string
+      pass:
+        description: 'Результат: прошел/не прошел'
+        type: boolean
+      threshold:
+        description: Порог для прохождения
+        type: integer
+      total_score:
+        description: Итоговая оцена (Общий набранный бал за интервью)
+        type: integer
+    type: object
+  applicantapimodels.ScoreDetail:
+    properties:
+      comment_for_similarity:
+        description: Комментарий к оценке
+        type: string
+      emotion_file_id:
+        description: Идентификатор файла с изображением графика эмоциий
+        type: string
+      error:
+        description: Ошибка анализа
+        type: string
+      file_id:
+        description: Идентификатор видео файла отправленный кандидатом
+        type: string
+      frames_file_id:
+        description: Идентификатор файла с изображением видео кадров
+        type: string
+      question_id:
+        description: Идентификатор вопроса
+        type: string
+      question_text:
+        description: Текст вопроса
+        type: string
+      sentiment_file_id:
+        description: Идентификатор файла с изображением графика настроения
+        type: string
+      similarity:
+        description: Оценка ответа
+        type: integer
+      transcript_text:
+        description: Ответ данный кандидатом (транскрипция)
+        type: string
+      voice_amplitude_file_id:
+        description: Идентификатор файла с изображением амплитуды голоса
         type: string
     type: object
   applicantapimodels.SourceData:
@@ -5741,6 +5801,36 @@ paths:
           schema:
             $ref: '#/definitions/apimodels.Response'
       summary: Скачать документ кандидата
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/file/{id}:
+    get:
+      description: Получить файл кандидата
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID файла
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получить файл кандидата
       tags:
       - Кандидат
   /api/v1/space/applicant/list:

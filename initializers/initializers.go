@@ -42,6 +42,7 @@ import (
 	vkstep0runworker "hr-tools-backend/lib/vk/step0-run-worker"
 	vkstep1runworker "hr-tools-backend/lib/vk/step1-run-worker"
 	vkstep10runworker "hr-tools-backend/lib/vk/step10-run-worker"
+	vkstep11runworker "hr-tools-backend/lib/vk/step11-run-worker"
 	vkstep9doneworker "hr-tools-backend/lib/vk/step9-done-worker"
 	vkstep9runworker "hr-tools-backend/lib/vk/step9-run-worker"
 	vkstep9scoreworker "hr-tools-backend/lib/vk/step9-score-worker"
@@ -115,6 +116,9 @@ func initWorkers(ctx context.Context) {
 
 	// Задача ВК. Шаг 9. семантическая оценка для опроса завершена
 	vkstep9doneworker.StartWorker(ctx)
+
+	// Задача ВК. Шаг 11. Генерация отчёта и рекомендаций
+	vkstep11runworker.StartWorker(ctx)
 
 	if makeTimeGap(ctx) {
 		//Задача получения откликов по вакансиям из HH/Avito

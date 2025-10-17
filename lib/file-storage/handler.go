@@ -20,7 +20,7 @@ import (
 type Provider interface {
 	GetDocList(ctx context.Context, applicantID string) ([]filesapimodels.FileView, error)
 	GetFileByType(ctx context.Context, spaceID, applicantID string, fileType dbmodels.FileType) ([]byte, *dbmodels.FileStorage, error)
-	GetFile(ctx context.Context, spaceID, fileID string) ([]byte, error)
+	GetFile(ctx context.Context, spaceID, fileID string) (body []byte, contentType, name string, err error)
 	GetFileObject(ctx context.Context, spaceID string, fileID string) (*minio.Object, error)
 	Upload(ctx context.Context, spaceID, applicantID string, file []byte, fileName string, fileType dbmodels.FileType, contentType string) error
 	UploadObject(ctx context.Context, fileInfo dbmodels.UploadFileInfo, reader io.Reader, fileSize int) (fileID string, err error)
@@ -66,24 +66,29 @@ func (i impl) GetFileByType(ctx context.Context, spaceID, applicantID string, fi
 	if file == nil {
 		return nil, nil, nil
 	}
-	fileBody, err := i.GetFile(ctx, spaceID, file.ID)
+	fileBody, _, _, err := i.GetFile(ctx, spaceID, file.ID)
 	return fileBody, file, err
 }
 
-func (i impl) GetFile(ctx context.Context, spaceID string, fileID string) ([]byte, error) {
+func (i impl) GetFile(ctx context.Context, spaceID string, fileID string) (body []byte, contentType, name string, err error) {
 	if fileID == "" {
-		return nil, nil
+		return nil, "", "", nil
 	}
+	rec, err := i.filesDBStorage.GetByID(fileID)
+	if err != nil {
+		return nil, "", "", err
+	}
+
 	s3file, err := i.s3client.GetObject(ctx, i.getSpaceBucketName(spaceID), fileID, minio.GetObjectOptions{})
 	if err != nil {
-		return nil, errors.Wrap(err, "ошибка получения файла из S3")
+		return nil, "", "", errors.Wrap(err, "ошибка получения файла из S3")
 	}
 	defer s3file.Close()
-	body, err := io.ReadAll(s3file)
+	body, err = io.ReadAll(s3file)
 	if err != nil {
-		return nil, errors.Wrap(err, "ошибка чтения файла из S3")
+		return nil, "", "", errors.Wrap(err, "ошибка чтения файла из S3")
 	}
-	return body, nil
+	return body, rec.ContentType, rec.Name, nil
 }
 
 func (i impl) GetFileObject(ctx context.Context, spaceID string, fileID string) (*minio.Object, error) {

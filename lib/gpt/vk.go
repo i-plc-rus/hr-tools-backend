@@ -109,3 +109,7 @@ func (i impl) VkStep1Regen(spaceID, vacancyID string, aiData surveyapimodels.AiD
 func (i impl) VkStep9Score(aiData surveyapimodels.SemanticData) (scoreResult surveyapimodels.VkStep9ScoreResult, err error) {
 	return surveyapimodels.VkStep9ScoreResult{}, errors.New("not implemented")
 }
+
+func (i impl) VkStep11Report(spaceID, vacancyID string, aiData surveyapimodels.ReportRequestData) (reportResult surveyapimodels.ReportResult, err error) {
+	return surveyapimodels.ReportResult{}, errors.New("not implemented")
+}

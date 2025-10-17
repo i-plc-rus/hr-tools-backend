@@ -37,6 +37,8 @@ func InitApplicantApiRouters(app *fiber.App) {
 			mRouter.Put("export_xls", controller.multiExportXls)
 			mRouter.Put("send_email", controller.multiSendMail)
 		})
+		router.Get("file/:id", controller.getFile) // получить файл
+
 		router.Route(":id", func(idRouter fiber.Router) {
 			idRouter.Post("upload-resume", controller.UploadResume) // загрузить резюме кандидата
 			idRouter.Post("upload-doc", controller.UploadDoc)       // загрузить документ кандидата
@@ -252,7 +254,7 @@ func (c *applicantApiController) GetDoc(ctx *fiber.Ctx) error {
 	}
 
 	spaceID := middleware.GetUserSpace(ctx)
-	body, err := filestorage.Instance.GetFile(ctx.UserContext(), spaceID, docID)
+	body, _, _, err := filestorage.Instance.GetFile(ctx.UserContext(), spaceID, docID)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка выгрузки файла с документом кандидата")
 	}
@@ -916,4 +918,35 @@ func (c *applicantApiController) surveyRegen(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Получить файл кандидата
+// @Tags Кандидат
+// @Description Получить файл кандидата
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    string  				    	true         "ID файла"
+// @Success 200
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/file/{id} [get]
+func (c *applicantApiController) getFile(ctx *fiber.Ctx) error {
+	docID, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	body, contentType, fileName, err := filestorage.Instance.GetFile(ctx.UserContext(), spaceID, docID)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка выгрузки файла с документом кандидата")
+	}
+	ctx.Set(fiber.HeaderContentType, contentType)
+	if fileName != "" {
+		ctx.Set(fiber.HeaderContentDisposition, `inline; filename="`+fileName+`"`)
+	} else {
+		ctx.Set(fiber.HeaderContentDisposition, `inline;`)
+	}
+
+	return ctx.Send(body)
 }

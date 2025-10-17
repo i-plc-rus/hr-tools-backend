@@ -34,6 +34,29 @@ type ApplicantVkSurvey struct {
 	StatusDescription string
 	Step0             surveyapimodels.VkStep0     // ВК. Шаг 0. анкета и ответы кандидата на типовые вопросы
 	Step1             surveyapimodels.VkStep1View // ВК. Шаг 1. Генерация черновика скрипта (15 вопросов и текст сценария для интервью)
+	ScoreAI           ScoreAI                     // Отчет по кандидату
+}
+
+type ScoreAI struct {
+	Details        []ScoreDetail `json:"details"`         // Детальная информация по каждому вопросу
+	TotalScore     int           `json:"total_score"`     // Итоговая оцена (Общий набранный бал за интервью)
+	Threshold      int           `json:"threshold"`       // Порог для прохождения
+	Pass           bool          `json:"pass"`            // Результат: прошел/не прошел
+	OverallComment string        `json:"overall_comment"` // Итоговый комментарий
+}
+
+type ScoreDetail struct {
+	QuestionID           string `json:"question_id"`             // Идентификатор вопроса
+	QuestionText         string `json:"question_text"`           // Текст вопроса
+	TranscriptText       string `json:"transcript_text"`         // Ответ данный кандидатом (транскрипция)
+	VideoFileID          string `json:"file_id"`                 // Идентификатор видео файла отправленный кандидатом
+	VoiceAmplitudeFileID string `json:"voice_amplitude_file_id"` // Идентификатор файла с изображением амплитуды голоса
+	FramesFileID         string `json:"frames_file_id"`          // Идентификатор файла с изображением видео кадров
+	EmotionFileID        string `json:"emotion_file_id"`         // Идентификатор файла с изображением графика эмоциий
+	SentimentFileID      string `json:"sentiment_file_id"`       // Идентификатор файла с изображением графика настроения
+	Similarity           int    `json:"similarity"`              // Оценка ответа
+	CommentForSimilarity string `json:"comment_for_similarity"`  // Комментарий к оценке
+	Error                string `json:"error"`                   // Ошибка анализа
 }
 
 type ApplicantViewExt struct {
@@ -177,6 +200,8 @@ func ApplicantConvert(rec dbmodels.Applicant) ApplicantView {
 		}
 
 		result.Survey.Step1 = surveyapimodels.VkStep1Convert(*rec.ApplicantVkStep, location)
+
+		result.Survey.ScoreAI = VkScoreAIConvert(rec)
 	}
 	return result
 }
@@ -331,4 +356,44 @@ type SourceItem struct {
 	Name    string `json:"name"`
 	Count   int    `json:"count"`
 	Percent int    `json:"percent"`
+}
+
+func VkScoreAIConvert(rec dbmodels.Applicant) ScoreAI {
+	vkStep := rec.ApplicantVkStep
+	result := ScoreAI{
+		Details:        []ScoreDetail{},
+		TotalScore:     vkStep.TotalScore,
+		Threshold:      vkStep.Threshold,
+		Pass:           vkStep.Pass,
+		OverallComment: vkStep.OverallComment,
+	}
+	evaluationMap := map[string]dbmodels.ApplicantVkVideoSurvey{}
+	for _, evaluation := range vkStep.VideoInterviewEvaluations {
+		evaluationMap[evaluation.QuestionID] = evaluation
+	}
+	for _, question := range vkStep.Step1.Questions {
+		detail := ScoreDetail{
+			QuestionID:   question.ID,
+			QuestionText: question.Text,
+			VideoFileID:  vkStep.VideoInterview.Answers[question.ID].FileID,
+		}
+		videoFile, ok := vkStep.VideoInterview.Answers[question.ID]
+		if ok {
+			detail.VideoFileID = videoFile.FileID
+		}
+
+		evaluation, ok := evaluationMap[question.ID]
+		if ok {
+			detail.TranscriptText = evaluation.TranscriptText
+			detail.VoiceAmplitudeFileID = evaluation.VoiceAmplitudeFileID
+			detail.FramesFileID = evaluation.FramesFileID
+			detail.EmotionFileID = evaluation.EmotionFileID
+			detail.SentimentFileID = evaluation.SentimentFileID
+			detail.Similarity = evaluation.Similarity
+			detail.CommentForSimilarity = evaluation.CommentForSimilarity
+			detail.Error = evaluation.Error
+		}
+		result.Details = append(result.Details, detail)
+	}
+	return result
 }

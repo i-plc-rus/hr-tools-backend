@@ -234,6 +234,10 @@ func (i impl) saveFailAnalize(vkStepsID, questionID string, errMsg string) {
 }
 
 func (i impl) saveImageFile(ctx context.Context, vkStepRec dbmodels.ApplicantVkStep, fileData *surveyapimodels.VkResponseFileData, fileName string) (fileID string, err error) {
+	if fileData == nil {
+		return "", nil
+	}
+
 	// анализ заверешен, сохраняем результат
 	fileInfo := dbmodels.UploadFileInfo{
 		SpaceID:        vkStepRec.SpaceID,
@@ -241,11 +245,11 @@ func (i impl) saveImageFile(ctx context.Context, vkStepRec dbmodels.ApplicantVkS
 		FileName:       fileName,
 		FileType:       dbmodels.ApplicantEmotions,
 		ContentType:    fileData.ContentType,
-		IsUniqueByName: false,
+		IsUniqueByName: true,
 	}
 	return i.fileStorage.UploadObject(ctx, fileInfo, bytes.NewReader(fileData.Body), len(fileData.Body))
 }
 
 func getImageFileName(questionID, imageName string) string {
-	return fmt.Sprintf("%v_%vemotion.jpeg", questionID, imageName)
+	return fmt.Sprintf("%v_%v.jpeg", questionID, imageName)
 }

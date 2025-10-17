@@ -25,6 +25,7 @@ const (
 	VkStepVideoTranscripted      = 100 //"Шаг9. Транскрибация выполнена"
 	VkStepVideoSemanticEvaluated = 110 //"Шаг9. Семантическая оценка расчитана"
 	VkStep10Filtered             = 120 //"Шаг10. Подсчёт баллов и адаптивный фильтр"
+	VkStep11Report               = 130 //"Шаг 11. Генерация отчёта и рекомендаций"
 )
 
 func (s StepStatus) String() string {
@@ -55,6 +56,8 @@ func (s StepStatus) String() string {
 		return "Шаг9. Семантическая оценка ответов расчитана"
 	case VkStep10Filtered:
 		return "Шаг10. Подсчёт баллов завершен"
+	case VkStep11Report:
+		return "Шаг11. Отчёта и рекомендации подготовлены"
 	default:
 		return "Не известный статус"
 	}
@@ -62,16 +65,17 @@ func (s StepStatus) String() string {
 
 type ApplicantVkStep struct {
 	BaseSpaceModel
-	ApplicantID               string `gorm:"type:varchar(36);index"`
-	Status                    StepStatus
+	ApplicantID               string                   `gorm:"type:varchar(36);index"`
+	Status                    StepStatus               `json:"status"`
 	Step0                     VkStep0                  `gorm:"type:jsonb"`
-	Step1                     VkStep1                  `gorm:"type:jsonb"` // вопросы для видео интервью
-	VideoInterview            VideoInterview           `gorm:"type:jsonb"` // ссылки на файлы с видео ответами
-	VideoInterviewInviteDate  time.Time                // время отправки ссылки на видео интервью
+	Step1                     VkStep1                  `gorm:"type:jsonb"`                   // вопросы для видео интервью
+	VideoInterview            VideoInterview           `gorm:"type:jsonb"`                   // ссылки на файлы с видео ответами
+	VideoInterviewInviteDate  time.Time                `json:"video_interview_invite_date"`  // время отправки ссылки на видео интервью
 	VideoInterviewEvaluations []ApplicantVkVideoSurvey `gorm:"foreignKey:ApplicantVkStepID"` // Транскрибация и семантическая оценка ответов видео интервью
-	TotalScore                int                      // общий набранный бал за интервью
-	Threshold                 int                      // порог для прохождения
-	Pass                      bool                     // результат: прошел/не прошел
+	TotalScore                int                      `json:"total_score"`                  // общий набранный бал за интервью
+	Threshold                 int                      `json:"threshold"`                    // порог для прохождения
+	Pass                      bool                     `json:"pass"`                         // результат: прошел/не прошел
+	OverallComment            string                   `json:"overall_comment"`              //
 }
 
 func (j VkStep0) Value() (driver.Value, error) {
@@ -136,6 +140,14 @@ func (r ApplicantVkStep) GetStep0SurveyUrl(conf *config.Configuration) string {
 
 func (r ApplicantVkStep) GetVideoSurveyUrl(conf *config.Configuration) string {
 	return conf.UIParams.VideoSurveyStepPath + r.ID
+}
+
+func (r ApplicantVkStep) GetEvaluationsContent() (string, error) {
+	body, err := json.Marshal(r.VideoInterviewEvaluations)
+	if err != nil {
+		return "", errors.Wrap(err, "ошибка десериализации структуры с оценкой ответов")
+	}
+	return string(body), nil
 }
 
 type VideoInterview struct {
