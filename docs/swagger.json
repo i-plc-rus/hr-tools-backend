@@ -3096,6 +3096,51 @@
                 }
             }
         },
+        "/api/v1/space/applicant/file/{id}": {
+            "get": {
+                "description": "Получить файл кандидата",
+                "tags": [
+                    "Кандидат"
+                ],
+                "summary": "Получить файл кандидата",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID файла",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/space/applicant/list": {
             "post": {
                 "description": "Список",
@@ -10449,6 +10494,14 @@
         "applicantapimodels.ApplicantVkSurvey": {
             "type": "object",
             "properties": {
+                "scoreAI": {
+                    "description": "Отчет по кандидату",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/applicantapimodels.ScoreAI"
+                        }
+                    ]
+                },
                 "status": {
                     "type": "integer"
                 },
@@ -10529,6 +10582,83 @@
                 },
                 "reason": {
                     "description": "Причина отказа",
+                    "type": "string"
+                }
+            }
+        },
+        "applicantapimodels.ScoreAI": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "description": "Детальная информация по каждому вопросу",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/applicantapimodels.ScoreDetail"
+                    }
+                },
+                "overall_comment": {
+                    "description": "Итоговый комментарий",
+                    "type": "string"
+                },
+                "pass": {
+                    "description": "Результат: прошел/не прошел",
+                    "type": "boolean"
+                },
+                "threshold": {
+                    "description": "Порог для прохождения",
+                    "type": "integer"
+                },
+                "total_score": {
+                    "description": "Итоговая оцена (Общий набранный бал за интервью)",
+                    "type": "integer"
+                }
+            }
+        },
+        "applicantapimodels.ScoreDetail": {
+            "type": "object",
+            "properties": {
+                "comment_for_similarity": {
+                    "description": "Комментарий к оценке",
+                    "type": "string"
+                },
+                "emotion_file_id": {
+                    "description": "Идентификатор файла с изображением графика эмоциий",
+                    "type": "string"
+                },
+                "error": {
+                    "description": "Ошибка анализа",
+                    "type": "string"
+                },
+                "file_id": {
+                    "description": "Идентификатор видео файла отправленный кандидатом",
+                    "type": "string"
+                },
+                "frames_file_id": {
+                    "description": "Идентификатор файла с изображением видео кадров",
+                    "type": "string"
+                },
+                "question_id": {
+                    "description": "Идентификатор вопроса",
+                    "type": "string"
+                },
+                "question_text": {
+                    "description": "Текст вопроса",
+                    "type": "string"
+                },
+                "sentiment_file_id": {
+                    "description": "Идентификатор файла с изображением графика настроения",
+                    "type": "string"
+                },
+                "similarity": {
+                    "description": "Оценка ответа",
+                    "type": "integer"
+                },
+                "transcript_text": {
+                    "description": "Ответ данный кандидатом (транскрипция)",
+                    "type": "string"
+                },
+                "voice_amplitude_file_id": {
+                    "description": "Идентификатор файла с изображением амплитуды голоса",
                     "type": "string"
                 }
             }
