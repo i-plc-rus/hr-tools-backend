@@ -36,7 +36,7 @@ type PlotValue struct {
 }
 
 func (g GradioUpdate) IsPlotValue() bool {
-	_, ok := g.Value.(PlotValue)
+	_, ok := g.Value.(map[string]any)
 	return ok
 }
 
@@ -51,8 +51,23 @@ func (g GradioUpdate) ToString() (string, bool) {
 }
 
 func (g GradioUpdate) ToPlotValue() (PlotValue, bool) {
-	value, ok := g.Value.(PlotValue)
-	return value, ok
+	valueMap, ok := g.Value.(map[string]any)
+	if !ok {
+		return PlotValue{}, false
+	}
+	tValue, ok := valueMap["type"].(string)
+	if !ok {
+		return PlotValue{}, false
+	}
+	pValue, ok := valueMap["plot"].(string)
+	if !ok {
+		return PlotValue{}, false
+	}
+	pv := PlotValue{
+		Type: tValue,
+		Plot: pValue,
+	}
+	return pv, true
 }
 
 func (p PlotValue) ToByteArr() (contentType string, body []byte, err error) {
@@ -61,8 +76,9 @@ func (p PlotValue) ToByteArr() (contentType string, body []byte, err error) {
 		return "", nil, errors.New("некорректный формат")
 	}
 	contentType = data[0]
+	contentType = strings.TrimLeft(contentType, "data:")
 	bodyBase := data[1]
-	bodyBase = strings.Replace(bodyBase, "base64,", "", 1)
+	bodyBase = strings.TrimLeft(bodyBase, "base64,")
 	body, err = base64.StdEncoding.DecodeString(bodyBase)
 	if err != nil {
 		return "", nil, err

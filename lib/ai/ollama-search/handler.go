@@ -99,6 +99,26 @@ func (i impl) VkStep9Score(aiData surveyapimodels.SemanticData) (scoreResult sur
 	return ParseVkStep9ScoreAIResponse(response)
 }
 
+func (i impl) VkStep11Report(spaceID, vacancyID string, aiData surveyapimodels.ReportRequestData) (reportResult surveyapimodels.ReportResult, err error) {
+	prompt := fmt.Sprintf(step11ReportTemplate, aiData.VacancyInfo, aiData.Requirements, aiData.ApplicantInfo, aiData.Questions, aiData.ApplicantAnswers,
+		aiData.Evalutions, aiData.TotalScore, aiData.Threshold)
+
+	now := time.Now()
+	// запрос к локальной модели
+	response, err := i.QueryOllama(prompt)
+	if err != nil {
+		return surveyapimodels.ReportResult{}, errors.Wrap(err, "ошибка формирования отчета")
+	}
+	i.getLogger().
+		WithField("prompt", prompt).
+		WithField("answer", response).
+		WithField("answer_duration_sec", time.Now().Sub(now).Seconds()).
+		Info("Ответ AI на запрос VkStep11Report")
+
+	answer := extractAnswer(response)
+	return surveyapimodels.ReportResult{OverallComment: answer}, nil
+}
+
 func (i impl) checkConfig() error {
 	if i.ollamaURL == "" {
 		return errors.New("не указан url для ollama")
@@ -264,7 +284,9 @@ func extractAnswer(response string) string {
 	if len(responseSlice) == 1 {
 		return response
 	}
-	return responseSlice[1]
+	answer := responseSlice[1]
+	answer = strings.TrimLeft(answer, "\n")
+	return answer
 }
 
 func replaceAnswerFormatTag(answer string) string {
