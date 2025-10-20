@@ -1981,6 +1981,71 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/dict/lang/find": {
+            "post": {
+                "description": "Поиск по названию",
+                "tags": [
+                    "Справочник. Языки"
+                ],
+                "summary": "Поиск по названию",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dictapimodels.LangData"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/dictapimodels.LangView"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/dict/reject_reason": {
             "post": {
                 "description": "Создание",
@@ -11250,6 +11315,25 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "department_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "dictapimodels.LangData": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "dictapimodels.LangView": {
+            "type": "object",
+            "properties": {
+                "id": {
                     "type": "string"
                 },
                 "name": {

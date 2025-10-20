@@ -1032,6 +1032,18 @@ definitions:
       name:
         type: string
     type: object
+  dictapimodels.LangData:
+    properties:
+      name:
+        type: string
+    type: object
+  dictapimodels.LangView:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
   dictapimodels.RejectReasonData:
     properties:
       initiator:
@@ -4349,6 +4361,46 @@ paths:
       summary: Поиск по названию
       tags:
       - Справочник. Штатные должности
+  /api/v1/dict/lang/find:
+    post:
+      description: Поиск по названию
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dictapimodels.LangData'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dictapimodels.LangView'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Поиск по названию
+      tags:
+      - Справочник. Языки
   /api/v1/dict/reject_reason:
     post:
       description: Создание
