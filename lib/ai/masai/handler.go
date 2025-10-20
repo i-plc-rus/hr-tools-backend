@@ -257,22 +257,22 @@ func (i impl) convertResponse(response masaimodels.GradioResponse) (result surve
 			contentType, body, err := p.ToByteArr()
 			if err == nil {
 				switch k {
-				case 0:
+				case 1:
 					result.VoiceAmplitude = &surveyapimodels.VkResponseFileData{
 						Body:        body,
 						ContentType: contentType,
 					}
-				case 1:
+				case 2:
 					result.Frames = &surveyapimodels.VkResponseFileData{
 						Body:        body,
 						ContentType: contentType,
 					}
-				case 2:
+				case 3:
 					result.Emotion = &surveyapimodels.VkResponseFileData{
 						Body:        body,
 						ContentType: contentType,
 					}
-				case 3:
+				case 4:
 					result.Sentiment = &surveyapimodels.VkResponseFileData{
 						Body:        body,
 						ContentType: contentType,
