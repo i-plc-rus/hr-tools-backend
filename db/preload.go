@@ -16,6 +16,7 @@ func InitPreload() {
 	fillCities()
 	fillSpaceSettings()
 	addPushSettings()
+	fillLanguages()
 }
 
 func addSuperAdmin() {

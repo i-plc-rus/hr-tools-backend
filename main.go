@@ -84,6 +84,7 @@ func main() {
 	dict.InitCompanyStructDictApiRouters(dicts)
 	dict.InitCityDictApiRouters(dicts)
 	dict.InitRejectReasonDictApiRouters(dicts)
+	dict.InitLangDictApiRouters(dicts)
 
 	//space
 	space := fiber.New()

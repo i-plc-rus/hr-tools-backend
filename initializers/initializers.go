@@ -15,6 +15,7 @@ import (
 	companystructprovider "hr-tools-backend/lib/dicts/company-struct"
 	departmentprovider "hr-tools-backend/lib/dicts/department"
 	jobtitleprovider "hr-tools-backend/lib/dicts/job-title"
+	languagesprovider "hr-tools-backend/lib/dicts/languages"
 	rejectreasonprovider "hr-tools-backend/lib/dicts/reject-reason"
 	xlsexport "hr-tools-backend/lib/export/xls"
 	avitohandler "hr-tools-backend/lib/external-services/avito"
@@ -74,6 +75,7 @@ func InitAllServices(ctx context.Context) {
 	companyprovider.NewHandler()
 	departmentprovider.NewHandler()
 	jobtitleprovider.NewHandler()
+	languagesprovider.NewHandler()
 	rejectreasonprovider.NewHandler()
 	companystructprovider.NewHandler()
 	aprovalstageshandler.NewHandler()
