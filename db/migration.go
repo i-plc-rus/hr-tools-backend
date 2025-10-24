@@ -148,6 +148,10 @@ func AutoMigrateDB() error {
 		return errors.Wrap(err, "ошибка создания структуры ApplicantVkVideoSurvey")
 	}
 
+	if err := DB.AutoMigrate(&dbmodels.LanguageData{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры LanguageData")
+	}
+
 	log.Info("Миграция прошла успешно")
 	return nil
 }
