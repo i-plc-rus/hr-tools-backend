@@ -60,7 +60,7 @@ func (i impl) Add(rec dbmodels.LanguageData, skipDuplicate bool) error {
 
 func (i impl) isUnique(selfID string, item dbmodels.LanguageData) (bool, error) {
 	var rowCount int64
-	tx := i.db.Model(dbmodels.City{})
+	tx := i.db.Model(dbmodels.LanguageData{})
 	tx.Where("LOWER(code) = ?", strings.ToLower(item.Code))
 	if selfID != "" {
 		tx.Where("id <> ?", selfID)
