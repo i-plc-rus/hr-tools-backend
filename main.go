@@ -30,9 +30,10 @@ func main() {
 	initializers.InitAllServices(ctx)
 
 	app := fiber.New(fiber.Config{
-		BodyLimit: 100 * 1024 * 1024, // limit of 100MB
+		BodyLimit: 700 * 1024 * 1024, // общий лимит 700MB
 	})
 	app.Use(fiberRecover.New())
+	app.Use(middleware.WithBodyLimit(100 * 1024 * 1024)) // доп проверка лимита, 100 mb, кроме исключений
 
 	swaggerCfg := swagger.Config{
 		Path:     "/swagger",
