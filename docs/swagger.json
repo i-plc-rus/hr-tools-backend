@@ -10559,7 +10559,7 @@
         "applicantapimodels.ApplicantVkSurvey": {
             "type": "object",
             "properties": {
-                "scoreAI": {
+                "score_ai": {
                     "description": "Отчет по кандидату",
                     "allOf": [
                         {
@@ -10568,9 +10568,9 @@
                     ]
                 },
                 "status": {
-                    "type": "integer"
+                    "$ref": "#/definitions/dbmodels.StepStatus"
                 },
-                "statusDescription": {
+                "status_description": {
                     "type": "string"
                 },
                 "step0": {
@@ -11192,6 +11192,57 @@
                     "type": "string"
                 }
             }
+        },
+        "dbmodels.StepStatus": {
+            "type": "integer",
+            "enum": [
+                0,
+                10,
+                20,
+                30,
+                40,
+                50,
+                60,
+                70,
+                80,
+                90,
+                100,
+                110,
+                120,
+                130
+            ],
+            "x-enum-comments": {
+                "VkStep0Answered": "\"Шаг0. Получены ответы\"",
+                "VkStep0Done": "\"Шаг0. Кандидат прошел\"",
+                "VkStep0NotSent": "\"Шаг0. Вопросы не отправлены\"",
+                "VkStep0Refuse": "\"Шаг0. Кандидат не прошел\"",
+                "VkStep0Sent": "\"Шаг0. Вопросы отправлены\"",
+                "VkStep10Filtered": "\"Шаг10. Подсчёт баллов и адаптивный фильтр\"",
+                "VkStep11Report": "\"Шаг 11. Генерация отчёта и рекомендаций\"",
+                "VkStep1Approved": "\"Шаг1. Список вопросов подтвержден\"",
+                "VkStep1Draft": "\"Шаг1. Получен черновика скрипта\"",
+                "VkStep1DraftFail": "\"Шаг1. Ошибка получения черновика скрипта\"",
+                "VkStep1Regen": "\"Шаг1. Перегенерация\"",
+                "VkStepVideoSemanticEvaluated": "\"Шаг9. Семантическая оценка расчитана\"",
+                "VkStepVideoSuggestSent": "\"Шаг7. Приглашение на видео интервью отправлено кандидату\"",
+                "VkStepVideoTranscripted": "\"Шаг9. Транскрибация выполнена\""
+            },
+            "x-enum-varnames": [
+                "VkStep0NotSent",
+                "VkStep0Sent",
+                "VkStep0Answered",
+                "VkStep0Refuse",
+                "VkStep0Done",
+                "VkStep1Draft",
+                "VkStep1DraftFail",
+                "VkStep1Regen",
+                "VkStep1Approved",
+                "VkStepVideoSuggestSent",
+                "VkStepVideoTranscripted",
+                "VkStepVideoSemanticEvaluated",
+                "VkStep10Filtered",
+                "VkStep11Report"
+            ]
         },
         "dbmodels.SurveyAnswers": {
             "type": "object",

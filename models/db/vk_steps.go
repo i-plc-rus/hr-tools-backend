@@ -12,20 +12,20 @@ import (
 type StepStatus int
 
 const (
-	VkStep0NotSent               = 0   //"Шаг0. Вопросы не отправлены"
-	VkStep0Sent                  = 10  //"Шаг0. Вопросы отправлены"
-	VkStep0Answered              = 20  //"Шаг0. Получены ответы"
-	VkStep0Refuse                = 30  //"Шаг0. Кандидат не прошел"
-	VkStep0Done                  = 40  //"Шаг0. Кандидат прошел"
-	VkStep1Draft                 = 50  //"Шаг1. Получен черновика скрипта"
-	VkStep1DraftFail             = 60  //"Шаг1. Ошибка получения черновика скрипта"
-	VkStep1Regen                 = 70  //"Шаг1. Перегенерация"
-	VkStep1Approved              = 80  //"Шаг1. Список вопросов подтвержден"
-	VkStepVideoSuggestSent       = 90  //"Шаг7. Приглашение на видео интервью отправлено кандидату"
-	VkStepVideoTranscripted      = 100 //"Шаг9. Транскрибация выполнена"
-	VkStepVideoSemanticEvaluated = 110 //"Шаг9. Семантическая оценка расчитана"
-	VkStep10Filtered             = 120 //"Шаг10. Подсчёт баллов и адаптивный фильтр"
-	VkStep11Report               = 130 //"Шаг 11. Генерация отчёта и рекомендаций"
+	VkStep0NotSent               StepStatus = 0   //"Шаг0. Вопросы не отправлены"
+	VkStep0Sent                  StepStatus = 10  //"Шаг0. Вопросы отправлены"
+	VkStep0Answered              StepStatus = 20  //"Шаг0. Получены ответы"
+	VkStep0Refuse                StepStatus = 30  //"Шаг0. Кандидат не прошел"
+	VkStep0Done                  StepStatus = 40  //"Шаг0. Кандидат прошел"
+	VkStep1Draft                 StepStatus = 50  //"Шаг1. Получен черновика скрипта"
+	VkStep1DraftFail             StepStatus = 60  //"Шаг1. Ошибка получения черновика скрипта"
+	VkStep1Regen                 StepStatus = 70  //"Шаг1. Перегенерация"
+	VkStep1Approved              StepStatus = 80  //"Шаг1. Список вопросов подтвержден"
+	VkStepVideoSuggestSent       StepStatus = 90  //"Шаг7. Приглашение на видео интервью отправлено кандидату"
+	VkStepVideoTranscripted      StepStatus = 100 //"Шаг9. Транскрибация выполнена"
+	VkStepVideoSemanticEvaluated StepStatus = 110 //"Шаг9. Семантическая оценка расчитана"
+	VkStep10Filtered             StepStatus = 120 //"Шаг10. Подсчёт баллов и адаптивный фильтр"
+	VkStep11Report               StepStatus = 130 //"Шаг 11. Генерация отчёта и рекомендаций"
 )
 
 func (s StepStatus) String() string {
@@ -57,7 +57,7 @@ func (s StepStatus) String() string {
 	case VkStep10Filtered:
 		return "Шаг10. Подсчёт баллов завершен"
 	case VkStep11Report:
-		return "Шаг11. Отчёта и рекомендации подготовлены"
+		return "Шаг11. Отчёт и рекомендации подготовлены"
 	default:
 		return "Не известный статус"
 	}

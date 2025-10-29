@@ -124,7 +124,7 @@ type VkStep0SurveyResult struct {
 }
 
 type VkStep0 struct {
-	Url       string            // Ссылка на анкету c типовыми вопросами для кандидата
+	Url       string            `json:"url"` // Ссылка на анкету c типовыми вопросами для кандидата
 	Questions []VkStep0Question `json:"questions"`
 	Answers   []VkStep0Answer   `json:"answers"`
 }
