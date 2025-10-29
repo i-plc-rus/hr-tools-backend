@@ -30,11 +30,11 @@ type ApplicantView struct {
 }
 
 type ApplicantVkSurvey struct {
-	Status            int
-	StatusDescription string
-	Step0             surveyapimodels.VkStep0     // ВК. Шаг 0. анкета и ответы кандидата на типовые вопросы
-	Step1             surveyapimodels.VkStep1View // ВК. Шаг 1. Генерация черновика скрипта (15 вопросов и текст сценария для интервью)
-	ScoreAI           ScoreAI                     // Отчет по кандидату
+	Status            dbmodels.StepStatus         `json:"status"`
+	StatusDescription string                      `json:"status_description"`
+	Step0             surveyapimodels.VkStep0     `json:"step0"`    // ВК. Шаг 0. анкета и ответы кандидата на типовые вопросы
+	Step1             surveyapimodels.VkStep1View `json:"step1"`    // ВК. Шаг 1. Генерация черновика скрипта (15 вопросов и текст сценария для интервью)
+	ScoreAI           ScoreAI                     `json:"score_ai"` // Отчет по кандидату
 }
 
 type ScoreAI struct {
@@ -183,7 +183,7 @@ func ApplicantConvert(rec dbmodels.Applicant) ApplicantView {
 	}
 	result.FIO = rec.GetFIO()
 	if rec.ApplicantVkStep != nil {
-		result.Survey.Status = int(rec.ApplicantVkStep.Status)
+		result.Survey.Status = rec.ApplicantVkStep.Status
 		result.Survey.StatusDescription = rec.ApplicantVkStep.Status.String()
 		result.Survey.Step0 = surveyapimodels.VkStep0Convert(*rec.ApplicantVkStep, jobTitle)
 
