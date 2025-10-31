@@ -3,15 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-	swaggermiddleware "github.com/go-openapi/runtime/middleware"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	fiberRecover "github.com/gofiber/fiber/v2/middleware/recover"
-	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/config"
 	apiv1 "hr-tools-backend/controllers/v1"
 	"hr-tools-backend/controllers/v1/dict"
-	"hr-tools-backend/controllers/v1/external"
+	externalapiv1 "hr-tools-backend/controllers/v1/external"
 	publicapi "hr-tools-backend/controllers/v1/public"
 	"hr-tools-backend/fiberlog"
 	"hr-tools-backend/initializers"
@@ -22,6 +17,12 @@ import (
 	"os/signal"
 	"sync"
 	"time"
+
+	swaggermiddleware "github.com/go-openapi/runtime/middleware"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	fiberRecover "github.com/gofiber/fiber/v2/middleware/recover"
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -33,7 +34,8 @@ func main() {
 		BodyLimit: 700 * 1024 * 1024, // общий лимит 700MB
 	})
 	app.Use(fiberRecover.New())
-	app.Use(middleware.WithBodyLimit(100 * 1024 * 1024)) // доп проверка лимита, 100 mb, кроме исключений
+	app.Use(middleware.WithBodyLimit(100 * 1024 * 1024))      // доп проверка лимита, 100 mb, кроме исключений
+	app.Use(middleware.ErrNotify(config.Conf.NotifyBot.Addr)) // уведомления об ошибках в телеграм бот
 
 	swaggerCfg := swagger.Config{
 		Path:     "/swagger",
@@ -49,7 +51,7 @@ func main() {
 
 	app.Use(swagger.New(ops, swaggerCfg))
 
-	app.Static("/static", "./static/static_web") 
+	app.Static("/static", "./static/static_web")
 
 	wsApp := fiber.New(fiber.Config{
 		BodyLimit: 10 * 1024 * 1024, // limit of 10MB
