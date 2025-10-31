@@ -70,8 +70,8 @@ type Configuration struct {
 			NumPredict    int     `default:"6144" env:"OLLAMA_NUM_PREDICT"`
 			RepeatPenalty float64 `default:"1.1" env:"OLLAMA_REPEAT_PENALTY"`
 		}
-		Masai struct{
-			URL     string  `default:"http://127.0.0.1:7860/gradio_api" env:"MASAI_URL"`
+		Masai struct {
+			URL string `default:"http://127.0.0.1:7860/gradio_api" env:"MASAI_URL"`
 		}
 	}
 	HH struct {
@@ -113,6 +113,9 @@ type Configuration struct {
 			Question4 string `default:"Удобная модель работы" env:"SURVEY_VK_STEP0_Q4"`
 			Question5 string `default:"Стаж по выбранной специальности" env:"SURVEY_VK_STEP0_Q5"`
 		}
+	}
+	NotifyBot struct {
+		Addr string `default:"http://93.189.231.84:8080/error" env:"NOTIFY_BOT_ADDR"`
 	}
 }
 
