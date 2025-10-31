@@ -108,13 +108,15 @@ func (i impl) IsExistNegotiationID(spaceID, negotiationID string, source models.
 func (i impl) ListOfNegotiation(spaceID string, filter dbmodels.NegotiationFilter) (list []dbmodels.Applicant, err error) {
 	list = []dbmodels.Applicant{}
 	tx := i.db.
+		Select("applicants.*").
 		Model(dbmodels.Applicant{}).
-		Where("space_id = ?", spaceID).
-		Where("vacancy_id = ?", filter.VacancyID).
-		Where("(negotiation_id is not null and negotiation_id <> '')").
-		Where("status != ?", models.ApplicantStatusArchive)
+		Joins("left join selection_stages as st on selection_stage_id = st.id").
+		Where("applicants.space_id = ?", spaceID).
+		Where("applicants.vacancy_id = ?", filter.VacancyID).
+		Where("(applicants.negotiation_id is not null and applicants.negotiation_id <> '')").
+		Where("applicants.status != ?", models.ApplicantStatusArchive)
 	i.addNegotiationFilter(tx, filter)
-	err = tx.Preload(clause.Associations).Find(&list).Error
+	err = tx.Preload(clause.Associations).Preload("SelectionStage").Find(&list).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -534,6 +536,10 @@ func (i impl) addNegotiationFilter(tx *gorm.DB, filter dbmodels.NegotiationFilte
 			jWhere := fmt.Sprintf("params @> '{\"have_additional_education\":false}'")
 			tx.Where(jWhere)
 		}
+	}
+	if filter.Step != "" {
+		searchValue := "%" + strings.ToLower(filter.Step) + "%"
+		tx.Where("LOWER(st.name) like ?", searchValue)
 	}
 }
 

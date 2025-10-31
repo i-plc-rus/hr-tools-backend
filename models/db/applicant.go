@@ -144,6 +144,7 @@ type NegotiationFilter struct {
 	JobSearchStatuses *models.SearchStatusType   `json:"job_search_statuses"` // Статус поиска работы
 	SearchLabel       *models.SearchLabelType    `json:"search_label"`        // Метка поиска резюме
 	AdvancedTraining  *bool                      `json:"advanced_training"`   // Повышение квалификации, курсы
+	Step              string                     `json:"step"`                // этап
 }
 
 func (n NegotiationFilter) Validate() error {
