@@ -43,7 +43,7 @@ func ErrNotify(addr string) fiber.Handler {
 					`{"code":%d,"method":%q,"path":%q,"error":%q}`,
 					statusCode, method, path, msg)
 				if _, reqErr := http.Post(addr, "application/json", strings.NewReader(payload)); reqErr != nil {
-					log.WithError(reqErr).Warn("error sending error notification")
+					log.WithError(reqErr).Warn("error sending error notification to telegram")
 				}
 			}()
 		}
