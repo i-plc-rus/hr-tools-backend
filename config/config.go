@@ -115,7 +115,8 @@ type Configuration struct {
 		}
 	}
 	NotifyBot struct {
-		Addr string `default:"http://93.189.231.84:8080/error" env:"NOTIFY_BOT_ADDR"`
+		AddrErr string `default:"http://93.189.231.84:8080/error" env:"NOTIFY_BOT_ERR"`
+		AddrAi  string `default:"http://93.189.231.84:8080/ai" env:"NOTIFY_BOT_AI"`
 	}
 }
 

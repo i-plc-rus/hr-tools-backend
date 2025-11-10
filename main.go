@@ -34,8 +34,8 @@ func main() {
 		BodyLimit: 700 * 1024 * 1024, // общий лимит 700MB
 	})
 	app.Use(fiberRecover.New())
-	app.Use(middleware.WithBodyLimit(100 * 1024 * 1024))      // доп проверка лимита, 100 mb, кроме исключений
-	app.Use(middleware.ErrNotify(config.Conf.NotifyBot.Addr)) // уведомления об ошибках в телеграм бот
+	app.Use(middleware.WithBodyLimit(100 * 1024 * 1024))         // доп проверка лимита, 100 mb, кроме исключений
+	app.Use(middleware.ErrNotify(config.Conf.NotifyBot.AddrErr)) // уведомления об ошибках в телеграм бот
 
 	swaggerCfg := swagger.Config{
 		Path:     "/swagger",
