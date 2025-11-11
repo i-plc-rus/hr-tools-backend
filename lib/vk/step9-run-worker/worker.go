@@ -4,18 +4,20 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
 	"hr-tools-backend/db"
 	masaihandler "hr-tools-backend/lib/ai/masai"
 	masaisessionstore "hr-tools-backend/lib/ai/masai/session-store"
 	filestorage "hr-tools-backend/lib/file-storage"
 	baseworker "hr-tools-backend/lib/utils/base-worker"
+	botnotify "hr-tools-backend/lib/utils/bot-notify"
 	"hr-tools-backend/lib/utils/helpers"
 	applicantvkstore "hr-tools-backend/lib/vk/applicant-vk-store"
 	vkvideoanalyzestore "hr-tools-backend/lib/vk/vk-video-analyze-store"
 	surveyapimodels "hr-tools-backend/models/api/survey"
 	dbmodels "hr-tools-backend/models/db"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 // Задача ВК. Шаг 9. Транскрибация
@@ -163,6 +165,9 @@ func (i impl) analyzeVideoAnswer(ctx context.Context, vkStepRec dbmodels.Applica
 			return false, nil
 		}
 		i.saveFailAnalize(vkStepRec.ID, questionID, "ошибка анализа видео файла")
+
+		// send notification to telegram bot
+		botnotify.SendAiResult("video analyze failed", vkStepRec.SpaceID, vkStepRec.ApplicantID, err.Error(), i.GetLogger())
 		return true, errors.Wrap(err, "ошибка анализа видео файла")
 	}
 	// анализ заверешен, сохраняем результат
@@ -176,6 +181,9 @@ func (i impl) analyzeVideoAnswer(ctx context.Context, vkStepRec dbmodels.Applica
 	logger := i.GetLogger().
 		WithField("applicant_id", vkStepRec.ApplicantID).
 		WithField("question_id", questionID)
+
+	// send notification to telegram bot
+	botnotify.SendAiResult("video analyze done", vkStepRec.SpaceID, vkStepRec.ApplicantID, "", logger)
 
 	// VoiceAmplitude
 	fileID, err := i.saveImageFile(ctx, vkStepRec, result.VoiceAmplitude, getImageFileName(questionID, "voice"))

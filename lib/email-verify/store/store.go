@@ -38,15 +38,15 @@ func (i impl) UpdateByCode(code string, updMap map[string]interface{}) error {
 
 func (i impl) DeleteByCode(code string) error {
 	return i.db.
-		Delete(&dbmodels.EmailVerify{}).
 		Where("code = ?", code).
+		Delete(&dbmodels.EmailVerify{}).
 		Error
 }
 
 func (i impl) Exist(email string) (bool, error) {
 	err := i.db.
-		First(&dbmodels.EmailVerify{}).
 		Where("email = ?", email).
+		First(&dbmodels.EmailVerify{}).
 		Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -70,8 +70,8 @@ func (i impl) Create(verifyData dbmodels.EmailVerify) error {
 func (i impl) GetByCode(code string) (*dbmodels.EmailVerify, error) {
 	rec := dbmodels.EmailVerify{}
 	err := i.db.
-		First(&rec).
 		Where("code = ?", code).
+		First(&rec).
 		Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
