@@ -58,11 +58,17 @@ func (i impl) SendVerifyCode(email string) error {
 	if err != nil {
 		return err
 	}
-	message := fmt.Sprintf("Ссылка для подтверждения почты: %s/api/v1/auth/verify-email?code=%s", config.Conf.Smtp.DomainForVerifyLink, verifyData.Code)
-	err = smtp.Instance.SendEMail(i.emailFrom, email, message, "EMail Confirm")
-	if err != nil {
-		return err
-	}
+	// отправляем код асинхронно, тк отправка может занять до полуминуты
+	go func(code string) {
+		logger := log.WithField("email", email)
+		message := fmt.Sprintf("Ссылка для подтверждения почты: %s/api/v1/auth/verify-email?code=%s", config.Conf.Smtp.DomainForVerifyLink, code)
+		err = smtp.Instance.SendEMail(i.emailFrom, email, message, "EMail Confirm")
+		if err != nil {
+			// если не удалось отправить, удаляем код для возможности повторной отправки
+			logger.WithError(err).Error("Ошибка отправки ссылки для подтверждения почты")
+			i.verifyStore.DeleteByCode(verifyData.Code)
+		}
+	}(verifyData.Code)
 	return nil
 }
 
@@ -113,7 +119,7 @@ func updateUser(email string, userStore spaceusersstore.Provider) error {
 		return errors.Wrap(err, "ошибка получения данных пользователя")
 	}
 	if user == nil {
-		return errors.Wrap(err,"пользователь не найден")
+		return errors.Wrap(err, "пользователь не найден")
 	}
 	updMap := map[string]interface{}{
 		"is_email_verified": true,
@@ -125,7 +131,7 @@ func updateUser(email string, userStore spaceusersstore.Provider) error {
 	}
 	err = userStore.Update(user.ID, updMap)
 	if err != nil {
-		return errors.Wrap(err,"ошибка обновления емайла пользователя space")
+		return errors.Wrap(err, "ошибка обновления емайла пользователя space")
 	}
 	return nil
 }
