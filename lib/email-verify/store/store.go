@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	dbmodels "hr-tools-backend/models/db"
+	"time"
 )
 
 type Provider interface {
@@ -46,6 +47,8 @@ func (i impl) DeleteByCode(code string) error {
 func (i impl) Exist(email string) (bool, error) {
 	err := i.db.
 		Where("email = ?", email).
+		Where("date_expires > ?", time.Now()).                 // игнорируем просроченные
+		Where("date_used < ?", time.Now().AddDate(-50, 0, 0)). // игнорируем использованные
 		First(&dbmodels.EmailVerify{}).
 		Error
 	if err != nil {
