@@ -1,6 +1,7 @@
 package publicapi
 
 import (
+	"context"
 	"github.com/gofiber/fiber/v2"
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/controllers"
@@ -8,6 +9,7 @@ import (
 	"hr-tools-backend/lib/vk"
 	apimodels "hr-tools-backend/models/api"
 	surveyapimodels "hr-tools-backend/models/api/survey"
+	"time"
 )
 
 type publicsurveyApiController struct {
@@ -27,6 +29,7 @@ func InitPublicSurveyApiRouters(app *fiber.App) {
 		})
 		router.Get("/video-interview/:id", controller.getVideoSurveyData)
 		router.Post("/upload-answer/:id/:questionID", controller.uploadAnswer)
+		router.All("/upload-stream/:id/:questionID", controller.streamUploadAnswer)
 	})
 }
 
@@ -194,4 +197,57 @@ func (c *publicsurveyApiController) uploadAnswer(ctx *fiber.Ctx) error {
 		return c.SendError(ctx, logger, err, "Ошибка сохранения видео файла")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary ВК. Шаг 8. Прохождение видео-интервью (потоковая загрузка видео ответа на сервер)
+// @Tags ВК
+// @Description ВК. Шаг 8. Прохождение видео-интервью (потоковая загрузка видео ответа на сервер)
+// @Param   id          path    	string  true         "Идентификатор анкеты"
+// @Param   question_id path    	string  true         "Идентификатор вопроса"
+// @Param   X-Filename  header 		string 	false 		 "Имя файла"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403§
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/public/survey/upload-stream/{id}/{question_id} [post]
+func (c *publicsurveyApiController) streamUploadAnswer(ctx *fiber.Ctx) error {
+	id := ctx.Params("id")
+	if id == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("Невозможно сохранить ответ, не указан идентификатор кандидата"))
+	}
+
+	questionID := ctx.Params("questionID")
+	if questionID == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("Невозможно сохранить ответ, не указан идентификатор вопроса"))
+	}
+
+	if !isStreamUpload(ctx) {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("Ожитается поток данных"))
+	}
+
+	fileName := ctx.Get("X-Filename")
+	contentType := ctx.Get("Content-Type", "application/octet-stream")
+
+	// Создаем контекст с таймаутом
+	streamCtx, cancel := context.WithTimeout(context.Background(), 20*time.Minute) // таймаут для больших файлов
+	defer cancel()
+
+	bodyStream := ctx.Request().BodyStream()
+	if bodyStream == nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError("Данные не переданы"))
+	}
+
+	logger := log.WithField("survey_id", id)
+	info, err := vk.Instance.UploadStreamVideoAnswer(streamCtx, id, questionID, bodyStream, fileName, contentType)
+	if err != nil {
+		return c.SendError(ctx, logger, err, "Ошибка сохранения видео файла")
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(fiber.Map{
+		"size": info.Size,
+	}))
+}
+
+func isStreamUpload(c *fiber.Ctx) bool {
+	return c.Method() == "POST" && c.Get("Content-Type") == "application/octet-stream"
 }

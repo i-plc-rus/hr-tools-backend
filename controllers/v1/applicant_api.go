@@ -258,6 +258,7 @@ func (c *applicantApiController) GetDoc(ctx *fiber.Ctx) error {
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка выгрузки файла с документом кандидата")
 	}
+	ctx.Set(helpers.HeaderLogIgnore, "true")
 
 	return ctx.Send(body)
 }
@@ -308,6 +309,7 @@ func (c *applicantApiController) GetResume(ctx *fiber.Ctx) error {
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка выгрузки файла с резюме кандидата")
 	}
+	ctx.Set(helpers.HeaderLogIgnore, "true")
 	if file != nil && file.ContentType != "" {
 		ctx.Set(fiber.HeaderContentType, file.ContentType)
 		ctx.Set(fiber.HeaderContentDisposition, `inline; filename="`+file.Name+`"`)
@@ -338,6 +340,7 @@ func (c *applicantApiController) getPhoto(ctx *fiber.Ctx) error {
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка выгрузки файла с фото кандидата")
 	}
+	ctx.Set(helpers.HeaderLogIgnore, "true")
 	if file != nil && file.ContentType != "" {
 		ctx.Set(fiber.HeaderContentType, file.ContentType)
 		ctx.Set(fiber.HeaderContentDisposition, `inline; filename="`+file.Name+`"`)
@@ -843,6 +846,7 @@ func (c *applicantApiController) multiExportXls(ctx *fiber.Ctx) error {
 	fileName := fmt.Sprintf("applicants-%v.xlsx", time.Now().Format("20060102-150405"))
 	ctx.Set("Content-Type", "application/vnd.ms-excel")
 	ctx.Set(fiber.HeaderContentDisposition, `attachment; filename="`+fileName+`"`)
+	ctx.Set(helpers.HeaderLogIgnore, "true")
 	return ctx.SendStream(data)
 }
 
@@ -937,10 +941,11 @@ func (c *applicantApiController) getFile(ctx *fiber.Ctx) error {
 	}
 
 	spaceID := middleware.GetUserSpace(ctx)
-	body, contentType, fileName, err := filestorage.Instance.GetFile(ctx.UserContext(), spaceID, docID)
+	body, contentType, fileName, err := filestorage.Instance.GetFileObjectWithType(ctx.UserContext(), spaceID, docID)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка выгрузки файла с документом кандидата")
 	}
+	ctx.Set(helpers.HeaderLogIgnore, "true")
 	ctx.Set(fiber.HeaderContentType, contentType)
 	if fileName != "" {
 		ctx.Set(fiber.HeaderContentDisposition, `inline; filename="`+fileName+`"`)
@@ -948,5 +953,5 @@ func (c *applicantApiController) getFile(ctx *fiber.Ctx) error {
 		ctx.Set(fiber.HeaderContentDisposition, `inline;`)
 	}
 
-	return ctx.Send(body)
+	return ctx.SendStream(body)
 }

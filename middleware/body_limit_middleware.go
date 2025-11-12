@@ -10,7 +10,8 @@ import (
 
 func WithBodyLimit(limit int64) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		if strings.Contains(c.Path(),"public/survey/upload-answer"){
+		if strings.Contains(c.Path(), "public/survey/upload-answer") ||
+			strings.Contains(c.Path(), "public/survey/upload-stream") {
 			return c.Next()
 		}
 		contentLength := c.Get("Content-Length")

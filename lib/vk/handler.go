@@ -1,6 +1,7 @@
 package vk
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -32,6 +33,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/minio/minio-go/v7"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
@@ -50,6 +52,7 @@ type Provider interface {
 	GetVideoAnswer(ctx context.Context, id, questionID string) (reader io.Reader, err error)
 	ScoreAnswer(videoSurveyRec dbmodels.ApplicantVkVideoSurvey) (err error)
 	GenerateReport(vkRec dbmodels.ApplicantVkStep) (ok bool, err error)
+	UploadStreamVideoAnswer(ctx context.Context, id, questionID string, reader io.Reader, fileName, contentType string) (info minio.UploadInfo, err error)
 }
 
 var Instance Provider
@@ -602,6 +605,66 @@ func (i impl) UploadVideoAnswer(ctx context.Context, id, questionID string, file
 			Error("ошибка добваления информации о видео файле в базу")
 	}
 	return nil
+}
+
+func (i impl) UploadStreamVideoAnswer(ctx context.Context, id, questionID string, body io.Reader, fileName, contentType1 string) (info minio.UploadInfo, err error) {
+	rec, err := i.vkStore.GetByID(id)
+	if err != nil {
+		return minio.UploadInfo{}, errors.Wrap(err, "ошибка получения анкеты кандидата")
+	}
+	if rec == nil {
+		return minio.UploadInfo{}, errors.New("анкета не найдена")
+	}
+	if answer, ok := rec.VideoInterview.Answers[questionID]; ok && answer.FileID != "" {
+		return minio.UploadInfo{}, errors.New("ответ уже сохранен")
+	}
+
+	// Читаем первые 512 байт для определения типа
+	buf := make([]byte, 512)
+	n, err := body.Read(buf)
+	if err != nil && err != io.EOF {
+		return minio.UploadInfo{}, errors.Wrap(err, "Не удалось определить тип файла")
+	}
+
+	// Определяем MIME тип
+	contentType := helpers.DetectFileContentType(fileName, buf[:n])
+
+	if !strings.HasPrefix(contentType, "video/") {
+		return minio.UploadInfo{}, errors.New("Ожидается файл с видео")
+	}
+
+	// Создаем новый reader, который включает прочитанные байты
+	reader := io.MultiReader(bytes.NewReader(buf[:n]), body)
+
+	fileInfo := dbmodels.UploadFileInfo{
+		SpaceID:        rec.SpaceID,
+		ApplicantID:    rec.ApplicantID,
+		FileName:       questionID,
+		FileType:       dbmodels.ApplicantVideoInterview,
+		ContentType:    contentType,
+		IsUniqueByName: true,
+	}
+	info, err = filestorage.Instance.UploadObjectFromStream(ctx, fileInfo, reader)
+	if err != nil {
+		return minio.UploadInfo{}, err
+	}
+	if rec.VideoInterview.Answers == nil {
+		rec.VideoInterview = dbmodels.VideoInterview{
+			Answers: map[string]dbmodels.VkVideoAnswer{},
+		}
+	}
+	rec.VideoInterview.Answers[questionID] = dbmodels.VkVideoAnswer{
+		FileID: info.Location,
+	}
+	_, err = i.vkStore.Save(*rec)
+	if err != nil {
+		i.getLogger(rec.SpaceID, rec.ApplicantID).
+			WithError(err).
+			WithField("question_id", questionID).
+			WithField("file_id", info.Location).
+			Error("ошибка добваления информации о видео файле в базу")
+	}
+	return info, nil
 }
 
 func (i impl) GetVideoAnswer(ctx context.Context, id, questionID string) (reader io.Reader, err error) {

@@ -2,6 +2,7 @@ package fiberlog
 
 import (
 	"fmt"
+	"hr-tools-backend/lib/utils/helpers"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -40,8 +41,15 @@ var (
 		return c.Get(fiber.HeaderUserAgent)
 	}
 	FuncTagBody FuncTag = func(c *fiber.Ctx, d *data) interface{} {
+		ignoreLog := c.GetRespHeader(helpers.HeaderLogIgnore)
+		if ignoreLog != "" {
+			return ""
+		}
 		contentType := c.Get(fiber.HeaderContentType)
 		if strings.Contains(strings.ToLower(contentType), "multipart/form-data") {
+			return ""
+		}
+		if strings.Contains(strings.ToLower(contentType), "octet-stream") {
 			return ""
 		}
 		return string(c.Body())

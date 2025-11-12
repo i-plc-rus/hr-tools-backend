@@ -31,7 +31,8 @@ func main() {
 	initializers.InitAllServices(ctx)
 
 	app := fiber.New(fiber.Config{
-		BodyLimit: 700 * 1024 * 1024, // общий лимит 700MB
+		StreamRequestBody: true,
+		BodyLimit:         700 * 1024 * 1024, // общий лимит 700MB
 	})
 	app.Use(fiberRecover.New())
 	app.Use(middleware.WithBodyLimit(100 * 1024 * 1024))         // доп проверка лимита, 100 mb, кроме исключений
@@ -66,7 +67,7 @@ func main() {
 	apiV1.Use(fiberlog.New(*initializers.LoggerConfig))
 	app.Mount("/api/v1", apiV1)
 	apiV1.Use(cors.New(cors.Config{
-		AllowHeaders:  "Origin, Content-Type, Accept, Authorization, Content-Disposition",
+		AllowHeaders:  "Origin, Content-Type, Accept, Authorization, Content-Disposition, X-Filename",
 		AllowMethods:  "GET, POST, PATCH, DELETE, PUT",
 		ExposeHeaders: "Content-Disposition",
 	}))
