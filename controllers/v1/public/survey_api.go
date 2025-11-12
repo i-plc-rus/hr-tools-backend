@@ -207,7 +207,7 @@ func (c *publicsurveyApiController) uploadAnswer(ctx *fiber.Ctx) error {
 // @Param   X-Filename  header 		string 	false 		 "Имя файла"
 // @Success 200 {object} apimodels.Response
 // @Failure 400 {object} apimodels.Response
-// @Failure 403§
+// @Failure 403
 // @Failure 500 {object} apimodels.Response
 // @router /api/v1/public/survey/upload-stream/{id}/{question_id} [post]
 func (c *publicsurveyApiController) streamUploadAnswer(ctx *fiber.Ctx) error {

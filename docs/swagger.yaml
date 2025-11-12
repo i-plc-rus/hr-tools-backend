@@ -949,6 +949,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/models.ApplicantSource'
         description: Источник
+      step:
+        description: этап
+        type: string
       trip_readiness:
         allOf:
         - $ref: '#/definitions/models.TripReadinessType'
@@ -4968,6 +4971,44 @@ paths:
           schema:
             $ref: '#/definitions/apimodels.Response'
       summary: ВК. Шаг 8. Прохождение видео-интервью (загрузка видео ответа на сервер)
+      tags:
+      - ВК
+  /api/v1/public/survey/upload-stream/{id}/{question_id}:
+    post:
+      description: ВК. Шаг 8. Прохождение видео-интервью (потоковая загрузка видео
+        ответа на сервер)
+      parameters:
+      - description: Идентификатор анкеты
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Идентификатор вопроса
+        in: path
+        name: question_id
+        required: true
+        type: string
+      - description: Имя файла
+        in: header
+        name: X-Filename
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: ВК. Шаг 8. Прохождение видео-интервью (потоковая загрузка видео ответа
+        на сервер)
       tags:
       - ВК
   /api/v1/public/survey/video-interview/{id}:

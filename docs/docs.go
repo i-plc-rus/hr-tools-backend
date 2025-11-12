@@ -2759,6 +2759,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/public/survey/upload-stream/{id}/{question_id}": {
+            "post": {
+                "description": "ВК. Шаг 8. Прохождение видео-интервью (потоковая загрузка видео ответа на сервер)",
+                "tags": [
+                    "ВК"
+                ],
+                "summary": "ВК. Шаг 8. Прохождение видео-интервью (потоковая загрузка видео ответа на сервер)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Идентификатор анкеты",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Идентификатор вопроса",
+                        "name": "question_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Имя файла",
+                        "name": "X-Filename",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/public/survey/video-interview/{id}": {
             "get": {
                 "description": "ВК. Шаг 8. Прохождение видео-интервью (Данные для интервью)",
@@ -11189,6 +11243,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/models.ApplicantSource"
                         }
                     ]
+                },
+                "step": {
+                    "description": "этап",
+                    "type": "string"
                 },
                 "trip_readiness": {
                     "description": "Готовность к командировкам",
