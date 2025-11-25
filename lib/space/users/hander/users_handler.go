@@ -11,6 +11,7 @@ import (
 	spaceapimodels "hr-tools-backend/models/api/space"
 	dbmodels "hr-tools-backend/models/db"
 	"sort"
+	"time"
 
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
@@ -19,6 +20,7 @@ import (
 type Provider interface {
 	CreateUser(request spaceapimodels.CreateUser, authorSpaceID string) (id, hMsg string, err error)
 	UpdateUser(userID string, request spaceapimodels.UpdateUser) error
+	UpdateUserStatus(userID string, request spaceapimodels.UpdateUserStatus) (user spaceapimodels.SpaceUser, err error)
 	DeleteUser(userID string) error
 	GetListUsers(spaceID string, filter spaceapimodels.SpaceUserFilter) (usersList []spaceapimodels.SpaceUser, rowCount int64, err error)
 	GetByID(userID string) (user spaceapimodels.SpaceUser, err error)
@@ -157,6 +159,47 @@ func (i impl) UpdateUser(userID string, request spaceapimodels.UpdateUser) error
 	})
 
 	return err
+}
+
+func (i impl) UpdateUserStatus(userID string, request spaceapimodels.UpdateUserStatus) (user spaceapimodels.SpaceUser, err error) {
+	userDB, err := i.spaceUserStore.GetByID(userID)
+	if err != nil {
+		return spaceapimodels.SpaceUser{}, err
+	}
+	if userDB == nil {
+		return spaceapimodels.SpaceUser{}, errors.New("пользователь не найден")
+	}
+
+	now := time.Now()
+	updMap := map[string]interface{}{
+		"status":            models.UserStatus(request.Status),
+		"status_changed_at": now,
+	}
+	if request.Comment != nil {
+		updMap["status_comment"] = request.Comment
+	}
+
+	// Если статус DISMISSED - отключаем пользователя (IsActive=false)
+	if models.UserStatus(request.Status) == models.SpaceDismissedStatus {
+		updMap["is_active"] = false
+	}
+
+	err = i.spaceUserStore.Update(userID, updMap)
+	if err != nil {
+		return spaceapimodels.SpaceUser{}, err
+	}
+
+	// Обновляем поля в уже полученном объекте
+	userDB.Status = models.UserStatus(request.Status)
+	userDB.StatusChangedAt = now
+	if request.Comment != nil {
+		userDB.StatusComment = request.Comment
+	}
+	if models.UserStatus(request.Status) == models.SpaceDismissedStatus {
+		userDB.IsActive = false
+	}
+
+	return userDB.ToModel(), nil
 }
 
 func (i impl) DeleteUser(userID string) error {

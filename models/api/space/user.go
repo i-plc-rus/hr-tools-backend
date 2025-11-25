@@ -3,6 +3,7 @@ package spaceapimodels
 import (
 	"errors"
 	apimodels "hr-tools-backend/models/api"
+	"time"
 )
 
 type CreateUser struct {
@@ -24,15 +25,18 @@ type SpaceUser struct {
 }
 
 type SpaceUserCommonData struct {
-	SpaceID     string `json:"space_id"`
-	Email       string `json:"email"` // Email пользователя
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
-	PhoneNumber string `json:"phone_number"`
-	IsAdmin     bool   `json:"is_admin"`
-	Role        string `json:"role"`
-	TextSign    string `json:"text_sign"`    // Текст подписи
-	JobTitleID  string `json:"job_title_id"` // Идентификатор должности
+	SpaceID         string    `json:"space_id"`
+	Email           string    `json:"email"` // Email пользователя
+	FirstName       string    `json:"first_name"`
+	LastName        string    `json:"last_name"`
+	PhoneNumber     string    `json:"phone_number"`
+	IsAdmin         bool      `json:"is_admin"`
+	Role            string    `json:"role"`
+	TextSign        string    `json:"text_sign"`         // Текст подписи
+	JobTitleID      string    `json:"job_title_id"`      // Идентификатор должности
+	Status          string    `json:"status"`            // Статус пользователя
+	StatusChangedAt time.Time `json:"status_changed_at"` // Дата изменения статуса
+	StatusComment   *string   `json:"status_comment"`    // Комментарий к статусу
 }
 
 type SpaceUserUpdateData struct {
@@ -135,10 +139,31 @@ type SpaceUserFilter struct {
 	apimodels.Pagination
 	Search string        `json:"search"` // Поиск
 	Sort   SpaceUserSort `json:"sort"`   // Сортировка
+	Status *string       `json:"status"` // Статус пользователя
 }
 
 type SpaceUserSort struct {
 	NameDesc  *bool `json:"fio_desc"`   // Имя, порядок сортировки false = ASC/ true = DESC / nil = нет
 	EmailDesc *bool `json:"email_desc"` // Email, порядок сортировки false = ASC/ true = DESC / nil = нет
 	RoleDesc  *bool `json:"role_desc"`  // Роль добавления, порядок сортировки false = ASC/ true = DESC / nil = нет
+}
+
+type UpdateUserStatus struct {
+	Status  string  `json:"status"`  // Статус пользователя: WORKING, VACATION, DISMISSED
+	Comment *string `json:"comment"` // Комментарий к статусу (опционально)
+}
+
+func (r UpdateUserStatus) Validate() error {
+	if r.Status == "" {
+		return errors.New("не указан статус")
+	}
+	validStatuses := map[string]bool{
+		"WORKING":   true,
+		"VACATION":  true,
+		"DISMISSED": true,
+	}
+	if !validStatuses[r.Status] {
+		return errors.New("неверный статус. Допустимые значения: WORKING, VACATION, DISMISSED")
+	}
+	return nil
 }

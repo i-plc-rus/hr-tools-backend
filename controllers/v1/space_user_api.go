@@ -28,6 +28,7 @@ func InitSpaceUserRouters(app *fiber.App) {
 		usersRootRoute.Route(":id", func(usersIDRoute fiber.Router) {
 			usersIDRoute.Delete("", controller.DeleteUser)
 			usersIDRoute.Put("", controller.UpdateUser)
+			usersIDRoute.Patch("status", controller.UpdateUserStatus)
 			usersIDRoute.Get("", controller.GetUserByID)
 			usersIDRoute.Get("photo", controller.getGetUserPhoto) // скачать фото
 		})
@@ -130,6 +131,37 @@ func (c *spaceUserController) UpdateUser(ctx *fiber.Ctx) error {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка обновления данных пользователя")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Обновить статус пользователя
+// @Tags Пользователи space
+// @Description Обновить статус пользователя
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param 	id 				path 		string  true 	"space user ID"
+// @Param	body				body		spaceapimodels.UpdateUserStatus	true	"request body"
+// @Success 200 {object} apimodels.Response{data=spaceapimodels.SpaceUser}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/users/{id}/status [patch]
+func (c *spaceUserController) UpdateUserStatus(ctx *fiber.Ctx) error {
+	userID, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	var payload spaceapimodels.UpdateUserStatus
+	if err := c.BodyParser(ctx, &payload); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	if err := payload.Validate(); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	user, err := spaceusershander.Instance.UpdateUserStatus(userID, payload)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка обновления статуса пользователя")
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(user))
 }
 
 // @Summary Получить список пользователей space

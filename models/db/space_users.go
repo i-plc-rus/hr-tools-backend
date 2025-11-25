@@ -28,7 +28,10 @@ type SpaceUser struct {
 	JobTitleID          *string `gorm:"type:varchar(36)"`
 	JobTitle            *JobTitle
 	PushEnabled         bool
-	DeletedAt           *time.Time `gorm:"index"`
+	DeletedAt           *time.Time        `gorm:"index"`
+	Status              models.UserStatus `gorm:"type:varchar(50);default:WORKING"` // статус пользователя
+	StatusChangedAt     time.Time
+	StatusComment       *string
 }
 
 func (r SpaceUser) ToModel() spaceapimodels.SpaceUser {
@@ -36,14 +39,17 @@ func (r SpaceUser) ToModel() spaceapimodels.SpaceUser {
 	result := spaceapimodels.SpaceUser{
 		ID: r.ID,
 		SpaceUserCommonData: spaceapimodels.SpaceUserCommonData{
-			Email:       r.Email,
-			FirstName:   r.FirstName,
-			LastName:    r.LastName,
-			PhoneNumber: r.PhoneNumber,
-			IsAdmin:     r.Role.IsSpaceAdmin(),
-			SpaceID:     r.SpaceID,
-			Role:        r.Role.ToHuman(),
-			TextSign:    r.TextSign,
+			Email:           r.Email,
+			FirstName:       r.FirstName,
+			LastName:        r.LastName,
+			PhoneNumber:     r.PhoneNumber,
+			IsAdmin:         r.Role.IsSpaceAdmin(),
+			SpaceID:         r.SpaceID,
+			Role:            r.Role.ToHuman(),
+			TextSign:        r.TextSign,
+			Status:          r.Status.ToHuman(),
+			StatusChangedAt: r.StatusChangedAt,
+			StatusComment:   r.StatusComment,
 		},
 		IsEmailVerified: r.IsEmailVerified,
 		NewEmail:        r.NewEmail,

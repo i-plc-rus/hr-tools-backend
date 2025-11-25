@@ -17,7 +17,16 @@ func AutoMigrateDB() error {
 		return errors.Wrap(err, "ошибка создания структуры EmailVerify")
 	}
 	if err := DB.AutoMigrate(&dbmodels.SpaceUser{}); err != nil {
-		return errors.Wrap(err, "ошибка создания структуры EmailVerify")
+		return errors.Wrap(err, "ошибка создания структуры SpaceUser")
+	}
+
+	// Миграция: проставить существующим пользователям status=WORKING и status_changed_at=NOW()
+	if err := DB.Exec(`
+		UPDATE space_users 
+		SET status = 'WORKING', status_changed_at = NOW() 
+		WHERE status IS NULL OR status = '' OR status_changed_at = '0001-01-01 00:00:00'::timestamp
+	`).Error; err != nil {
+		return errors.Wrap(err, "ошибка обновления статусов пользователей")
 	}
 
 	if err := DB.AutoMigrate(&dbmodels.AdminPanelUser{}); err != nil {
@@ -143,7 +152,7 @@ func AutoMigrateDB() error {
 	if err := DB.AutoMigrate(&dbmodels.MasaiSession{}); err != nil {
 		return errors.Wrap(err, "ошибка создания структуры MasaiSession")
 	}
-	
+
 	if err := DB.AutoMigrate(&dbmodels.ApplicantVkVideoSurvey{}); err != nil {
 		return errors.Wrap(err, "ошибка создания структуры ApplicantVkVideoSurvey")
 	}

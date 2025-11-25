@@ -27,3 +27,24 @@ func (r UserRole) IsSpaceAdmin() bool {
 }
 
 const SystemUser = "Система"
+
+type UserStatus string
+
+const (
+	SpaceWorkingStatus    UserStatus = "WORKING"
+	SpaceOnVacationStatus UserStatus = "VACATION"
+	SpaceDismissedStatus  UserStatus = "DISMISSED"
+)
+
+var userStatusHumanName = map[UserStatus]string{
+	SpaceWorkingStatus:    "Работает",
+	SpaceOnVacationStatus: "В отпуске",
+	SpaceDismissedStatus:  "Уволен",
+}
+
+func (r UserStatus) ToHuman() string {
+	if human, exist := userStatusHumanName[r]; exist {
+		return human
+	}
+	return string(r)
+}

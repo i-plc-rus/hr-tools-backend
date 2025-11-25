@@ -72,6 +72,12 @@ func (i impl) RefreshToken(ctx *fiber.Ctx, refreshToken string) (response authap
 				Error("ошибка поиска пользователя")
 			return authapimodels.JWTResponse{}, err
 		}
+		if user == nil {
+			return authapimodels.JWTResponse{}, errors.New("пользователь не найден")
+		}
+		if !user.IsActive {
+			return authapimodels.JWTResponse{}, errors.New("учетная запись деактивирована")
+		}
 		tokenString, err := authutils.GetToken(userID, user.GetFullName(), user.SpaceID, user.Role.IsSpaceAdmin(), string(user.Role))
 		if err != nil {
 			log.WithError(err).Error("ошибка генерации JWT")
@@ -101,6 +107,12 @@ func (i impl) Me(ctx *fiber.Ctx) (spaceUser spaceapimodels.SpaceUser, err error)
 		logger.WithError(err).Error("ошибка поиска пользователя")
 		return spaceapimodels.SpaceUser{}, err
 	}
+	if user == nil {
+		return spaceapimodels.SpaceUser{}, errors.New("пользователь не найден")
+	}
+	if !user.IsActive {
+		return spaceapimodels.SpaceUser{}, errors.New("учетная запись деактивирована")
+	}
 	return user.ToModel(), nil
 
 }
@@ -121,6 +133,10 @@ func (i impl) Login(email, password string) (response authapimodels.JWTResponse,
 	if authutils.GetMD5Hash(password) != user.Password {
 		logger.Debug("пользователь не прошел проверку пароля")
 		return authapimodels.JWTResponse{}, errors.New("пользователь не прошел проверку пароля")
+	}
+	if !user.IsActive {
+		logger.Debug("пользователь деактивирован")
+		return authapimodels.JWTResponse{}, errors.New("учетная запись деактивирована")
 	}
 	if smtp.Instance.IsConfigured() && !user.Role.IsSpaceAdmin() && !user.IsEmailVerified {
 		return authapimodels.JWTResponse{}, errors.New("необходимо подтвердить почту")

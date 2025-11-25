@@ -1,6 +1,7 @@
 package spaceusersstore
 
 import (
+	"hr-tools-backend/models"
 	spaceapimodels "hr-tools-backend/models/api/space"
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
@@ -41,6 +42,10 @@ func (i impl) GetCountList(spaceID string, filter spaceapimodels.SpaceUserFilter
 		Model(dbmodels.SpaceUser{}).
 		Where("space_id = ?", spaceID).
 		Where("deleted_at IS NULL")
+	// Исключаем уволенных пользователей, если не указан явно фильтр по статусу DISMISSED
+	if filter.Status == nil || *filter.Status != string(models.SpaceDismissedStatus) {
+		tx = tx.Where("status != ?", models.SpaceDismissedStatus)
+	}
 	i.addFilter(tx, filter)
 	err = tx.Count(&rowCount).Error
 	if err != nil {
@@ -55,6 +60,10 @@ func (i impl) GetList(spaceID string, filter spaceapimodels.SpaceUserFilter) (us
 		Select("space_users.*, (last_name || ' ' || first_name) as fio").
 		Where("space_id = ?", spaceID).
 		Where("deleted_at IS NULL")
+	// Исключаем уволенных пользователей, если не указан явно фильтр по статусу DISMISSED
+	if filter.Status == nil || *filter.Status != string(models.SpaceDismissedStatus) {
+		tx = tx.Where("status != ?", models.SpaceDismissedStatus)
+	}
 	i.addFilter(tx, filter)
 	i.addSort(tx, filter.Sort)
 	page, limit := filter.GetPage()
@@ -173,7 +182,8 @@ func (i impl) GetListForVacancy(spaceID, vacancyID string, filter vacancyapimode
 	tx = tx.
 		Where("space_id = ?", spaceID).
 		Where("id not in (select user_id from vacancy_teams where vacancy_id = ?)", vacancyID).
-		Where("deleted_at IS NULL")
+		Where("deleted_at IS NULL").
+		Where("status != ?", models.SpaceDismissedStatus) // Исключаем уволенных пользователей
 	if filter.Search != "" {
 		tx = tx.Where("LOWER(first_name|| ' ' || last_name) like ?", "%"+strings.ToLower(filter.Search)+"%")
 	}
@@ -193,6 +203,9 @@ func (i impl) addFilter(tx *gorm.DB, filter spaceapimodels.SpaceUserFilter) {
 	if filter.Search != "" {
 		tx.Where("LOWER(last_name || ' ' || first_name) like ?", "%"+strings.ToLower(filter.Search)+"%").
 			Or("LOWER(email) like ?", "%"+strings.ToLower(filter.Search)+"%")
+	}
+	if filter.Status != nil && *filter.Status != "" {
+		tx.Where("status = ?", *filter.Status)
 	}
 }
 
