@@ -2,14 +2,17 @@ package publicapi
 
 import (
 	"context"
-	"github.com/gofiber/fiber/v2"
-	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/controllers"
 	"hr-tools-backend/lib/survey"
+	botnotify "hr-tools-backend/lib/utils/bot-notify"
+	normalizevideo "hr-tools-backend/lib/utils/normalize-video"
 	"hr-tools-backend/lib/vk"
 	apimodels "hr-tools-backend/models/api"
 	surveyapimodels "hr-tools-backend/models/api/survey"
 	"time"
+
+	"github.com/gofiber/fiber/v2"
+	log "github.com/sirupsen/logrus"
 )
 
 type publicsurveyApiController struct {
@@ -241,6 +244,16 @@ func (c *publicsurveyApiController) streamUploadAnswer(ctx *fiber.Ctx) error {
 	info, err := vk.Instance.UploadStreamVideoAnswer(streamCtx, id, questionID, bodyStream, fileName, contentType)
 	if err != nil {
 		return c.SendError(ctx, logger, err, "Ошибка сохранения видео файла")
+	}
+
+	// нормализуем видео, удаляем исходный файл
+	normalizedInfo, err := normalizevideo.Run(info)
+	if err != nil {
+		log.WithError(err).Error("Ошибка нормализации видео файла")
+		// send notification to telegram TODO: add universal err endpoint
+		botnotify.SendAiResult("normalize_video", info.Bucket, info.Key, err.Error(), logger)
+	} else {
+		info = normalizedInfo
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(fiber.Map{

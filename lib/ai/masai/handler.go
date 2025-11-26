@@ -76,7 +76,7 @@ func (i impl) AnalyzeAnswer(vkStepID, applicantID, questionID string, reader io.
 		}
 	}
 	now := time.Now()
-	response, err := i.QueryMasai(reader, fmt.Sprintf("%v.mp4", questionID), sessionRec)
+	response, err := i.QueryMasai(reader, fmt.Sprintf("%v.webm", questionID), sessionRec)
 	if err != nil {
 		return surveyapimodels.VkAiInterviewResponse{}, err
 	}
