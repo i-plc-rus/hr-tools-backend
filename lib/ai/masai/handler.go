@@ -16,6 +16,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
@@ -27,6 +28,7 @@ type impl struct {
 	ctx     context.Context
 	baseUrl string
 	session masaisessionstore.Provider
+	busy    atomic.Bool
 }
 
 func GetHandler(ctx context.Context) *impl {
@@ -211,6 +213,10 @@ func (i impl) submitJob(videoPath string) (string, error) {
 }
 
 func (i impl) listenResults(eventID string) (result []byte, err error) {
+	// флаг занятости ИИ
+	i.busy.Store(true)
+	defer i.busy.Store(false)
+
 	client := sse.NewClient(fmt.Sprintf("%v/call/event_handler_submit/%s", i.baseUrl, eventID))
 
 	var event sse.Event
@@ -282,4 +288,8 @@ func (i impl) convertResponse(response masaimodels.GradioResponse) (result surve
 		}
 	}
 	return result
+}
+
+func (i impl) IsVideoAiAvailable() bool {
+	return !i.busy.Load()
 }
