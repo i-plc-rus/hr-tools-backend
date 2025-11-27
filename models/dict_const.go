@@ -547,3 +547,24 @@ const (
 	MessengerTypeSMS     MessengerType = "sms"
 	MessengerTypeWhatsUp MessengerType = "whatsup"
 )
+
+type LicenseStatus string
+
+const (
+	LicenseStatusActive      LicenseStatus = "ACTIVE"
+	LicenseStatusExpiresSoon LicenseStatus = "EXPIRES_SOON"
+	LicenseStatusExpired     LicenseStatus = "EXPIRED"
+	LicenseStatusGrace       LicenseStatus = "GRACE"
+)
+
+func (s LicenseStatus) IdReadOnly() bool {
+	return s == LicenseStatusExpired || s == LicenseStatusGrace
+}
+
+type LicensePaymentStatus string
+
+const (
+	LicensePaymentStatusPending LicensePaymentStatus = "PENDING"
+	LicensePaymentStatusPaid    LicensePaymentStatus = "PAID"
+	LicensePaymentStatusFailed  LicensePaymentStatus = "FAILED"
+)

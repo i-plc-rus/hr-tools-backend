@@ -161,6 +161,18 @@ func AutoMigrateDB() error {
 		return errors.Wrap(err, "ошибка создания структуры LanguageData")
 	}
 
+	if err := DB.AutoMigrate(&dbmodels.License{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры License")
+	}
+
+	if err := DB.AutoMigrate(&dbmodels.LicensePayment{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры LicensePayment")
+	}
+
+	if err := DB.AutoMigrate(&dbmodels.LicensePlan{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры LicensePlan")
+	}
+
 	log.Info("Миграция прошла успешно")
 	return nil
 }

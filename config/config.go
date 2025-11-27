@@ -98,7 +98,8 @@ type Configuration struct {
 		DashboardParams models.DashboardParams
 	}
 	Sales struct {
-		Email string `default:"info@it-tech.group" env:"SALES_EMAIL"` // sales@hr.tools.pro - previous one
+		Email       string `default:"info@it-tech.group" env:"SALES_EMAIL"` // sales@hr.tools.pro - previous one
+		DefaultPlan string `default:"Базовый" env:"SALES_DEF_PLAN"`
 	}
 	UIParams struct {
 		SurveyStep0Path     string `default:"https://s.hr-tools.pro/public/survey/step0/" env:"PUBLIC_SURVEY_STEP0_UI_URL"`

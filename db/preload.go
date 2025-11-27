@@ -3,10 +3,14 @@ package db
 import (
 	"hr-tools-backend/config"
 	adminpaneluserstore "hr-tools-backend/lib/admin-panel/store"
+	licenseplanstore "hr-tools-backend/lib/licence/plan-store"
+	licensestore "hr-tools-backend/lib/licence/store"
 	pushsettingsstore "hr-tools-backend/lib/space/push/settings-store"
+	spacestore "hr-tools-backend/lib/space/store"
 	authutils "hr-tools-backend/lib/utils/auth-utils"
 	"hr-tools-backend/models"
 	dbmodels "hr-tools-backend/models/db"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -17,6 +21,8 @@ func InitPreload() {
 	fillSpaceSettings()
 	addPushSettings()
 	fillLanguages()
+	addBaseLicensePlan()
+	addDefLicense()
 }
 
 func addSuperAdmin() {
@@ -74,6 +80,59 @@ func addPushSettings() {
 				log.WithError(err).Error("ошибка добавления настроек пушей")
 				return
 			}
+		}
+	}
+}
+
+func addBaseLicensePlan() {
+	if config.Conf.Sales.DefaultPlan == "" {
+		log.Warn("Базовый план не добавлен, отсутвует настройка SALES_DEF_PLAN")
+		return
+	}
+	store := licenseplanstore.NewInstance(DB)
+	store.Create(dbmodels.LicensePlan{
+		Name:                config.Conf.Sales.DefaultPlan,
+		Cost:                10000,
+		ExtensionPeriodDays: 30,
+	})
+}
+
+func addDefLicense() {
+	if config.Conf.Sales.DefaultPlan == "" {
+		log.Warn("ошибка установки лицензий, отсутвует настройка SALES_DEF_PLAN")
+		return
+	}
+
+	store := licensestore.NewInstance(DB)
+	spaceStore := spacestore.NewInstance(DB)
+	spaceIds, err := spaceStore.GetActiveIds()
+	if err != nil {
+		log.WithError(err).Error("ошибка добавления лицензий для организаций")
+		return
+	}
+
+	now := time.Now()
+	endAt := now.Add(time.Hour * 24 * 7)
+	plan := config.Conf.Sales.DefaultPlan
+	for _, id := range spaceIds {
+		rec := dbmodels.License{
+			BaseSpaceModel: dbmodels.BaseSpaceModel{
+				SpaceID: id,
+			},
+			Status:    models.LicenseStatusActive,
+			StartsAt:  &now,
+			EndsAt:    &endAt,
+			Plan:      plan,
+			AutoRenew: false,
+		}
+
+		_, err := store.Create(rec)
+		if err != nil {
+			log.
+				WithError(err).
+				WithField("space_id", id).
+				Error("ошибка добавления лицензии для организации")
+			return
 		}
 	}
 }

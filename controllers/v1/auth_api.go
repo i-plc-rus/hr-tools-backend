@@ -54,7 +54,7 @@ func (c *authApiController) login(ctx *fiber.Ctx) error {
 // @Tags Аутентификация пользователей
 // @Description Получить информацию о текущем пользователе
 // @Param   Authorization		header		string	true	"Authorization token"
-// @Success 200 {object} spaceapimodels.SpaceUser
+// @Success 200 {object} spaceapimodels.SpaceUserExt
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
