@@ -1867,6 +1867,15 @@ definitions:
         type: string
       space_id:
         type: string
+      status:
+        description: Статус пользователя
+        type: string
+      status_changed_at:
+        description: Дата изменения статуса
+        type: string
+      status_comment:
+        description: Комментарий к статусу
+        type: string
       text_sign:
         description: Текст подписи
         type: string
@@ -2008,6 +2017,15 @@ definitions:
         type: string
       space_id:
         type: string
+      status:
+        description: Статус пользователя
+        type: string
+      status_changed_at:
+        description: Дата изменения статуса
+        type: string
+      status_comment:
+        description: Комментарий к статусу
+        type: string
       text_sign:
         description: Текст подписи
         type: string
@@ -2027,6 +2045,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/spaceapimodels.SpaceUserSort'
         description: Сортировка
+      status:
+        description: Статус пользователя
+        type: string
     type: object
   spaceapimodels.SpaceUserProfileData:
     properties:
@@ -2140,6 +2161,15 @@ definitions:
         type: string
       text_sign:
         description: Текст подписи
+        type: string
+    type: object
+  spaceapimodels.UpdateUserStatus:
+    properties:
+      comment:
+        description: Комментарий к статусу (опционально)
+        type: string
+      status:
+        description: 'Статус пользователя: WORKING, VACATION, DISMISSED'
         type: string
     type: object
   supersetapimodels.GuestTokenResponse:
@@ -4871,6 +4901,21 @@ paths:
       summary: Сохранение ответов
       tags:
       - Анкета кандидата
+  /api/v1/public/survey/ai:
+    get:
+      description: Получение информации о статусе AI
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Информация об AI
+      tags:
+      - ВК
   /api/v1/public/survey/step0/{id}:
     get:
       description: ВК. Шаг 0. Получение анкеты c типовыми вопросами
@@ -9424,6 +9469,49 @@ paths:
           schema:
             $ref: '#/definitions/apimodels.Response'
       summary: Скачать фото
+      tags:
+      - Пользователи space
+  /api/v1/users/{id}/status:
+    patch:
+      description: Обновить статус пользователя
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: space user ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/spaceapimodels.UpdateUserStatus'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/spaceapimodels.SpaceUser'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Обновить статус пользователя
       tags:
       - Пользователи space
   /api/v1/users/list:

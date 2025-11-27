@@ -2603,6 +2603,29 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/public/survey/ai": {
+            "get": {
+                "description": "Получение информации о статусе AI",
+                "tags": [
+                    "ВК"
+                ],
+                "summary": "Информация об AI",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/public/survey/step0/{id}": {
             "get": {
                 "description": "ВК. Шаг 0. Получение анкеты c типовыми вопросами",
@@ -9772,6 +9795,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/users/{id}/status": {
+            "patch": {
+                "description": "Обновить статус пользователя",
+                "tags": [
+                    "Пользователи space"
+                ],
+                "summary": "Обновить статус пользователя",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "space user ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/spaceapimodels.UpdateUserStatus"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/spaceapimodels.SpaceUser"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/ws": {
             "get": {
                 "description": "Системные пуши",
@@ -12469,6 +12561,18 @@ const docTemplate = `{
                 "space_id": {
                     "type": "string"
                 },
+                "status": {
+                    "description": "Статус пользователя",
+                    "type": "string"
+                },
+                "status_changed_at": {
+                    "description": "Дата изменения статуса",
+                    "type": "string"
+                },
+                "status_comment": {
+                    "description": "Комментарий к статусу",
+                    "type": "string"
+                },
                 "text_sign": {
                     "description": "Текст подписи",
                     "type": "string"
@@ -12682,6 +12786,18 @@ const docTemplate = `{
                 "space_id": {
                     "type": "string"
                 },
+                "status": {
+                    "description": "Статус пользователя",
+                    "type": "string"
+                },
+                "status_changed_at": {
+                    "description": "Дата изменения статуса",
+                    "type": "string"
+                },
+                "status_comment": {
+                    "description": "Комментарий к статусу",
+                    "type": "string"
+                },
                 "text_sign": {
                     "description": "Текст подписи",
                     "type": "string"
@@ -12710,6 +12826,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/spaceapimodels.SpaceUserSort"
                         }
                     ]
+                },
+                "status": {
+                    "description": "Статус пользователя",
+                    "type": "string"
                 }
             }
         },
@@ -12867,6 +12987,19 @@ const docTemplate = `{
                 },
                 "text_sign": {
                     "description": "Текст подписи",
+                    "type": "string"
+                }
+            }
+        },
+        "spaceapimodels.UpdateUserStatus": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "description": "Комментарий к статусу (опционально)",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "Статус пользователя: WORKING, VACATION, DISMISSED",
                     "type": "string"
                 }
             }

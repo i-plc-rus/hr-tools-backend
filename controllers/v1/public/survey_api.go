@@ -2,14 +2,17 @@ package publicapi
 
 import (
 	"context"
-	"github.com/gofiber/fiber/v2"
-	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/controllers"
+	masaihandler "hr-tools-backend/lib/ai/masai"
 	"hr-tools-backend/lib/survey"
+	aichecker "hr-tools-backend/lib/utils/ai-checker"
 	"hr-tools-backend/lib/vk"
 	apimodels "hr-tools-backend/models/api"
 	surveyapimodels "hr-tools-backend/models/api/survey"
 	"time"
+
+	"github.com/gofiber/fiber/v2"
+	log "github.com/sirupsen/logrus"
 )
 
 type publicsurveyApiController struct {
@@ -19,6 +22,7 @@ type publicsurveyApiController struct {
 func InitPublicSurveyApiRouters(app *fiber.App) {
 	controller := publicsurveyApiController{}
 	app.Route("survey", func(router fiber.Router) {
+		router.Get("/ai", controller.getAiInfo)
 		router.Route(":id", func(idRoute fiber.Router) {
 			idRoute.Get("", controller.getSurvey)
 			idRoute.Put("", controller.setSurvey)
@@ -250,4 +254,25 @@ func (c *publicsurveyApiController) streamUploadAnswer(ctx *fiber.Ctx) error {
 
 func isStreamUpload(c *fiber.Ctx) bool {
 	return c.Method() == "POST" && c.Get("Content-Type") == "application/octet-stream"
+}
+
+// @Summary Информация об AI
+// @Tags ВК
+// @Description Получение информации о статусе AI
+// @Success 200 {object} apimodels.Response
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/public/survey/ai [get]
+func (c *publicsurveyApiController) getAiInfo(ctx *fiber.Ctx) error {
+	isTextAvailable, err := aichecker.IsTextAiAvailable(ctx.UserContext())
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError("Ошибка получения информации о доступности AI " + err.Error()))
+	}
+
+	masaiInstance := masaihandler.GetHandler(ctx.UserContext())
+	isVideoAiAvailable := masaiInstance.IsVideoAiAvailable()
+
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(fiber.Map{
+		"text_ai_available":  isTextAvailable,
+		"video_ai_available": isVideoAiAvailable,
+	}))
 }
