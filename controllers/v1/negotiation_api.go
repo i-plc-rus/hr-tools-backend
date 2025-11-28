@@ -17,6 +17,8 @@ type negotiationApiController struct {
 func InitNegotiationApiRouters(app *fiber.App) {
 	controller := negotiationApiController{}
 	app.Route("negotiation", func(router fiber.Router) {
+		router.Use(middleware.LicenseRequired())
+		
 		router.Post("list", controller.list)
 		router.Route(":id", func(idRoute fiber.Router) {
 			idRoute.Put("status_change", controller.statusChange)

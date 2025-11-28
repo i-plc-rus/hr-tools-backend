@@ -85,6 +85,7 @@ func addPushSettings() {
 }
 
 func addBaseLicensePlan() {
+	log.Info("предзаполнение базового плана для лицензий")
 	if config.Conf.Sales.DefaultPlan == "" {
 		log.Warn("Базовый план не добавлен, отсутвует настройка SALES_DEF_PLAN")
 		return
@@ -98,6 +99,7 @@ func addBaseLicensePlan() {
 }
 
 func addDefLicense() {
+	log.Info("добавление лицензий для организаций")
 	if config.Conf.Sales.DefaultPlan == "" {
 		log.Warn("ошибка установки лицензий, отсутвует настройка SALES_DEF_PLAN")
 		return
@@ -115,6 +117,17 @@ func addDefLicense() {
 	endAt := now.Add(time.Hour * 24 * 7)
 	plan := config.Conf.Sales.DefaultPlan
 	for _, id := range spaceIds {
+		ok, err := store.IsExist(id)
+		if err != nil {
+			log.
+				WithError(err).
+				WithField("space_id", id).
+				Error("ошибка проверки наличия лицензии у организации")
+			return
+		}
+		if ok {
+			continue
+		}
 		rec := dbmodels.License{
 			BaseSpaceModel: dbmodels.BaseSpaceModel{
 				SpaceID: id,
@@ -126,7 +139,7 @@ func addDefLicense() {
 			AutoRenew: false,
 		}
 
-		_, err := store.Create(rec)
+		_, err = store.Create(rec)
 		if err != nil {
 			log.
 				WithError(err).

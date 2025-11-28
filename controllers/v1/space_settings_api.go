@@ -18,6 +18,7 @@ func InitSpaceSettingRouters(app *fiber.App) {
 	app.Route("settings", func(usersRootRoute fiber.Router) {
 		usersRootRoute.Use(middleware.AuthorizationRequired())
 		usersRootRoute.Use(middleware.SpaceAdminRequired())
+		
 		usersRootRoute.Get("list", controller.ListSettings)
 		usersRootRoute.Route(":code", func(usersIDRoute fiber.Router) {
 			usersIDRoute.Put("", controller.UpdateSetting)

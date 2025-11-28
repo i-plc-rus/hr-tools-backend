@@ -19,6 +19,8 @@ type analyticsApiController struct {
 func InitAnalyticsApiRouters(app *fiber.App) {
 	controller := analyticsApiController{}
 	app.Route("analytics", func(router fiber.Router) {
+		router.Use(middleware.LicenseRequired())
+		
 		router.Put("source", controller.source)
 		router.Put("source_export", controller.sourceExport)
 	})
