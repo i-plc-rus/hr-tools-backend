@@ -82,6 +82,7 @@ func main() {
 	dicts := fiber.New()
 	apiV1.Mount("/dict", dicts)
 	dicts.Use(middleware.AuthorizationRequired())
+	dicts.Use(middleware.LicenseRequired())
 	dict.InitCompanyDictApiRouters(dicts)
 	dict.InitDepartmentDictApiRouters(dicts)
 	dict.InitJobTitleDictApiRouters(dicts)
@@ -104,6 +105,7 @@ func main() {
 	apiv1.InitAnalyticsApiRouters(space)
 	apiv1.InitMessengerApiRouters(space)
 	apiv1.InitSupersetApiRouters(space)
+	apiv1.InitBillingApiRouters(space)
 
 	ext := fiber.New()
 	space.Mount("/ext", ext)

@@ -2,11 +2,11 @@ package spacehandler
 
 import (
 	"context"
-	"github.com/pkg/errors"
-	"gorm.io/gorm"
+	"hr-tools-backend/config"
 	"hr-tools-backend/db"
 	companystructload "hr-tools-backend/lib/company-struct-load"
 	filestorage "hr-tools-backend/lib/file-storage"
+	licensestore "hr-tools-backend/lib/licence/store"
 	messagetemplate "hr-tools-backend/lib/message-template"
 	"hr-tools-backend/lib/smtp"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
@@ -17,6 +17,10 @@ import (
 	"hr-tools-backend/models"
 	spaceapimodels "hr-tools-backend/models/api/space"
 	dbmodels "hr-tools-backend/models/db"
+	"time"
+
+	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 type Provider interface {
@@ -68,6 +72,11 @@ func (i impl) CreateOrganizationSpace(request spaceapimodels.CreateOrganization)
 		}
 		// создаем отдельный бакет в S3
 		err = i.makeS3Bucket(context.Background(), spaceID)
+		if err != nil {
+			return err
+		}
+		// создаем лицензию
+		err = i.addLicense(tx, spaceID)
 		if err != nil {
 			return err
 		}
@@ -214,6 +223,27 @@ func (i impl) makeS3Bucket(ctx context.Context, spaceID string) error {
 	err := filestorage.Instance.MakeSpaceBucket(ctx, spaceID)
 	if err != nil {
 		return errors.Wrap(err, "ошибка создания бакета для space")
+	}
+	return nil
+}
+
+func (i impl) addLicense(tx *gorm.DB, spaceID string) error {
+	now := time.Now()
+	endAt := now.Add(time.Hour * 24 * 7)
+	plan := config.Conf.Sales.DefaultPlan
+	rec := dbmodels.License{
+			BaseSpaceModel: dbmodels.BaseSpaceModel{
+				SpaceID: spaceID,
+			},
+			Status:    models.LicenseStatusActive,
+			StartsAt:  &now,
+			EndsAt:    &endAt,
+			Plan:      plan,
+			AutoRenew: false,
+		}
+	_, err := licensestore.NewInstance(tx).Create(rec)
+	if err != nil {
+		return errors.Wrap(err, "Ошибка добавления лицензии для организации")
 	}
 	return nil
 }

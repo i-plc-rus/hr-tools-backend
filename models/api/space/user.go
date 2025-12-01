@@ -2,6 +2,7 @@ package spaceapimodels
 
 import (
 	"errors"
+	"hr-tools-backend/models"
 	apimodels "hr-tools-backend/models/api"
 	"time"
 )
@@ -22,6 +23,12 @@ type SpaceUser struct {
 	IsEmailVerified bool   `json:"is_email_verified"` // Email подтвержден
 	NewEmail        string `json:"new_email"`         // Новый email, который станет основным после подтверждения
 	JobTitleName    string `json:"job_title_name"`    // Навание должности
+}
+
+type SpaceUserExt struct {
+	SpaceUser
+	LicenseStatus   models.LicenseStatus `json:"license_status"`    // Статус лицензии
+	LicenseReadOnly bool                 `json:"license_read_only"` // Блокировка мутаций
 }
 
 type SpaceUserCommonData struct {

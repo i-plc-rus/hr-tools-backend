@@ -17,6 +17,8 @@ func InitGptApiRouters(app *fiber.App) {
 	controller := gptApiController{}
 	app.Route("gpt", func(usersRootRoute fiber.Router) {
 		usersRootRoute.Use(middleware.AuthorizationRequired())
+		usersRootRoute.Use(middleware.LicenseRequired())
+		
 		usersRootRoute.Post("generate_vacancy_description", controller.GetVacancyDescription)
 	})
 }

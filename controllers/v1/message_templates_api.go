@@ -25,6 +25,8 @@ type msgTemplateApiController struct {
 func InitMsgTemplateApiRouters(app *fiber.App) {
 	controller := msgTemplateApiController{}
 	app.Route("msg-templates", func(router fiber.Router) {
+		router.Use(middleware.LicenseRequired())
+		
 		router.Post("send-email-msg", controller.SendEmailMessage) // отправить сообщение на почту кандидату
 		router.Get("list", controller.GetTemplatesList)            // получить список шаблонов сообщений
 		router.Post("", controller.create)

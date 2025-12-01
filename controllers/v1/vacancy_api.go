@@ -19,6 +19,8 @@ type vacancyApiController struct {
 func InitVacancyApiRouters(app *fiber.App) {
 	controller := vacancyApiController{}
 	app.Route("vacancy", func(router fiber.Router) {
+		router.Use(middleware.LicenseRequired())
+		
 		router.Post("list", controller.list)
 		router.Post("", controller.create)
 		router.Route(":id", func(idRoute fiber.Router) {

@@ -17,6 +17,8 @@ type messengerApiController struct {
 func InitMessengerApiRouters(app *fiber.App) {
 	controller := messengerApiController{}
 	app.Route("messenger", func(router fiber.Router) {
+		router.Use(middleware.LicenseRequired())
+		
 		router.Route("job", func(jobMessengerRoute fiber.Router) {
 			jobMessengerRoute.Get("is_available", controller.isJobMessengerAvailable)
 			jobMessengerRoute.Post("send_message", controller.sendJobMessage)

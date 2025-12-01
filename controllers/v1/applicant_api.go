@@ -27,6 +27,8 @@ type applicantApiController struct {
 func InitApplicantApiRouters(app *fiber.App) {
 	controller := applicantApiController{}
 	app.Route("applicant", func(router fiber.Router) {
+		router.Use(middleware.LicenseRequired())
+		
 		router.Get("doc/:id", controller.GetDoc)       // скачать документ по id
 		router.Delete("doc/:id", controller.deleteDoc) // удлить документ по id
 		router.Post("list", controller.list)

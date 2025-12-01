@@ -5,11 +5,14 @@ import (
 	"hr-tools-backend/config"
 	"hr-tools-backend/db"
 	emailverify "hr-tools-backend/lib/email-verify"
+	licensestore "hr-tools-backend/lib/licence/store"
 	"hr-tools-backend/lib/smtp"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	authutils "hr-tools-backend/lib/utils/auth-utils"
+	"hr-tools-backend/models"
 	authapimodels "hr-tools-backend/models/api/auth"
 	spaceapimodels "hr-tools-backend/models/api/space"
+	dbmodels "hr-tools-backend/models/db"
 	"strings"
 	"time"
 
@@ -25,7 +28,7 @@ type Provider interface {
 	VerifyEmail(code string) error
 	CheckEmail(email string) (bool, error)
 	Login(email, password string) (response authapimodels.JWTResponse, err error)
-	Me(ctx *fiber.Ctx) (spaceUser spaceapimodels.SpaceUser, err error)
+	Me(ctx *fiber.Ctx) (spaceUser spaceapimodels.SpaceUserExt, err error)
 	RefreshToken(ctx *fiber.Ctx, refreshToken string) (response authapimodels.JWTResponse, err error)
 	PasswordRecovery(email string) error
 	PasswordReset(resetCode, newPassword string) error
@@ -37,6 +40,7 @@ func NewHandler() {
 	Instance = impl{
 		emailVerify:     emailverify.NewInstance(config.Conf.Smtp.EmailSendVerification),
 		spaceUsersStore: spaceusersstore.NewInstance(db.DB),
+		licenseStore:    licensestore.NewInstance(db.DB),
 		systemEmail:     config.Conf.Smtp.EmailSendVerification,
 		recoveryTitle:   config.Conf.Recovery.MailTitle,
 		recoveryBody:    config.Conf.Recovery.MailBody,
@@ -46,6 +50,7 @@ func NewHandler() {
 type impl struct {
 	emailVerify     emailverify.Provider
 	spaceUsersStore spaceusersstore.Provider
+	licenseStore    licensestore.Provider
 	systemEmail     string
 	recoveryTitle   string
 	recoveryBody    string
@@ -97,7 +102,7 @@ func (i impl) RefreshToken(ctx *fiber.Ctx, refreshToken string) (response authap
 	return authapimodels.JWTResponse{}, errors.New("refresh token is not valid")
 }
 
-func (i impl) Me(ctx *fiber.Ctx) (spaceUser spaceapimodels.SpaceUser, err error) {
+func (i impl) Me(ctx *fiber.Ctx) (spaceUser spaceapimodels.SpaceUserExt, err error) {
 	token := ctx.Locals("user").(*jwt.Token)
 	claims := token.Claims.(jwt.MapClaims)
 	userID := claims["sub"].(string)
@@ -105,15 +110,36 @@ func (i impl) Me(ctx *fiber.Ctx) (spaceUser spaceapimodels.SpaceUser, err error)
 	user, err := i.spaceUsersStore.GetByID(userID)
 	if err != nil {
 		logger.WithError(err).Error("ошибка поиска пользователя")
-		return spaceapimodels.SpaceUser{}, err
+		return spaceapimodels.SpaceUserExt{}, err
 	}
+
 	if user == nil {
-		return spaceapimodels.SpaceUser{}, errors.New("пользователь не найден")
+		return spaceapimodels.SpaceUserExt{}, errors.New("пользователь не найден")
 	}
 	if !user.IsActive {
-		return spaceapimodels.SpaceUser{}, errors.New("учетная запись деактивирована")
+		return spaceapimodels.SpaceUserExt{}, errors.New("учетная запись деактивирована")
 	}
-	return user.ToModel(), nil
+	licence, err := i.licenseStore.GetBySpace(user.SpaceID)
+	if err != nil {
+		logger.
+			WithError(err).
+			Error("ошибка получения лицензии по организайции")
+	}
+	if licence == nil {
+		logger.
+			WithField("space_id", user.SpaceID).
+			Warn("лицензиия не найдена")
+			
+		licence = &dbmodels.License{
+			Status: models.LicenseStatusExpired,
+		}
+	}
+	result := spaceapimodels.SpaceUserExt{
+		SpaceUser:       user.ToModel(),
+		LicenseStatus:   licence.Status,
+		LicenseReadOnly: licence.Status.IdReadOnly(),
+	}
+	return result, nil
 
 }
 
