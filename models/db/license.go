@@ -15,7 +15,14 @@ type License struct {
 	Plan            string
 	AutoRenew       bool
 	LicensePayments []LicensePayment
-	// days_left
+}
+
+type LicenseExt struct {
+	License
+	PlanID          string
+	PlanName        string
+	PlanCost        float64
+	PlanPeriodDays  int
 }
 
 func (j License) Validate() error {

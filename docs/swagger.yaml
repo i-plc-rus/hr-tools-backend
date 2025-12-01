@@ -1161,6 +1161,89 @@ definitions:
         description: 'ссылка на вакансию в виде: https://izhevsk.hh.ru/vacancy/108984166'
         type: string
     type: object
+  licenseapimodels.License:
+    properties:
+      auto_renew:
+        type: boolean
+      days_left:
+        type: integer
+      ends_at:
+        type: string
+      id:
+        type: string
+      license_payments:
+        items:
+          $ref: '#/definitions/licenseapimodels.LicensePayment'
+        type: array
+      plan:
+        $ref: '#/definitions/licenseapimodels.LicensePlan'
+      starts_at:
+        type: string
+      status:
+        $ref: '#/definitions/models.LicenseStatus'
+    type: object
+  licenseapimodels.LicensePayment:
+    properties:
+      amount:
+        type: number
+      currency:
+        type: string
+      id:
+        type: string
+      meta:
+        type: string
+      paid_at:
+        type: string
+      provider:
+        type: string
+      status:
+        $ref: '#/definitions/models.LicensePaymentStatus'
+    type: object
+  licenseapimodels.LicensePlan:
+    properties:
+      cost:
+        type: number
+      extension_period_days:
+        type: integer
+      id:
+        type: string
+      plan:
+        type: string
+    type: object
+  licenseapimodels.LicenseRenew:
+    properties:
+      offer_accepter:
+        type: boolean
+    type: object
+  licenseapimodels.LicenseRenewConfirm:
+    properties:
+      id:
+        type: string
+      meta:
+        type: string
+      paid_at:
+        type: string
+      provider:
+        type: string
+    type: object
+  licenseapimodels.LicenseRenewInfo:
+    properties:
+      cost:
+        type: number
+      ends_at:
+        type: string
+      period_days:
+        type: integer
+      plan:
+        type: string
+      starts_at:
+        type: string
+    type: object
+  licenseapimodels.LicenseRenewResponse:
+    properties:
+      id:
+        type: string
+    type: object
   models.AddedType:
     enum:
     - Добавлен
@@ -1371,6 +1454,28 @@ definitions:
     - LanguageLevelC1
     - LanguageLevelC2
     - LanguageLevelL1
+  models.LicensePaymentStatus:
+    enum:
+    - PENDING
+    - PAID
+    - FAILED
+    type: string
+    x-enum-varnames:
+    - LicensePaymentStatusPending
+    - LicensePaymentStatusPaid
+    - LicensePaymentStatusFailed
+  models.LicenseStatus:
+    enum:
+    - ACTIVE
+    - EXPIRES_SOON
+    - EXPIRED
+    - GRACE
+    type: string
+    x-enum-varnames:
+    - LicenseStatusActive
+    - LicenseStatusExpiresSoon
+    - LicenseStatusExpired
+    - LicenseStatusGrace
   models.LimitType:
     enum:
     - Минут
@@ -2008,6 +2113,57 @@ definitions:
         type: string
       last_name:
         type: string
+      new_email:
+        description: Новый email, который станет основным после подтверждения
+        type: string
+      phone_number:
+        type: string
+      role:
+        type: string
+      space_id:
+        type: string
+      status:
+        description: Статус пользователя
+        type: string
+      status_changed_at:
+        description: Дата изменения статуса
+        type: string
+      status_comment:
+        description: Комментарий к статусу
+        type: string
+      text_sign:
+        description: Текст подписи
+        type: string
+    type: object
+  spaceapimodels.SpaceUserExt:
+    properties:
+      email:
+        description: Email пользователя
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      is_admin:
+        type: boolean
+      is_email_verified:
+        description: Email подтвержден
+        type: boolean
+      job_title_id:
+        description: Идентификатор должности
+        type: string
+      job_title_name:
+        description: Навание должности
+        type: string
+      last_name:
+        type: string
+      license_read_only:
+        description: Блокировка мутаций
+        type: boolean
+      license_status:
+        allOf:
+        - $ref: '#/definitions/models.LicenseStatus'
+        description: Статус лицензии
       new_email:
         description: Новый email, который станет основным после подтверждения
         type: string
@@ -3197,6 +3353,39 @@ definitions:
 info:
   contact: {}
 paths:
+  /api/v1/admin_panel/billing/payment/confirm:
+    post:
+      description: Подтвердить платеж
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/licenseapimodels.LicenseRenewConfirm'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Подтвердить платеж
+      tags:
+      - Админ панель. Лицензия
   /api/v1/admin_panel/login:
     post:
       description: Аутентификация пользователя
@@ -3476,7 +3665,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/spaceapimodels.SpaceUser'
+            $ref: '#/definitions/spaceapimodels.SpaceUserExt'
         "400":
           description: Bad Request
           schema:
@@ -6193,6 +6382,107 @@ paths:
       summary: Отправить письма кандидатам
       tags:
       - Кандидат
+  /api/v1/space/billing/license:
+    get:
+      description: Данные лицензии
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/licenseapimodels.License'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Данные лицензии
+      tags:
+      - Лицензия
+  /api/v1/space/billing/license/renew:
+    get:
+      description: Информация о продлении
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/licenseapimodels.LicenseRenewInfo'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Информация о продлении
+      tags:
+      - Лицензия
+    post:
+      description: Создать черновик продления
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/licenseapimodels.LicenseRenew'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/licenseapimodels.LicenseRenewResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Создать черновик продления
+      tags:
+      - Лицензия
   /api/v1/space/ext/avito/{id}/attach:
     put:
       description: Привязать существующую вакансию

@@ -10,6 +10,7 @@ import (
 type Provider interface {
 	Create(rec dbmodels.LicensePlan) (id string, err error)
 	GetByID(id string) (rec *dbmodels.LicensePlan, err error)
+	GetByName(name string) (rec *dbmodels.LicensePlan, err error)
 	FindByName(name string) (list []dbmodels.LicensePlan, err error)
 	Update(id string, updMap map[string]interface{}) error
 	Delete(id string) error
@@ -48,6 +49,21 @@ func (i impl) GetByID(id string) (*dbmodels.LicensePlan, error) {
 	rec := dbmodels.LicensePlan{}
 	err := i.db.
 		Where("id = ?", id).
+		First(&rec).
+		Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &rec, nil
+}
+
+func (i impl) GetByName(name string) (*dbmodels.LicensePlan, error) {
+	rec := dbmodels.LicensePlan{}
+	err := i.db.
+		Where("name = ?", name).
 		First(&rec).
 		Error
 	if err != nil {

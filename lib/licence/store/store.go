@@ -7,11 +7,13 @@ import (
 
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Provider interface {
 	Create(rec dbmodels.License) (id string, err error)
 	GetByID(spaceID, id string) (*dbmodels.License, error)
+	GetBySpaceExt(spaceID string) (*dbmodels.LicenseExt, error)
 	GetBySpace(spaceID string) (rec *dbmodels.License, err error)
 	Update(spaceID, id string, updMap map[string]interface{}) error
 	Delete(spaceID, id string) error
@@ -71,6 +73,25 @@ func (i impl) GetBySpace(spaceID string) (*dbmodels.License, error) {
 	rec := dbmodels.License{}
 	err := i.db.
 		Where("space_id = ?", spaceID).
+		First(&rec).
+		Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &rec, nil
+}
+
+func (i impl) GetBySpaceExt(spaceID string) (*dbmodels.LicenseExt, error) {
+	rec := dbmodels.LicenseExt{}
+	err := i.db.
+		Select("licenses.*, p.id as plan_id, p.name as plan_name, p.cost as plan_cost, p.extension_period_days as plan_period_days").
+		Model(&dbmodels.License{}).
+		Joins("left join license_plans as p on plan = p.Name").
+		Where("licenses.space_id = ?", spaceID).
+		Preload(clause.Associations).
 		First(&rec).
 		Error
 	if err != nil {

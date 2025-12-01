@@ -105,6 +105,7 @@ func main() {
 	apiv1.InitAnalyticsApiRouters(space)
 	apiv1.InitMessengerApiRouters(space)
 	apiv1.InitSupersetApiRouters(space)
+	apiv1.InitBillingApiRouters(space)
 
 	ext := fiber.New()
 	space.Mount("/ext", ext)

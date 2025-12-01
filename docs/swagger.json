@@ -4,6 +4,56 @@
         "contact": {}
     },
     "paths": {
+        "/api/v1/admin_panel/billing/payment/confirm": {
+            "post": {
+                "description": "Подтвердить платеж",
+                "tags": [
+                    "Админ панель. Лицензия"
+                ],
+                "summary": "Подтвердить платеж",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/licenseapimodels.LicenseRenewConfirm"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin_panel/login": {
             "post": {
                 "description": "Аутентификация пользователя",
@@ -445,7 +495,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/spaceapimodels.SpaceUser"
+                            "$ref": "#/definitions/spaceapimodels.SpaceUserExt"
                         }
                     },
                     "400": {
@@ -4658,6 +4708,172 @@
                 "responses": {
                     "200": {
                         "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/billing/license": {
+            "get": {
+                "description": "Данные лицензии",
+                "tags": [
+                    "Лицензия"
+                ],
+                "summary": "Данные лицензии",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/licenseapimodels.License"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/billing/license/renew": {
+            "get": {
+                "description": "Информация о продлении",
+                "tags": [
+                    "Лицензия"
+                ],
+                "summary": "Информация о продлении",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/licenseapimodels.LicenseRenewInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Создать черновик продления",
+                "tags": [
+                    "Лицензия"
+                ],
+                "summary": "Создать черновик продления",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/licenseapimodels.LicenseRenew"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/licenseapimodels.LicenseRenewResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     },
                     "400": {
                         "description": "Bad Request",
@@ -11637,6 +11853,134 @@
                 }
             }
         },
+        "licenseapimodels.License": {
+            "type": "object",
+            "properties": {
+                "auto_renew": {
+                    "type": "boolean"
+                },
+                "days_left": {
+                    "type": "integer"
+                },
+                "ends_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "license_payments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/licenseapimodels.LicensePayment"
+                    }
+                },
+                "plan": {
+                    "$ref": "#/definitions/licenseapimodels.LicensePlan"
+                },
+                "starts_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.LicenseStatus"
+                }
+            }
+        },
+        "licenseapimodels.LicensePayment": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "meta": {
+                    "type": "string"
+                },
+                "paid_at": {
+                    "type": "string"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.LicensePaymentStatus"
+                }
+            }
+        },
+        "licenseapimodels.LicensePlan": {
+            "type": "object",
+            "properties": {
+                "cost": {
+                    "type": "number"
+                },
+                "extension_period_days": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "plan": {
+                    "type": "string"
+                }
+            }
+        },
+        "licenseapimodels.LicenseRenew": {
+            "type": "object",
+            "properties": {
+                "offer_accepter": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "licenseapimodels.LicenseRenewConfirm": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "meta": {
+                    "type": "string"
+                },
+                "paid_at": {
+                    "type": "string"
+                },
+                "provider": {
+                    "type": "string"
+                }
+            }
+        },
+        "licenseapimodels.LicenseRenewInfo": {
+            "type": "object",
+            "properties": {
+                "cost": {
+                    "type": "number"
+                },
+                "ends_at": {
+                    "type": "string"
+                },
+                "period_days": {
+                    "type": "integer"
+                },
+                "plan": {
+                    "type": "string"
+                },
+                "starts_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "licenseapimodels.LicenseRenewResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
         "models.AddedType": {
             "type": "string",
             "enum": [
@@ -11889,6 +12233,34 @@
                 "LanguageLevelC1",
                 "LanguageLevelC2",
                 "LanguageLevelL1"
+            ]
+        },
+        "models.LicensePaymentStatus": {
+            "type": "string",
+            "enum": [
+                "PENDING",
+                "PAID",
+                "FAILED"
+            ],
+            "x-enum-varnames": [
+                "LicensePaymentStatusPending",
+                "LicensePaymentStatusPaid",
+                "LicensePaymentStatusFailed"
+            ]
+        },
+        "models.LicenseStatus": {
+            "type": "string",
+            "enum": [
+                "ACTIVE",
+                "EXPIRES_SOON",
+                "EXPIRED",
+                "GRACE"
+            ],
+            "x-enum-varnames": [
+                "LicenseStatusActive",
+                "LicenseStatusExpiresSoon",
+                "LicenseStatusExpired",
+                "LicenseStatusGrace"
             ]
         },
         "models.LimitType": {
@@ -12761,6 +13133,80 @@
                 },
                 "last_name": {
                     "type": "string"
+                },
+                "new_email": {
+                    "description": "Новый email, который станет основным после подтверждения",
+                    "type": "string"
+                },
+                "phone_number": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "space_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "Статус пользователя",
+                    "type": "string"
+                },
+                "status_changed_at": {
+                    "description": "Дата изменения статуса",
+                    "type": "string"
+                },
+                "status_comment": {
+                    "description": "Комментарий к статусу",
+                    "type": "string"
+                },
+                "text_sign": {
+                    "description": "Текст подписи",
+                    "type": "string"
+                }
+            }
+        },
+        "spaceapimodels.SpaceUserExt": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "description": "Email пользователя",
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_admin": {
+                    "type": "boolean"
+                },
+                "is_email_verified": {
+                    "description": "Email подтвержден",
+                    "type": "boolean"
+                },
+                "job_title_id": {
+                    "description": "Идентификатор должности",
+                    "type": "string"
+                },
+                "job_title_name": {
+                    "description": "Навание должности",
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "license_read_only": {
+                    "description": "Блокировка мутаций",
+                    "type": "boolean"
+                },
+                "license_status": {
+                    "description": "Статус лицензии",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.LicenseStatus"
+                        }
+                    ]
                 },
                 "new_email": {
                     "description": "Новый email, который станет основным после подтверждения",

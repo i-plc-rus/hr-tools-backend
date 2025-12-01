@@ -28,6 +28,7 @@ import (
 	externalserviceworker "hr-tools-backend/lib/external-services/worker"
 	filestorage "hr-tools-backend/lib/file-storage"
 	gpthandler "hr-tools-backend/lib/gpt"
+	licencehandler "hr-tools-backend/lib/licence"
 	licenseworker "hr-tools-backend/lib/licence/worker"
 	messagetemplate "hr-tools-backend/lib/message-template"
 	spaceauthhandler "hr-tools-backend/lib/space/auth"
@@ -94,6 +95,7 @@ func InitAllServices(ctx context.Context) {
 	survey.NewHandler()
 	vk.NewHandler(ctx)
 	supersethandler.NewHandler(config.Conf.Superset.Host, config.Conf.Superset.Username, config.Conf.Superset.Password, config.Conf.Superset.DashboardParams)
+	licencehandler.NewHandler()
 	go initWorkers(ctx)
 }
 
