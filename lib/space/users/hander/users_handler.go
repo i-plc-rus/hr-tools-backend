@@ -183,6 +183,10 @@ func (i impl) UpdateUserStatus(userID string, request spaceapimodels.UpdateUserS
 	if models.UserStatus(request.Status) == models.SpaceDismissedStatus {
 		updMap["is_active"] = false
 	}
+	// Если был статус DISMISSED - включаем пользователя (IsActive=true)
+	if userDB.Status == models.SpaceDismissedStatus {
+		updMap["is_active"] = true
+	}
 
 	err = i.spaceUserStore.Update(userID, updMap)
 	if err != nil {
