@@ -174,14 +174,10 @@ func (i impl) UpdateUserStatus(userID string, request spaceapimodels.UpdateUserS
 	updMap := map[string]interface{}{
 		"status":            models.UserStatus(request.Status),
 		"status_changed_at": now,
+		"is_active":         models.UserStatus(request.Status) != models.SpaceDismissedStatus,
 	}
 	if request.Comment != nil {
 		updMap["status_comment"] = request.Comment
-	}
-
-	// Если статус DISMISSED - отключаем пользователя (IsActive=false)
-	if models.UserStatus(request.Status) == models.SpaceDismissedStatus {
-		updMap["is_active"] = false
 	}
 
 	err = i.spaceUserStore.Update(userID, updMap)
