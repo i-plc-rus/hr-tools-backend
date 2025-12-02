@@ -114,6 +114,7 @@ type Configuration struct {
 			Question4 string `default:"Удобная модель работы" env:"SURVEY_VK_STEP0_Q4"`
 			Question5 string `default:"Стаж по выбранной специальности" env:"SURVEY_VK_STEP0_Q5"`
 		}
+		VideoNormalizeBitrate string `default:"1000" env:"VIDEO_NORMALIZE_BITRATE"`
 	}
 	NotifyBot struct {
 		AddrErr string `default:"http://93.189.231.84:8080/error" env:"NOTIFY_BOT_ERR"`

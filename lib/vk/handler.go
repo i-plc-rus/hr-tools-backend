@@ -18,6 +18,7 @@ import (
 	"hr-tools-backend/lib/smtp"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
 	"hr-tools-backend/lib/utils/helpers"
+	videonormalize "hr-tools-backend/lib/utils/video-normalize"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	applicantvkstore "hr-tools-backend/lib/vk/applicant-vk-store"
 	questionhistorystore "hr-tools-backend/lib/vk/question-history-store"
@@ -653,6 +654,16 @@ func (i impl) UploadStreamVideoAnswer(ctx context.Context, id, questionID string
 			Answers: map[string]dbmodels.VkVideoAnswer{},
 		}
 	}
+
+	// Нормализация видео
+	normalizedVideo, err := videonormalize.Run(ctx, fileInfo, info.Location)
+	if err != nil {
+		log.WithError(err).Error(err, "ошибка нормализации видео")
+		// продолжаем работу даже если нормализация видео не удалась
+	} else {
+		info.Location = normalizedVideo // используем нормализованный файл
+	}
+
 	rec.VideoInterview.Answers[questionID] = dbmodels.VkVideoAnswer{
 		FileID: info.Location,
 	}
