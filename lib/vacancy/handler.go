@@ -16,6 +16,7 @@ import (
 	hhhandler "hr-tools-backend/lib/external-services/hh"
 	pushhandler "hr-tools-backend/lib/space/push/handler"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
+	vacancyreqstore "hr-tools-backend/lib/vacancy-req/store"
 	selectionstagestore "hr-tools-backend/lib/vacancy/selection-stage-store"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	teamstore "hr-tools-backend/lib/vacancy/team-store"
@@ -157,6 +158,15 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyData) 
 		}
 		if data.VacancyRequestID != "" {
 			rec.VacancyRequestID = &data.VacancyRequestID
+			vrStore := vacancyreqstore.NewInstance(tx)
+
+			updMap := map[string]interface{}{
+				"Status": models.VRStatusInHr,
+			}
+			err = vrStore.Update(spaceID, data.VacancyRequestID, updMap)
+			if err != nil {
+				return errors.Wrap(err, "ошибка изменения статуса заявки")
+			}
 		}
 		if data.CompanyID != "" {
 			rec.CompanyID = &data.CompanyID
@@ -489,6 +499,18 @@ func (i impl) StatusChange(spaceID, vacancyID, userID string, status models.Vaca
 		}
 		if !status.IsClosed() {
 			return nil
+		}
+
+		if rec.VacancyRequestID != nil && status == models.VacancyStatusClosed {
+			vrStore := vacancyreqstore.NewInstance(tx)
+			updMap := map[string]any{
+				"status": models.VRStatusDone,
+			}
+			err = vrStore.Update(spaceID, *rec.VacancyRequestID, updMap)
+			if err != nil {
+				return errors.Wrapf(err, "ошибка перевода заявки (%v) в статус (%v)", *rec.VacancyRequestID, models.VRStatusDone)
+			}
+			logger.Info("статус заявки обновлен")
 		}
 
 		//получение списка кандидатов по вакансии

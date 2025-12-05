@@ -1,4 +1,4 @@
-package approvalstagestore
+package approvaltaskstore
 
 import (
 	"github.com/pkg/errors"
@@ -7,12 +7,12 @@ import (
 )
 
 type Provider interface {
-	Create(rec dbmodels.ApprovalStage) (id string, err error)
-	GetByID(spaceID, id string) (rec *dbmodels.ApprovalStage, err error)
+	Create(rec dbmodels.ApprovalTask) (id string, err error)
+	GetByID(spaceID, id string) (rec *dbmodels.ApprovalTask, err error)
 	Update(spaceID, id string, updMap map[string]interface{}) error
 	Delete(spaceID, id string) error
-	DeleteByVacancyRequest(spaceID, vacancyRequestID string) error
-	List(spaceID, vacancyRequestID string) (list []dbmodels.ApprovalStage, err error)
+	DeleteByVacancyRequest(spaceID, requestID string) error
+	List(spaceID, requestID string) (list []dbmodels.ApprovalTask, err error)
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -25,10 +25,9 @@ type impl struct {
 	db *gorm.DB
 }
 
-func (i impl) Create(rec dbmodels.ApprovalStage) (id string, err error) {
+func (i impl) Create(rec dbmodels.ApprovalTask) (id string, err error) {
 	err = i.db.
-		Omit("VacancyRequest").
-		Omit("SpaceUser").
+		Omit("AssigneeUser").
 		Save(&rec).
 		Error
 	if err != nil {
@@ -37,12 +36,12 @@ func (i impl) Create(rec dbmodels.ApprovalStage) (id string, err error) {
 	return rec.ID, nil
 }
 
-func (i impl) GetByID(spaceID, id string) (*dbmodels.ApprovalStage, error) {
-	rec := dbmodels.ApprovalStage{}
+func (i impl) GetByID(spaceID, id string) (*dbmodels.ApprovalTask, error) {
+	rec := dbmodels.ApprovalTask{}
 	err := i.db.
 		Where("id = ?", id).
 		Where("space_id = ?", spaceID).
-		Preload("SpaceUser").
+		Preload("AssigneeUser").
 		First(&rec).
 		Error
 	if err != nil {
@@ -59,7 +58,7 @@ func (i impl) Update(spaceID, id string, updMap map[string]interface{}) error {
 		return nil
 	}
 	err := i.db.
-		Model(&dbmodels.ApprovalStage{}).
+		Model(&dbmodels.ApprovalTask{}).
 		Where("id = ?", id).
 		Where("space_id = ?", spaceID).
 		Updates(updMap).
@@ -71,7 +70,7 @@ func (i impl) Update(spaceID, id string, updMap map[string]interface{}) error {
 }
 
 func (i impl) Delete(spaceID, id string) error {
-	rec := dbmodels.ApprovalStage{
+	rec := dbmodels.ApprovalTask{
 		BaseSpaceModel: dbmodels.BaseSpaceModel{
 			BaseModel: dbmodels.BaseModel{ID: id},
 			SpaceID:   spaceID,
@@ -87,11 +86,11 @@ func (i impl) Delete(spaceID, id string) error {
 	return nil
 }
 
-func (i impl) DeleteByVacancyRequest(spaceID, vacancyRequestID string) error {
-	rec := dbmodels.ApprovalStage{}
-	err := i.db.Model(&dbmodels.ApprovalStage{}).
+func (i impl) DeleteByVacancyRequest(spaceID, requestID string) error {
+	rec := dbmodels.ApprovalTask{}
+	err := i.db.Model(&dbmodels.ApprovalTask{}).
 		Where("space_id = ?", spaceID).
-		Where("vacancy_request_id = ?", vacancyRequestID).
+		Where("request_id = ?", requestID).
 		Delete(&rec).Error
 	if err != nil {
 		return err
@@ -99,12 +98,13 @@ func (i impl) DeleteByVacancyRequest(spaceID, vacancyRequestID string) error {
 	return nil
 }
 
-func (i impl) List(spaceID, vacancyRequestID string) (list []dbmodels.ApprovalStage, err error) {
-	list = []dbmodels.ApprovalStage{}
+func (i impl) List(spaceID, requestID string) (list []dbmodels.ApprovalTask, err error) {
+	list = []dbmodels.ApprovalTask{}
 	tx := i.db.
 		Where("space_id = ?", spaceID).
-		Where("vacancy_request_id = ?", vacancyRequestID).
-		Preload("SpaceUser")
+		Where("request_id = ?", requestID).
+		Order("created_at ASC").
+		Preload("AssigneeUser")
 	err = tx.Find(&list).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

@@ -8728,11 +8728,59 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/space/vacancy_request/{id}/approval_stages": {
-            "put": {
+        "/api/v1/space/vacancy_request/{id}/approval_history": {
+            "get": {
+                "description": "История согласования",
+                "tags": [
+                    "Согласование заявок"
+                ],
+                "summary": "История согласования",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "rec ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/vacancy_request/{id}/approvals": {
+            "get": {
                 "description": "Обновление цепочки согласования",
                 "tags": [
-                    "Заявка"
+                    "Согласование заявок"
                 ],
                 "summary": "Обновление цепочки согласования",
                 "parameters": [
@@ -8751,8 +8799,63 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/vacancyapimodels.ApprovalStages"
+                                "$ref": "#/definitions/vacancyapimodels.ApprovalTaskView"
                             }
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "rec ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Обновление цепочки согласования",
+                "tags": [
+                    "Согласование заявок"
+                ],
+                "summary": "Обновление цепочки согласования",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/vacancyapimodels.ApprovalTasks"
                         }
                     },
                     {
@@ -8788,13 +8891,13 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/space/vacancy_request/{id}/approve": {
-            "put": {
-                "description": "Согласовать",
+        "/api/v1/space/vacancy_request/{id}/approvals/{taskId}/": {
+            "post": {
+                "description": "Отклонить",
                 "tags": [
-                    "Заявка"
+                    "Согласование заявок"
                 ],
-                "summary": "Согласовать",
+                "summary": "Отклонить",
                 "parameters": [
                     {
                         "type": "string",
@@ -8809,13 +8912,78 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/vacancyapimodels.VacancyRequestData"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/vacancyapimodels.ApprovalReject"
+                            }
                         }
                     },
                     {
                         "type": "string",
                         "description": "rec ID",
                         "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "task rec ID",
+                        "name": "taskId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/vacancy_request/{id}/approvals/{taskId}/approve": {
+            "post": {
+                "description": "Согласовать",
+                "tags": [
+                    "Согласование заявок"
+                ],
+                "summary": "Согласовать",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "rec ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "task rec ID",
+                        "name": "taskId",
                         "in": "path",
                         "required": true
                     }
@@ -9202,13 +9370,13 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/space/vacancy_request/{id}/reject": {
-            "put": {
-                "description": "Отклонить",
+        "/api/v1/space/vacancy_request/{id}/request_changes": {
+            "post": {
+                "description": "На доработку",
                 "tags": [
-                    "Заявка"
+                    "Согласование заявок"
                 ],
-                "summary": "Отклонить",
+                "summary": "На доработку",
                 "parameters": [
                     {
                         "type": "string",
@@ -9223,7 +9391,10 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/vacancyapimodels.VacancyRequestData"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/vacancyapimodels.ApprovalRequestChanges"
+                            }
                         }
                     },
                     {
@@ -9232,52 +9403,11 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/apimodels.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/apimodels.Response"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden"
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/apimodels.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/space/vacancy_request/{id}/to_revision": {
-            "put": {
-                "description": "На доработку",
-                "tags": [
-                    "Заявка"
-                ],
-                "summary": "На доработку",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Authorization token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
                     },
                     {
                         "type": "string",
-                        "description": "rec ID",
-                        "name": "id",
+                        "description": "task rec ID",
+                        "name": "taskId",
                         "in": "path",
                         "required": true
                     }
@@ -12054,17 +12184,21 @@ const docTemplate = `{
                 "ApplicantStatusArchive"
             ]
         },
-        "models.ApprovalStatus": {
+        "models.ApprovalState": {
             "type": "string",
             "enum": [
-                "Согласованно",
-                "Не согласованно",
-                "Ждет согласования"
+                "PENDING",
+                "APPROVED",
+                "REQUEST_CHANGES",
+                "REJECTED",
+                "REMOVED"
             ],
             "x-enum-varnames": [
-                "AStatusApproved",
-                "AStatusRejected",
-                "AStatusAwaiting"
+                "AStatePending",
+                "AStateApproved",
+                "AStateRequestChanges",
+                "AStateRejected",
+                "AStateRemoved"
             ]
         },
         "models.DriverLicenseType": {
@@ -12541,22 +12675,24 @@ const docTemplate = `{
         "models.VRStatus": {
             "type": "string",
             "enum": [
-                "Создана",
-                "Отменена",
-                "Не согласована",
-                "Согласована",
-                "На доработке",
-                "На согласовании",
-                "Шаблон"
+                "DRAFT",
+                "CREATED",
+                "IN_APPROVAL",
+                "APPROVED",
+                "REJECTED",
+                "IN_HR",
+                "CANCELLED",
+                "DONE"
             ],
             "x-enum-varnames": [
+                "VRStatusDraft",
                 "VRStatusCreated",
-                "VRStatusCanceled",
-                "VRStatusNotAccepted",
-                "VRStatusAccepted",
-                "VRStatusUnderRevision",
-                "VRStatusUnderAccepted",
-                "VRStatusTemplate"
+                "VRStatusInApproval",
+                "VRStatusApproved",
+                "VRStatusRejected",
+                "VRStatusInHr",
+                "VRStatusCancelled",
+                "VRStatusDone"
             ]
         },
         "models.VRType": {
@@ -13712,44 +13848,60 @@ const docTemplate = `{
                 }
             }
         },
-        "vacancyapimodels.ApprovalStageData": {
+        "vacancyapimodels.ApprovalReject": {
             "type": "object",
             "properties": {
-                "approval_status": {
-                    "$ref": "#/definitions/models.ApprovalStatus"
-                },
-                "space_user_id": {
+                "comment": {
                     "type": "string"
-                },
-                "stage": {
-                    "type": "integer"
                 }
             }
         },
-        "vacancyapimodels.ApprovalStageView": {
+        "vacancyapimodels.ApprovalRequestChanges": {
             "type": "object",
             "properties": {
-                "approval_status": {
-                    "$ref": "#/definitions/models.ApprovalStatus"
-                },
-                "space_user_id": {
+                "comment": {
                     "type": "string"
-                },
-                "space_user_name": {
-                    "type": "string"
-                },
-                "stage": {
-                    "type": "integer"
                 }
             }
         },
-        "vacancyapimodels.ApprovalStages": {
+        "vacancyapimodels.ApprovalTaskData": {
+            "type": "object",
+            "properties": {
+                "assignee_user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "vacancyapimodels.ApprovalTaskView": {
+            "type": "object",
+            "properties": {
+                "assignee_user_id": {
+                    "type": "string"
+                },
+                "assignee_user_name": {
+                    "type": "string"
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "decided_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "state": {
+                    "$ref": "#/definitions/models.ApprovalState"
+                }
+            }
+        },
+        "vacancyapimodels.ApprovalTasks": {
             "type": "object",
             "properties": {
                 "approval_stages": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/vacancyapimodels.ApprovalStageData"
+                        "$ref": "#/definitions/vacancyapimodels.ApprovalTaskData"
                     }
                 }
             }
@@ -14179,7 +14331,7 @@ const docTemplate = `{
                 "approval_stages": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/vacancyapimodels.ApprovalStageData"
+                        "$ref": "#/definitions/vacancyapimodels.ApprovalTaskData"
                     }
                 },
                 "as_template": {
@@ -14304,134 +14456,13 @@ const docTemplate = `{
                 }
             }
         },
-        "vacancyapimodels.VacancyRequestData": {
-            "type": "object",
-            "properties": {
-                "chief_fio": {
-                    "description": "фио непосредственного руководителя",
-                    "type": "string"
-                },
-                "city_id": {
-                    "description": "ид города",
-                    "type": "string"
-                },
-                "company_id": {
-                    "description": "ид компании",
-                    "type": "string"
-                },
-                "company_name": {
-                    "description": "название компании",
-                    "type": "string"
-                },
-                "company_struct_id": {
-                    "description": "ид структуры компании",
-                    "type": "string"
-                },
-                "confidential": {
-                    "description": "конфиденциальная вакансия",
-                    "type": "boolean"
-                },
-                "department_id": {
-                    "description": "ид подразделения",
-                    "type": "string"
-                },
-                "description": {
-                    "description": "Коментарий к заявке",
-                    "type": "string"
-                },
-                "employment": {
-                    "description": "Занятость",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.Employment"
-                        }
-                    ]
-                },
-                "experience": {
-                    "description": "Опыт работы",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.Experience"
-                        }
-                    ]
-                },
-                "in_interaction": {
-                    "description": "внутреннее взаимодействие",
-                    "type": "string"
-                },
-                "interviewer": {
-                    "description": "сотрудник проводящий интервью",
-                    "type": "string"
-                },
-                "job_title_id": {
-                    "description": "ид штатной должности",
-                    "type": "string"
-                },
-                "opened_positions": {
-                    "description": "кол-во открытых позиций",
-                    "type": "integer"
-                },
-                "out_interaction": {
-                    "description": "внешнее взаимодействие",
-                    "type": "string"
-                },
-                "place_of_work": {
-                    "description": "адрес места работы",
-                    "type": "string"
-                },
-                "request_type": {
-                    "description": "тип вакансии",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.VRType"
-                        }
-                    ]
-                },
-                "requirements": {
-                    "description": "требования/обязанности/условия",
-                    "type": "string"
-                },
-                "schedule": {
-                    "description": "Режим работы",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.Schedule"
-                        }
-                    ]
-                },
-                "selection_type": {
-                    "description": "вид подбора",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.VRSelectionType"
-                        }
-                    ]
-                },
-                "short_info": {
-                    "description": "краткая информация о комманде отдела",
-                    "type": "string"
-                },
-                "urgency": {
-                    "description": "срочность",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.VRUrgency"
-                        }
-                    ]
-                },
-                "vacancy_name": {
-                    "description": "название вакансии",
-                    "type": "string"
-                }
-            }
-        },
         "vacancyapimodels.VacancyRequestEditData": {
             "type": "object",
             "properties": {
                 "approval_stages": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/vacancyapimodels.ApprovalStageData"
+                        "$ref": "#/definitions/vacancyapimodels.ApprovalTaskData"
                     }
                 },
                 "chief_fio": {
@@ -14555,18 +14586,6 @@ const docTemplate = `{
         "vacancyapimodels.VacancyRequestView": {
             "type": "object",
             "properties": {
-                "approval_stage_current": {
-                    "type": "integer"
-                },
-                "approval_stage_is_last": {
-                    "type": "boolean"
-                },
-                "approval_stages": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/vacancyapimodels.ApprovalStageView"
-                    }
-                },
                 "chief_fio": {
                     "description": "фио непосредственного руководителя",
                     "type": "string"

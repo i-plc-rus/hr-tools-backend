@@ -4,7 +4,6 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"hr-tools-backend/models"
-	"sort"
 	"time"
 )
 
@@ -38,7 +37,6 @@ type VacancyRequest struct {
 	OutInteraction  string
 	InInteraction   string
 	Status          models.VRStatus
-	ApprovalStages  []*ApprovalStage
 	Employment      models.Employment `gorm:"type:varchar(255)"` // Занятость
 	Experience      models.Experience `gorm:"type:varchar(255)"` // Опыт работы
 	Schedule        models.Schedule   `gorm:"type:varchar(255)"` // Режим работы
@@ -61,19 +59,6 @@ func (v *VacancyRequest) AfterDelete(tx *gorm.DB) (err error) {
 	if v.ID == "" {
 		return nil
 	}
-	tx.Clauses(clause.Returning{}).Where("vacancy_request_id = ?", v.ID).Delete(&ApprovalStage{})
+	tx.Clauses(clause.Returning{}).Where("request_id = ?", v.ID).Delete(&ApprovalTask{})
 	return
-}
-
-func (v *VacancyRequest) GetCurrentApprovalStage() (isLast bool, stage *ApprovalStage) {
-	sort.Slice(v.ApprovalStages, func(i, j int) bool {
-		return v.ApprovalStages[i].Stage < v.ApprovalStages[j].Stage
-	})
-	for k, item := range v.ApprovalStages {
-		if item.ApprovalStatus == models.AStatusApproved {
-			continue
-		}
-		return k == len(v.ApprovalStages)-1, item
-	}
-	return true, nil
 }
