@@ -1,6 +1,7 @@
 package masaihandler
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -20,7 +21,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/r3labs/sse/v2"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -217,31 +217,64 @@ func (i impl) listenResults(eventID string) (result []byte, err error) {
 	i.busy.Store(true)
 	defer i.busy.Store(false)
 
-	client := sse.NewClient(fmt.Sprintf("%v/call/event_handler_submit/%s", i.baseUrl, eventID))
-
-	var event sse.Event
-	err = client.SubscribeRawWithContext(i.ctx, func(msg *sse.Event) {
-		if msg == nil {
-			return
-		}
-		i.getLogger().Infof("Событие: %v", string(msg.Event))
-		if string(msg.Event) == "complete" || string(msg.Event) == "error" {
-			event = *msg
-			return
-		}
-	})
+	url := fmt.Sprintf("%v/call/event_handler_submit/%s", i.baseUrl, eventID)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	switch string(event.Event) {
-	case "error":
-		return nil, errors.New(string(event.Data))
-	case "complete":
-		return event.Data, nil
-	default:
-		return nil, errors.Errorf("получено неизвестное событие: %v", string(event.Event))
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
 	}
+	defer resp.Body.Close()
+
+	reader := bufio.NewReader(resp.Body)
+
+	var currentEvent string
+	var currentData bytes.Buffer
+
+	for {
+		line, err := reader.ReadBytes('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, err
+		}
+
+		line = bytes.TrimSpace(line)
+		// Пустая строка означает конец события в SSE
+		if len(line) == 0 {
+			if currentEvent == "complete" {
+				// Убираем лишние пробелы
+				result := bytes.TrimSpace(currentData.Bytes())
+				return result, nil
+			}
+			if currentEvent == "error" {
+				return nil, errors.Wrap(errors.New(currentData.String()), "ошибка анализа видео файла")
+			}
+			// Сбрасываем для следующего события
+			currentEvent = ""
+			currentData.Reset()
+			continue
+		}
+
+		if bytes.HasPrefix(line, []byte("event:")) {
+			currentEvent = string(bytes.TrimSpace(line[len("event:"):]))
+			currentData.Reset() // Сбрасываем данные при новом событии
+		} else if bytes.HasPrefix(line, []byte("data:")) {
+			// Каждая строка начинается с "data:"
+			// Многострочные данные объединяются с одним переносом строки
+			dataPart := line[len("data:"):]
+			dataPart = bytes.TrimLeft(dataPart, " \t") // Убираем пробелы только в начале
+			if currentData.Len() > 0 {
+				currentData.WriteByte('\n') // Добавляем перенос между многострочными данными
+			}
+			currentData.Write(dataPart)
+		}
+	}
+	return nil, errors.New("не получено событие complete")
 }
 
 func (i impl) removeSession(id string, force bool) {
