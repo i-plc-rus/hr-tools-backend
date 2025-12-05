@@ -63,7 +63,7 @@ type VacancyRequestCreateData struct {
 
 type VacancyRequestEditData struct {
 	VacancyRequestData
-	ApprovalStages
+	ApprovalTasks
 }
 
 func (v VacancyRequestEditData) Validate() error {
@@ -71,7 +71,7 @@ func (v VacancyRequestEditData) Validate() error {
 	if err != nil {
 		return err
 	}
-	return v.ApprovalStages.Validate()
+	return v.ApprovalTasks.Validate()
 }
 
 type VacancyRequestView struct {
@@ -83,9 +83,6 @@ type VacancyRequestView struct {
 	JobTitleName         string              `json:"job_title_name"`
 	City                 string              `json:"city"`
 	CompanyStructName    string              `json:"company_struct_name"`
-	ApprovalStages       []ApprovalStageView `json:"approval_stages"`
-	ApprovalStageCurrent int                 `json:"approval_stage_current"`
-	ApprovalStageIsLast  bool                `json:"approval_stage_is_last"`
 	Pinned               bool                `json:"pinned"`
 	Favorite             bool                `json:"favorite"`
 	OpenVacancies        int                 `json:"open_vacancies"` // кол-во вакансий открытых по заявке
@@ -149,16 +146,6 @@ func VacancyRequestConvert(rec dbmodels.VacancyRequest) VacancyRequestView {
 	if rec.CompanyStruct != nil {
 		result.CompanyStructName = rec.CompanyStruct.Name
 	}
-	approvalStages := []ApprovalStageView{}
-	for _, item := range rec.ApprovalStages {
-		approvalStages = append(approvalStages, ApprovalStageConvert(*item))
-	}
-	isLast, stage := rec.GetCurrentApprovalStage()
-	if stage != nil {
-		result.ApprovalStageCurrent = stage.Stage
-		result.ApprovalStageIsLast = isLast
-	}
-	result.ApprovalStages = approvalStages
 	result.OpenVacancies = len(rec.Vacancies)
 	for _, comment := range rec.Comments {
 		commentView := CommentView{
