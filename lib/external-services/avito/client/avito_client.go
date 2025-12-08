@@ -5,13 +5,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"hr-tools-backend/db"
+	externalservices "hr-tools-backend/lib/external-services"
+	extapiauditstore "hr-tools-backend/lib/external-services/ext-api-audit-store"
 	avitoapimodels "hr-tools-backend/models/api/avito"
+	dbmodels "hr-tools-backend/models/db"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 type Provider interface {
@@ -61,16 +66,19 @@ type Provider interface {
 var Instance Provider
 
 type impl struct {
-	host string
+	host       string
+	auditStore extapiauditstore.Provider
 }
 
 func NewProvider() {
 	Instance = &impl{
-		host: host,
+		host:       host,
+		auditStore: extapiauditstore.NewInstance(db.DB),
 	}
 }
 
 const (
+	serviceName          string = "avito"
 	host                 string = "https://api.avito.ru"
 	tokenPath            string = "%s/token"
 	tokenScope           string = "job:cv,job:write,job:applications,messenger:read,messenger:write,stats:read,job:vacancy,user:read"
@@ -112,7 +120,7 @@ func (i impl) RequestToken(ctx context.Context, req avitoapimodels.RequestToken)
 		WithField("external_request", uri).
 		WithField("request_body", fmt.Sprintf("%+v", data.Encode()))
 
-	err := i.sendRequest(logger, r, &resp, "")
+	err := i.sendRequest(ctx, logger, r, &resp, "")
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +143,7 @@ func (i impl) RefreshToken(ctx context.Context, req avitoapimodels.RefreshToken)
 		WithField("external_request", uri).
 		WithField("request_body", fmt.Sprintf("%+v", data.Encode()))
 
-	err := i.sendRequest(logger, r, &resp, "")
+	err := i.sendRequest(ctx, logger, r, &resp, "")
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +159,7 @@ func (i impl) Self(ctx context.Context, accessToken string) (*avitoapimodels.Sel
 	r.Header.Add("Content-Type", "application/json")
 	resp := new(avitoapimodels.SelfData)
 
-	err := i.sendRequest(logger, r, resp, accessToken)
+	err := i.sendRequest(ctx, logger, r, resp, accessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +182,8 @@ func (i impl) VacancyPublish(ctx context.Context, accessToken string, request av
 	logger = logger.
 		WithField("request_body", string(body))
 
-	err = i.sendRequest(logger, r, &resp, accessToken)
+	rCtx := externalservices.GetAuditContext(ctx, uri, body)
+	err = i.sendRequest(rCtx, logger, r, &resp, accessToken)
 	if err != nil {
 		return "", err
 	}
@@ -197,7 +206,7 @@ func (i impl) VacancyStatus(ctx context.Context, accessToken string, request avi
 	logger = logger.
 		WithField("request_body", string(body))
 
-	err = i.sendRequest(logger, r, resp, accessToken)
+	err = i.sendRequest(ctx, logger, r, resp, accessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +230,8 @@ func (i impl) VacancyUpdate(ctx context.Context, accessToken, vacancyPublishID s
 	logger = logger.
 		WithField("request_body", string(body))
 	resp := avitoapimodels.VacancyPubResponse{}
-	err = i.sendRequest(logger, r, &resp, accessToken)
+	rCtx := externalservices.GetAuditContext(ctx, uri, body)
+	err = i.sendRequest(rCtx, logger, r, &resp, accessToken)
 	if err != nil {
 		return "", err
 	}
@@ -235,7 +245,8 @@ func (i impl) VacancyClose(ctx context.Context, accessToken string, vacancyID in
 		WithField("external_request", uri)
 	r, _ := http.NewRequestWithContext(ctx, "PUT", uri, nil)
 	r.Header.Add("Content-Type", "application/json")
-	return i.sendRequest(logger, r, nil, accessToken)
+	rCtx := externalservices.GetAuditContext(ctx, uri, nil)
+	return i.sendRequest(rCtx, logger, r, nil, accessToken)
 }
 
 func (i impl) GetVacancy(ctx context.Context, accessToken string, vacancyID int) (resp *avitoapimodels.VacancyInfo, err error) {
@@ -248,7 +259,7 @@ func (i impl) GetVacancy(ctx context.Context, accessToken string, vacancyID int)
 	r.Header.Add("Content-Type", "application/json")
 	resp = new(avitoapimodels.VacancyInfo)
 
-	err = i.sendRequest(logger, r, resp, accessToken)
+	err = i.sendRequest(ctx, logger, r, resp, accessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +279,7 @@ func (i impl) GetApplicationIDs(ctx context.Context, accessToken string, updated
 	r.Header.Add("Content-Type", "application/json")
 	resp = new(avitoapimodels.AppliesIDResponse)
 
-	err = i.sendRequest(logger, r, resp, accessToken)
+	err = i.sendRequest(ctx, logger, r, resp, accessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +304,7 @@ func (i impl) GetApplicationByIDs(ctx context.Context, accessToken string, ids [
 	r.Header.Add("Content-Type", "application/json")
 	resp = new(avitoapimodels.AppliesResponse)
 
-	err = i.sendRequest(logger, r, resp, accessToken)
+	err = i.sendRequest(ctx, logger, r, resp, accessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +321,7 @@ func (i impl) GetResume(ctx context.Context, accessToken string, vacancyID, resu
 	r.Header.Add("Content-Type", "application/json")
 	resp = new(avitoapimodels.Resume)
 
-	err = i.sendRequest(logger, r, resp, accessToken)
+	err = i.sendRequest(ctx, logger, r, resp, accessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -333,7 +344,7 @@ func (i impl) SendNewMessage(ctx context.Context, accessToken string, userID int
 	logger = logger.
 		WithField("request_body", string(body))
 
-	return i.sendRequest(logger, r, nil, accessToken)
+	return i.sendRequest(ctx, logger, r, nil, accessToken)
 }
 
 func (i impl) MarkReadMessage(ctx context.Context, accessToken string, userID int64, chatID string) error {
@@ -343,7 +354,7 @@ func (i impl) MarkReadMessage(ctx context.Context, accessToken string, userID in
 
 	r, _ := http.NewRequestWithContext(ctx, "POST", uri, nil)
 	r.Header.Add("Content-Type", "application/json")
-	return i.sendRequest(logger, r, nil, accessToken)
+	return i.sendRequest(ctx, logger, r, nil, accessToken)
 }
 
 func (i impl) GetMessages(ctx context.Context, accessToken string, userID int64, chatID string) (avitoapimodels.MessageResponse, error) {
@@ -355,7 +366,7 @@ func (i impl) GetMessages(ctx context.Context, accessToken string, userID int64,
 	r, _ := http.NewRequestWithContext(ctx, "GET", uri, nil)
 	r.Header.Add("Content-Type", "application/json")
 
-	err := i.sendRequest(logger, r, &resp, accessToken)
+	err := i.sendRequest(ctx, logger, r, &resp, accessToken)
 	if err != nil {
 		return avitoapimodels.MessageResponse{}, err
 	}
@@ -371,23 +382,27 @@ func (i impl) GetChatInfo(ctx context.Context, accessToken string, userID int64,
 	r, _ := http.NewRequestWithContext(ctx, "GET", uri, nil)
 	r.Header.Add("Content-Type", "application/json")
 
-	err := i.sendRequest(logger, r, &resp, accessToken)
+	err := i.sendRequest(ctx, logger, r, &resp, accessToken)
 	if err != nil {
 		return avitoapimodels.ChatInfo{}, err
 	}
 	return resp, nil
 }
 
-func (i impl) sendRequest(logger *log.Entry, r *http.Request, resp interface{}, accessToken string) error {
+func (i impl) sendRequest(ctx context.Context, logger *log.Entry, r *http.Request, resp interface{}, accessToken string) error {
 	r.Header.Add("User-Agent", "HRTools/1.0")
 	if accessToken != "" {
 		r.Header.Add("Authorization", fmt.Sprintf("Bearer %v", accessToken))
 	}
 	client := &http.Client{}
 	response, err := client.Do(r)
+	// читаем Body только 1 раз
+	responseBody, logger := getResponseBody(logger, response)
 	if response != nil && (response.StatusCode >= 200 && response.StatusCode <= 300) {
+		if len(responseBody) != 0 {
+			i.auditError(ctx, string(responseBody), response.StatusCode)
+		}
 		if resp != nil {
-			responseBody, _ := io.ReadAll(response.Body)
 			err = json.Unmarshal(responseBody, resp)
 			if err != nil {
 				return errors.Wrap(err, "ошибка сериализации ответа")
@@ -398,10 +413,35 @@ func (i impl) sendRequest(logger *log.Entry, r *http.Request, resp interface{}, 
 
 	responseError := ""
 	if response != nil {
-		responseBody, _ := io.ReadAll(response.Body)
-		logger = logger.WithField("response_body", string(responseBody))
 		responseError = string(responseBody)
 	}
 	logger.Error("ошибка отправки запроса в Avito")
 	return errors.Errorf("Некорректный запрос. Ошибка: %v", responseError)
+}
+
+func getResponseBody(logger *log.Entry, response *http.Response) ([]byte, *log.Entry) {
+	if response != nil {
+		responseBody, _ := io.ReadAll(response.Body)
+		return responseBody, logger.WithField("response_body", string(responseBody))
+	}
+	return nil, logger
+}
+
+func (i impl) auditError(ctx context.Context, response string, status int) {
+	ctxData := externalservices.ExtractAuditData(ctx)
+	if !ctxData.WithAudit {
+		return
+	}
+	rec := dbmodels.ExtApiAudit{
+		BaseSpaceModel: dbmodels.BaseSpaceModel{
+			SpaceID: ctxData.SpaceID,
+		},
+		RecID:    ctxData.RecID,
+		Service:  serviceName,
+		Uri:      ctxData.Uri,
+		Request:  ctxData.Request,
+		Response: response,
+		Status:   status,
+	}
+	i.auditStore.Create(rec)
 }

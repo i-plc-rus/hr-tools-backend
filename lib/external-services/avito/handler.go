@@ -160,7 +160,7 @@ func (i *impl) VacancyPublish(ctx context.Context, spaceID, vacancyID string) (h
 		return hMsg, nil
 	}
 
-	id, err := i.client.VacancyPublish(ctx, accessToken, *request)
+	id, err := i.client.VacancyPublish(externalservices.GetContextWithRecID(ctx, spaceID, vacancyID), accessToken, *request)
 	if err != nil {
 		return "", err
 	}
@@ -198,7 +198,7 @@ func (i *impl) VacancyUpdate(ctx context.Context, spaceID, vacancyID string) (hM
 		return hMsg, nil
 	}
 
-	id, err := i.client.VacancyUpdate(ctx, accessToken, rec.AvitoPublishID, rec.AvitoID, *request)
+	id, err := i.client.VacancyUpdate(externalservices.GetContextWithRecID(ctx, spaceID, vacancyID), accessToken, rec.AvitoPublishID, rec.AvitoID, *request)
 	if err != nil {
 		return "", err
 	}
@@ -228,7 +228,7 @@ func (i *impl) VacancyClose(ctx context.Context, spaceID, vacancyID string) (hMs
 	if hMsg != "" {
 		return hMsg, nil
 	}
-	return "", i.client.VacancyClose(ctx, accessToken, rec.AvitoID)
+	return "", i.client.VacancyClose(externalservices.GetContextWithRecID(ctx, spaceID, vacancyID), accessToken, rec.AvitoID)
 }
 
 func (i *impl) VacancyAttach(ctx context.Context, spaceID, vacancyID string, extID string) (hMsg string, err error) {

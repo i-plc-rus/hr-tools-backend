@@ -165,7 +165,7 @@ func (i *impl) VacancyPublish(ctx context.Context, spaceID, vacancyID string) (h
 		return hMsg, nil
 	}
 
-	id, hMsg, err := i.client.VacancyPublish(ctx, accessToken, *request)
+	id, hMsg, err := i.client.VacancyPublish(externalservices.GetContextWithRecID(ctx, spaceID, vacancyID), accessToken, *request)
 	if err != nil || hMsg != "" {
 		updMap := map[string]interface{}{
 			"hh_reasons": hMsg,
@@ -212,7 +212,7 @@ func (i *impl) VacancyUpdate(ctx context.Context, spaceID, vacancyID string) (hM
 		return hMsg, nil
 	}
 
-	err = i.client.VacancyUpdate(ctx, accessToken, rec.HhID, *request)
+	err = i.client.VacancyUpdate(externalservices.GetContextWithRecID(ctx, spaceID, vacancyID), accessToken, rec.HhID, *request)
 	updMap := map[string]any{
 		"hh_status": models.VacancyPubStatusModeration,
 	}
@@ -238,7 +238,7 @@ func (i *impl) VacancyClose(ctx context.Context, spaceID, vacancyID string) (hMs
 	if rec.HhID == "" {
 		return "вакансия еще не опубликованна", nil
 	}
-	return "", i.client.VacancyClose(ctx, accessToken, self.Employer.ID, rec.HhID)
+	return "", i.client.VacancyClose(externalservices.GetContextWithRecID(ctx, spaceID, vacancyID), accessToken, self.Employer.ID, rec.HhID)
 }
 
 func (i *impl) VacancyAttach(ctx context.Context, spaceID, vacancyID, hhID string) (hMsg string, err error) {
