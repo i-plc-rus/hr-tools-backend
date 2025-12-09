@@ -23,4 +23,5 @@ type ApprovalHistory struct {
 	AssigneeUser   *SpaceUser `gorm:"foreignKey:AssigneeUserID"`
 	State          models.ApprovalState
 	Comment        string
+	Changes        EntityChanges `gorm:"type:jsonb"`
 }

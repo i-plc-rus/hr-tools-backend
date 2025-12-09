@@ -9437,6 +9437,69 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/space/vacancy_request/{id}/vacancies": {
+            "get": {
+                "description": "Получение списка связанных вакансий",
+                "tags": [
+                    "Заявка"
+                ],
+                "summary": "Получение списка связанных вакансий",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "rec ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.ScrollerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/vacancyapimodels.VacancyView"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/user_profile": {
             "get": {
                 "description": "Получить профиль пользователя",
@@ -14583,6 +14646,20 @@ const docTemplate = `{
                 }
             }
         },
+        "vacancyapimodels.VacancyRequestPreView": {
+            "type": "object",
+            "properties": {
+                "creation_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.VRStatus"
+                }
+            }
+        },
         "vacancyapimodels.VacancyRequestView": {
             "type": "object",
             "properties": {
@@ -14863,6 +14940,9 @@ const docTemplate = `{
                 "place_of_work": {
                     "description": "адрес места работы",
                     "type": "string"
+                },
+                "request": {
+                    "$ref": "#/definitions/vacancyapimodels.VacancyRequestPreView"
                 },
                 "request_type": {
                     "description": "тип вакансии",

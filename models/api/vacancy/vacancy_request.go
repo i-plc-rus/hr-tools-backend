@@ -74,19 +74,25 @@ func (v VacancyRequestEditData) Validate() error {
 	return v.ApprovalTasks.Validate()
 }
 
+type VacancyRequestPreView struct {
+	ID           string          `json:"id"`
+	CreationDate time.Time       `json:"creation_date"`
+	Status       models.VRStatus `json:"status"`
+}
+
 type VacancyRequestView struct {
 	VacancyRequestData
-	ID                   string              `json:"id"`
-	CreationDate         time.Time           `json:"creation_date"`
-	Status               models.VRStatus     `json:"status"`
-	DepartmentName       string              `json:"department_name"`
-	JobTitleName         string              `json:"job_title_name"`
-	City                 string              `json:"city"`
-	CompanyStructName    string              `json:"company_struct_name"`
-	Pinned               bool                `json:"pinned"`
-	Favorite             bool                `json:"favorite"`
-	OpenVacancies        int                 `json:"open_vacancies"` // кол-во вакансий открытых по заявке
-	Comments             []CommentView       `json:"comments"`
+	ID                string          `json:"id"`
+	CreationDate      time.Time       `json:"creation_date"`
+	Status            models.VRStatus `json:"status"`
+	DepartmentName    string          `json:"department_name"`
+	JobTitleName      string          `json:"job_title_name"`
+	City              string          `json:"city"`
+	CompanyStructName string          `json:"company_struct_name"`
+	Pinned            bool            `json:"pinned"`
+	Favorite          bool            `json:"favorite"`
+	OpenVacancies     int             `json:"open_vacancies"` // кол-во вакансий открытых по заявке
+	Comments          []CommentView   `json:"comments"`
 }
 
 func VacancyRequestConvert(rec dbmodels.VacancyRequest) VacancyRequestView {
