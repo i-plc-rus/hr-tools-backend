@@ -420,9 +420,6 @@ func (i impl) sendRequestWithErrorData(ctx context.Context, logger *log.Entry, r
 		return nil, errors.Wrap(err, "ошибка отправки запроса в HH")
 	}
 	if response != nil && (response.StatusCode >= 200 && response.StatusCode <= 300) {
-		if len(responseBody) != 0 {
-			i.auditError(ctx, string(responseBody), response.StatusCode)
-		}
 		if resp != nil && needUnmarshalResponse {
 			if responseBody != nil {
 				err = json.Unmarshal(responseBody, resp)
@@ -437,6 +434,7 @@ func (i impl) sendRequestWithErrorData(ctx context.Context, logger *log.Entry, r
 	logger.Error("Некорректный запрос в HH")
 	errorResp := hhapimodels.ErrorData{}
 	if response != nil && responseBody != nil {
+		i.auditError(ctx, string(responseBody), response.StatusCode)
 		err = json.Unmarshal(responseBody, &errorResp)
 		if err != nil {
 			logger.WithError(err).Error("ошибка сериализации ответа с ошибкой")
