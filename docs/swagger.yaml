@@ -2983,6 +2983,15 @@ definitions:
         description: название вакансии
         type: string
     type: object
+  vacancyapimodels.VacancyRequestPreView:
+    properties:
+      creation_date:
+        type: string
+      id:
+        type: string
+      status:
+        $ref: '#/definitions/models.VRStatus'
+    type: object
   vacancyapimodels.VacancyRequestView:
     properties:
       chief_fio:
@@ -3171,6 +3180,8 @@ definitions:
       place_of_work:
         description: адрес места работы
         type: string
+      request:
+        $ref: '#/definitions/vacancyapimodels.VacancyRequestPreView'
       request_type:
         allOf:
         - $ref: '#/definitions/models.VRType'
@@ -9323,6 +9334,45 @@ paths:
       summary: На доработку
       tags:
       - Согласование заявок
+  /api/v1/space/vacancy_request/{id}/vacancies:
+    get:
+      description: Получение списка связанных вакансий
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.ScrollerResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/vacancyapimodels.VacancyView'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получение списка связанных вакансий
+      tags:
+      - Заявка
   /api/v1/space/vacancy_request/list:
     post:
       description: Список

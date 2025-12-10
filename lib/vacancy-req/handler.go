@@ -370,6 +370,24 @@ func (i impl) Approve(spaceID, requestID, taskID, userID string) (hMsh string, e
 			if hMsh != "" {
 				return errors.New(hMsh)
 			}
+
+			aprovalStagesHandler := aprovaltaskhandler.NewHandlerWithTx(tx)
+			auditRec := dbmodels.ApprovalHistory{
+				BaseSpaceModel: dbmodels.BaseSpaceModel{SpaceID: spaceID},
+				RequestID:      requestID,
+				AssigneeUserID: userID,
+				Comment:        "Заявка полностью согласована",
+				Changes: dbmodels.EntityChanges{
+					Description: "Изменен статус заявки",
+					Data: []dbmodels.FieldChanges{
+						{
+							Field:    "Status",
+							OldValue: rec.Status,
+							NewValue: models.VRStatusApproved},
+					},
+				},
+			}
+			aprovalStagesHandler.AuditCommon(auditRec)
 		}
 		return nil
 	})
@@ -629,9 +647,12 @@ func (i impl) publish(spaceID, id, userID string) error {
 	if err != nil {
 		return err
 	}
-	_, err = i.vacancyHandler.Create(spaceID, userID, data)
+	_, hMsg, err := i.vacancyHandler.Create(spaceID, userID, data)
 	if err != nil {
 		return err
+	}
+	if hMsg != "" {
+		return errors.New(hMsg)
 	}
 	return nil
 }

@@ -19,6 +19,7 @@ type Provider interface {
 	Save(spaceID, requestID string, stages []vacancyapimodels.ApprovalTaskData) (hMsg string, err error)
 	History(spaceID, requestID string) ([]vacancyapimodels.ApprovalHistoryView, error)
 	Audit(data dbmodels.ApprovalTask)
+	AuditCommon(rec dbmodels.ApprovalHistory)
 }
 
 var Instance Provider
@@ -154,5 +155,12 @@ func (i impl) Audit(data dbmodels.ApprovalTask) {
 	_, err := i.approvalHistoryStore.Create(rec)
 	if err != nil {
 		i.GetLogger(data.SpaceID, data.RequestID).WithError(err).Error("Ошибка добавления истории по задаче согласования заявки")
+	}
+}
+
+func (i impl) AuditCommon(rec dbmodels.ApprovalHistory){
+	_, err := i.approvalHistoryStore.Create(rec)
+	if err != nil {
+		i.GetLogger(rec.SpaceID, rec.RequestID).WithError(err).Error("Ошибка добавления истории по задаче согласования заявки")
 	}
 }

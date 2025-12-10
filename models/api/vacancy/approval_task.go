@@ -94,8 +94,9 @@ type ApprovalHistoryData struct {
 
 type ApprovalHistoryView struct {
 	ApprovalHistoryData
-	CreatedAt        time.Time `json:"created_at"`
-	AssigneeUserName string    `json:"assignee_user_name"`
+	CreatedAt        time.Time              `json:"created_at"`
+	AssigneeUserName string                 `json:"assignee_user_name"`
+	Changes          dbmodels.EntityChanges `json:"changes"` // Изменения
 }
 
 func ApprovalHistoryConvert(rec dbmodels.ApprovalHistory) ApprovalHistoryView {
@@ -114,5 +115,6 @@ func ApprovalHistoryConvert(rec dbmodels.ApprovalHistory) ApprovalHistoryView {
 		},
 		CreatedAt:        rec.CreatedAt,
 		AssigneeUserName: userName,
+		Changes:          rec.Changes,
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"hr-tools-backend/db"
 	applicanthistoryhandler "hr-tools-backend/lib/applicant-history"
 	applicantstore "hr-tools-backend/lib/applicant/store"
+	aprovaltaskhandler "hr-tools-backend/lib/aproval-task"
 	citystore "hr-tools-backend/lib/dicts/city/store"
 	companyprovider "hr-tools-backend/lib/dicts/company"
 	companystructprovider "hr-tools-backend/lib/dicts/company-struct"
@@ -35,7 +36,7 @@ import (
 )
 
 type Provider interface {
-	Create(spaceID, userID string, data vacancyapimodels.VacancyData) (id string, err error)
+	Create(spaceID, userID string, data vacancyapimodels.VacancyData) (id, hMsg string, err error)
 	GetByID(spaceID, id string) (item vacancyapimodels.VacancyView, err error)
 	Update(spaceID, id string, data vacancyapimodels.VacancyData) error
 	Delete(spaceID, id string) error
@@ -124,12 +125,13 @@ func (i impl) checkDependency(spaceID string, data vacancyapimodels.VacancyData)
 	return nil
 }
 
-func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyData) (id string, err error) {
+func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyData) (id, hMsg string, err error) {
 	logger := i.getLogger(spaceID, "", userID)
 	err = i.checkDependency(spaceID, data)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
+	vrChanges := []dbmodels.FieldChanges{}
 	recID := ""
 	err = db.DB.Transaction(func(tx *gorm.DB) error {
 		rec := dbmodels.Vacancy{
@@ -157,12 +159,30 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyData) 
 			Schedule:   data.Schedule,
 		}
 		if data.VacancyRequestID != "" {
-			rec.VacancyRequestID = &data.VacancyRequestID
 			vrStore := vacancyreqstore.NewInstance(tx)
+			vrRec, err := vrStore.GetByID(spaceID, data.VacancyRequestID)
+			if err != nil {
+				return errors.Wrap(err, "ошибка получения заявки")
+			}
+			if vrRec == nil {
+				hMsg = "заявка не найдена"
+				return nil
+			}
+			if vrRec.Status != models.VRStatusApproved {
+				hMsg = "необходимо согласовать заявку"
+				return nil
+			}
+
+			rec.VacancyRequestID = &vrRec.ID
 
 			updMap := map[string]interface{}{
 				"Status": models.VRStatusInHr,
 			}
+			vrChanges = append(vrChanges, dbmodels.FieldChanges{
+				Field:    "Status",
+				OldValue: vrRec.Status,
+				NewValue: models.VRStatusInHr,
+			})
 			err = vrStore.Update(spaceID, data.VacancyRequestID, updMap)
 			if err != nil {
 				return errors.Wrap(err, "ошибка изменения статуса заявки")
@@ -203,16 +223,39 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyData) 
 		if err != nil {
 			return errors.Wrap(err, "Ошибка приглашения участника в команду")
 		}
+		if data.VacancyRequestID != "" {
+			aprovalStagesHandler := aprovaltaskhandler.NewHandlerWithTx(tx)
+			vrChanges = append(vrChanges, dbmodels.FieldChanges{
+				Field:    "Vacancies.ID",
+				OldValue: nil,
+				NewValue: recID,
+			})
+			auditRec := dbmodels.ApprovalHistory{
+				BaseSpaceModel: dbmodels.BaseSpaceModel{SpaceID: spaceID},
+				RequestID:      data.VacancyRequestID,
+				AssigneeUserID: userID,
+				Comment:        "Создана вакансия по заявке",
+				Changes: dbmodels.EntityChanges{
+					Description: "Создана вакансия по заявке",
+					Data: vrChanges,
+				},
+			}
+			aprovalStagesHandler.AuditCommon(auditRec)
+		}
 
 		return nil
 	})
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
+	if hMsg != "" {
+		return "", hMsg, nil
+	}
+
 	logger.
 		WithField("rec_id", recID).
 		Info("Создана вакансия")
-	return recID, nil
+	return recID, "", nil
 }
 
 func (i impl) GetByID(spaceID, id string) (item vacancyapimodels.VacancyView, err error) {

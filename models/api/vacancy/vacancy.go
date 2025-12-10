@@ -90,11 +90,12 @@ type VacancyInfo struct {
 type VacancyView struct {
 	VacancyData
 	VacancyInfo
-	External        ExternalData         `json:"external"`
-	ID              string               `json:"id"`
-	CreationDate    time.Time            `json:"creation_date"`
-	SelectionStages []SelectionStageView `json:"selection_stages"` // этапы подбора
-	Comments        []CommentView        `json:"comments"`
+	External        ExternalData           `json:"external"`
+	ID              string                 `json:"id"`
+	CreationDate    time.Time              `json:"creation_date"`
+	SelectionStages []SelectionStageView   `json:"selection_stages"` // этапы подбора
+	Comments        []CommentView          `json:"comments"`
+	Request         *VacancyRequestPreView `json:"request"`
 }
 
 type Salary struct {
@@ -192,6 +193,13 @@ func VacancyConvert(rec dbmodels.VacancyExt) VacancyView {
 	}
 	if rec.VacancyRequestID != nil {
 		result.VacancyRequestID = *rec.VacancyRequestID
+		if rec.VacancyRequest != nil {
+			result.Request = &VacancyRequestPreView{
+				ID:           rec.VacancyRequest.ID,
+				CreationDate: rec.VacancyRequest.CreatedAt,
+				Status:       rec.VacancyRequest.Status,
+			}
+		}
 	}
 
 	if rec.HhID != "" {

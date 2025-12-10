@@ -3,6 +3,7 @@ package apiv1
 import (
 	"github.com/gofiber/fiber/v2"
 	"hr-tools-backend/controllers"
+	vacancyhandler "hr-tools-backend/lib/vacancy"
 	vacancyreqhandler "hr-tools-backend/lib/vacancy-req"
 	"hr-tools-backend/middleware"
 	"hr-tools-backend/models"
@@ -24,6 +25,7 @@ func InitVacancyRequestApiRouters(app *fiber.App) {
 		router.Route(":id", func(idRoute fiber.Router) {
 			idRoute.Put("", controller.update)
 			idRoute.Get("", controller.get)
+			idRoute.Get("vacancies", controller.vacancies)
 			idRoute.Delete("", controller.delete)
 			idRoute.Put("pin", controller.pin)
 			idRoute.Put("favorite", controller.favorite)
@@ -136,6 +138,33 @@ func (c *vacancyReqApiController) get(ctx *fiber.Ctx) error {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения заявки")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(resp))
+}
+
+// @Summary Получение списка связанных вакансий
+// @Tags Заявка
+// @Description Получение списка связанных вакансий
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    string  				    	true         "rec ID"
+// @Success 200 {object} apimodels.ScrollerResponse{data=[]vacancyapimodels.VacancyView}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/vacancy_request/{id}/vacancies [get]
+func (c *vacancyReqApiController) vacancies(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	filter := vacancyapimodels.VacancyFilter{
+		VacancyRequestID: id,
+	}
+	list, rowCount, err := vacancyhandler.Instance.List(spaceID, id, filter)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения заявки")
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewScrollerResponse(list, rowCount))
 }
 
 // @Summary Удаление
