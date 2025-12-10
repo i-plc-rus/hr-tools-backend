@@ -34,11 +34,27 @@ func GetContextWithRecID(ctx context.Context, spaceID, recID string) context.Con
 
 func ExtractAuditData(ctx context.Context) AuditData {
 	data := AuditData{
-		SpaceID:   ctx.Value(spaceIDKey).(string),
-		Request:   ctx.Value(requestKey).(string),
-		Uri:       ctx.Value(uriKey).(string),
-		RecID:     ctx.Value(recIDKey).(string),
-		WithAudit: ctx.Value(withAuditKey).(bool),
+		SpaceID:   getStringCtxValue(ctx, spaceIDKey),
+		Request:   getStringCtxValue(ctx, requestKey),
+		Uri:       getStringCtxValue(ctx, uriKey),
+		RecID:     getStringCtxValue(ctx, recIDKey),
+		WithAudit: getBoolCtxValue(ctx, withAuditKey),
 	}
 	return data
+}
+
+func getStringCtxValue(ctx context.Context, key string) string {
+	value := ctx.Value(key)
+	if value == nil {
+		return ""
+	}
+	return value.(string)
+}
+
+func getBoolCtxValue(ctx context.Context, key string) bool {
+	value := ctx.Value(key)
+	if value == nil {
+		return false
+	}
+	return value.(bool)
 }
