@@ -399,9 +399,6 @@ func (i impl) sendRequest(ctx context.Context, logger *log.Entry, r *http.Reques
 	// читаем Body только 1 раз
 	responseBody, logger := getResponseBody(logger, response)
 	if response != nil && (response.StatusCode >= 200 && response.StatusCode <= 300) {
-		if len(responseBody) != 0 {
-			i.auditError(ctx, string(responseBody), response.StatusCode)
-		}
 		if resp != nil {
 			err = json.Unmarshal(responseBody, resp)
 			if err != nil {
@@ -414,6 +411,7 @@ func (i impl) sendRequest(ctx context.Context, logger *log.Entry, r *http.Reques
 	responseError := ""
 	if response != nil {
 		responseError = string(responseBody)
+		i.auditError(ctx, responseError, response.StatusCode)
 	}
 	logger.Error("ошибка отправки запроса в Avito")
 	return errors.Errorf("Некорректный запрос. Ошибка: %v", responseError)
