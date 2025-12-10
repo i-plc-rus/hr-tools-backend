@@ -9,7 +9,7 @@ import (
 	"hr-tools-backend/lib/analytics"
 	"hr-tools-backend/lib/applicant"
 	applicanthistoryhandler "hr-tools-backend/lib/applicant-history"
-	aprovalstageshandler "hr-tools-backend/lib/aproval-stages"
+	aprovaltaskhandler "hr-tools-backend/lib/aproval-task"
 	cityprovider "hr-tools-backend/lib/dicts/city"
 	companyprovider "hr-tools-backend/lib/dicts/company"
 	companystructprovider "hr-tools-backend/lib/dicts/company-struct"
@@ -80,7 +80,7 @@ func InitAllServices(ctx context.Context) {
 	languagesprovider.NewHandler()
 	rejectreasonprovider.NewHandler()
 	companystructprovider.NewHandler()
-	aprovalstageshandler.NewHandler()
+	aprovaltaskhandler.NewHandler()
 	vacancyhandler.NewHandler()
 	vacancyreqhandler.NewHandler()
 	spacesettingshandler.NewHandler()

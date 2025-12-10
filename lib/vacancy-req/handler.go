@@ -3,8 +3,8 @@ package vacancyreqhandler
 import (
 	"fmt"
 	"hr-tools-backend/db"
-	aprovalstageshandler "hr-tools-backend/lib/aproval-stages"
-	approvalstagestore "hr-tools-backend/lib/aproval-stages/store"
+	aprovaltaskhandler "hr-tools-backend/lib/aproval-task"
+	approvaltaskstore "hr-tools-backend/lib/aproval-task/store"
 	citystore "hr-tools-backend/lib/dicts/city/store"
 	companyprovider "hr-tools-backend/lib/dicts/company"
 	companystructprovider "hr-tools-backend/lib/dicts/company-struct"
@@ -33,12 +33,14 @@ type Provider interface {
 	Delete(spaceID, id string) error
 	List(spaceID, userID string, filter vacancyapimodels.VrFilter) (list []vacancyapimodels.VacancyRequestView, rowCount int64, err error)
 	ChangeStatus(spaceID, id, userID string, status models.VRStatus) (hMsh string, err error)
-	Approve(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) (hMsh string, err error)
-	Reject(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) (hMsh string, err error)
 	CreateVacancy(spaceID, id, userID string) (hMsh string, err error)
 	ToPin(id, userID string, isSet bool) error
 	ToFavorite(id, userID string, isSet bool) error
 	AddComment(spaceID, id string, data vacancyapimodels.Comment) error
+	//согласование заявок
+	Approve(spaceID, requestID, taskID, userID string) (hMsh string, err error)
+	RequestChanges(spaceID, requestID, taskID, userID string, data vacancyapimodels.ApprovalRequestChanges) (hMsh string, err error)
+	Reject(spaceID, requestID, taskID, userID string, data vacancyapimodels.ApprovalReject) (hMsh string, err error)
 }
 
 var Instance Provider
@@ -46,28 +48,28 @@ var Instance Provider
 func NewHandler() {
 	Instance = impl{
 		store:                 vacancyreqstore.NewInstance(db.DB),
-		approvalStageStore:    approvalstagestore.NewInstance(db.DB),
+		approvalTaskStore:     approvaltaskstore.NewInstance(db.DB),
 		companyProvider:       companyprovider.Instance,
 		departmentProvider:    departmentprovider.Instance,
 		jobTitleProvider:      jobtitleprovider.Instance,
 		cityStore:             citystore.NewInstance(db.DB),
 		companyStructProvider: companystructprovider.Instance,
 		vacancyHandler:        vacancyhandler.Instance,
-		aprovalStagesHandler:  aprovalstageshandler.Instance,
+		aprovalTaskHandler:    aprovaltaskhandler.Instance,
 		spaceUserStore:        spaceusersstore.NewInstance(db.DB),
 	}
 }
 
 type impl struct {
 	store                 vacancyreqstore.Provider
-	approvalStageStore    approvalstagestore.Provider
+	approvalTaskStore     approvaltaskstore.Provider
 	companyProvider       companyprovider.Provider
 	departmentProvider    departmentprovider.Provider
 	jobTitleProvider      jobtitleprovider.Provider
 	cityStore             citystore.Provider
 	companyStructProvider companystructprovider.Provider
 	vacancyHandler        vacancyhandler.Provider
-	aprovalStagesHandler  aprovalstageshandler.Provider
+	aprovalTaskHandler    aprovaltaskhandler.Provider
 	spaceUserStore        spaceusersstore.Provider
 }
 
@@ -138,7 +140,7 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyReques
 		Schedule:        data.Schedule,
 	}
 	if data.AsTemplate {
-		rec.Status = models.VRStatusTemplate
+		rec.Status = models.VRStatusDraft
 	}
 	if data.CompanyID != "" {
 		rec.CompanyID = &data.CompanyID
@@ -158,7 +160,7 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyReques
 
 	err = db.DB.Transaction(func(tx *gorm.DB) error {
 		store := vacancyreqstore.NewInstance(tx)
-		aprovalStagesHandler := aprovalstageshandler.NewHandlerWithTx(tx)
+		aprovalStagesHandler := aprovaltaskhandler.NewHandlerWithTx(tx)
 		if rec.CompanyID == nil && data.CompanyName != "" {
 			companyID, err := createCompany(tx, spaceID, data.CompanyName)
 			if err != nil {
@@ -170,7 +172,7 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyReques
 		if err != nil {
 			return err
 		}
-		hMsg, err = aprovalStagesHandler.Save(spaceID, id, data.ApprovalStages.ApprovalStages)
+		hMsg, err = aprovalStagesHandler.Save(spaceID, id, data.ApprovalTasks.ApprovalTasks)
 		return err
 	})
 	if err != nil {
@@ -205,12 +207,12 @@ func (i impl) Update(spaceID, id string, data vacancyapimodels.VacancyRequestEdi
 			data.CompanyID = companyID
 		}
 		store := vacancyreqstore.NewInstance(tx)
-		aprovalStagesHandler := aprovalstageshandler.NewHandlerWithTx(tx)
+		aprovalStagesHandler := aprovaltaskhandler.NewHandlerWithTx(tx)
 		err := i.updateVr(store, spaceID, id, data.VacancyRequestData)
 		if err != nil {
 			return err
 		}
-		hMsg, err = aprovalStagesHandler.Save(spaceID, id, data.ApprovalStages.ApprovalStages)
+		hMsg, err = aprovalStagesHandler.Save(spaceID, id, data.ApprovalTasks.ApprovalTasks)
 		return err
 	})
 	if err != nil {
@@ -280,11 +282,32 @@ func (i impl) ChangeStatus(spaceID, id, userID string, status models.VRStatus) (
 		return "", err
 	}
 	logger.Info("статус заявки обновлен")
-	if status == models.VRStatusCanceled {
+	if status == models.VRStatusCancelled {
+		err = i.cancelVacancies(spaceID, id, userID)
+		if err != nil {
+			logger.WithError(err).Error("ошибка закрытия вакансии по заявке")
+		}
 		notification := models.GetPushVRClosed(rec.VacancyName, string(status))
 		go i.sendNotification(*rec, notification)
 	}
 	return "", nil
+}
+
+func (i impl) cancelVacancies(spaceID, id, userID string) error {
+	filter := vacancyapimodels.VacancyFilter{
+		VacancyRequestID: id,
+	}
+	vacancyList, _, err := i.vacancyHandler.List(spaceID, userID, filter)
+	if err != nil {
+		return err
+	}
+	for _, vacancy := range vacancyList {
+		err = i.vacancyHandler.StatusChange(spaceID, vacancy.ID, userID, models.VacancyStatusCanceled)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (i impl) checkVacancyExist(spaceID, id, userID string) (bool, error) {
@@ -298,42 +321,84 @@ func (i impl) checkVacancyExist(spaceID, id, userID string) (bool, error) {
 	return rowCount > 0, nil
 }
 
-func (i impl) Approve(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) (hMsh string, err error) {
-	rec, err := i.getRec(spaceID, id)
-	if err != nil {
-		return "", err
+func (i impl) Approve(spaceID, requestID, taskID, userID string) (hMsh string, err error) {
+	rec, taskRec, hMsh, err := i.approvalPrepare(spaceID, requestID, taskID, userID)
+	if hMsh != "" || err != nil {
+		return hMsh, err
 	}
 	if !rec.Status.AllowAccept() {
 		return fmt.Sprintf("невозможно согласовать заявку в текущем статусе: %v", rec.Status), nil
 	}
-	if rec.Status == models.VRStatusAccepted {
-		return "заявка уже согласована", nil
+
+	err = db.DB.Transaction(func(tx *gorm.DB) error {
+		aprovalStagesHandler := aprovaltaskhandler.NewHandlerWithTx(tx)
+		//меняем статус задачи согласования
+		updMap := map[string]interface{}{
+			"State":     models.AStateApproved,
+			"Comment":   "",
+			"DecidedAt": nil,
+		}
+		approvalTaskStore := approvaltaskstore.NewInstance(tx)
+		err = approvalTaskStore.Update(spaceID, taskID, updMap)
+		if err != nil {
+			return err
+		}
+		if taskRec != nil {
+			// для аудита
+			taskRec.State = models.AStateApproved
+			taskRec.Comment = ""
+			taskRec.DecidedAt = nil
+			aprovalStagesHandler.Audit(*taskRec)
+		}
+		taskList, err := approvalTaskStore.List(spaceID, requestID)
+		if err != nil {
+			return err
+		}
+		allAprove := true
+		for _, task := range taskList {
+			if task.State != models.AStateApproved {
+				allAprove = false
+				break
+			}
+		}
+		if allAprove {
+			//все согласовали, меняем статус заявки
+			hMsh, err = i.ChangeStatus(spaceID, requestID, userID, models.VRStatusApproved)
+			if err != nil {
+				return err
+			}
+			if hMsh != "" {
+				return errors.New(hMsh)
+			}
+
+			aprovalStagesHandler := aprovaltaskhandler.NewHandlerWithTx(tx)
+			auditRec := dbmodels.ApprovalHistory{
+				BaseSpaceModel: dbmodels.BaseSpaceModel{SpaceID: spaceID},
+				RequestID:      requestID,
+				AssigneeUserID: userID,
+				Comment:        "Заявка полностью согласована",
+				Changes: dbmodels.EntityChanges{
+					Description: "Изменен статус заявки",
+					Data: []dbmodels.FieldChanges{
+						{
+							Field:    "Status",
+							OldValue: rec.Status,
+							NewValue: models.VRStatusApproved},
+					},
+				},
+			}
+			aprovalStagesHandler.AuditCommon(auditRec)
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
 	}
 
-	isLastStage, stage := rec.GetCurrentApprovalStage()
-	if stage != nil {
-		if userID != stage.SpaceUserID {
-			return "за текущий этап отвечает другой сотрудник", nil
-		}
-		err = i.updateVr(i.store, spaceID, id, data)
-		if err != nil {
-			return "", errors.Wrap(err, "ошибка обновления данных заявки при согласовании")
-		}
-		updMap := map[string]interface{}{
-			"ApprovalStatus": models.AStatusApproved,
-		}
-		err = i.approvalStageStore.Update(spaceID, stage.ID, updMap)
-		if err != nil {
-			return "", errors.Wrap(err, "ошибка обновления статуса согласования")
-		}
-	}
-	if isLastStage {
-		return i.ChangeStatus(spaceID, id, userID, models.VRStatusAccepted)
-	}
 	go func(rec dbmodels.VacancyRequest) {
 		code := models.PushVRApproved
 		logger := log.WithField("space_id", spaceID).
-			WithField("rec_id", id).
+			WithField("rec_id", requestID).
 			WithField("event_code", code)
 		user, err := i.spaceUserStore.GetByID(userID)
 		if err != nil {
@@ -350,36 +415,103 @@ func (i impl) Approve(spaceID, id, userID string, data vacancyapimodels.VacancyR
 	return "", nil
 }
 
-func (i impl) Reject(spaceID, id, userID string, data vacancyapimodels.VacancyRequestData) (hMsh string, err error) {
-	rec, err := i.getRec(spaceID, id)
+func (i impl) RequestChanges(spaceID, requestID, taskID, userID string, data vacancyapimodels.ApprovalRequestChanges) (hMsh string, err error) {
+	rec, taskRec, hMsh, err := i.approvalPrepare(spaceID, requestID, taskID, userID)
+	if hMsh != "" || err != nil {
+		return hMsh, err
+	}
+	if !rec.Status.AllowReject() {
+		return fmt.Sprintf("невозможно отправить на доработку заявку в текущем статусе: %v", rec.Status), nil
+	}
+
+	err = db.DB.Transaction(func(tx *gorm.DB) error {
+		aprovalStagesHandler := aprovaltaskhandler.NewHandlerWithTx(tx)
+		//меняем статус задачи согласования
+		now := time.Now()
+		updMap := map[string]interface{}{
+			"State":     models.AStateRequestChanges,
+			"Comment":   data.Comment,
+			"DecidedAt": now,
+		}
+		approvalTaskStore := approvaltaskstore.NewInstance(tx)
+		err = approvalTaskStore.Update(spaceID, taskID, updMap)
+		if err != nil {
+			return err
+		}
+
+		//меняем статус заявки
+		hMsh, err = i.ChangeStatus(spaceID, requestID, userID, models.VRStatusCreated)
+		if err != nil {
+			return err
+		}
+		if hMsh != "" {
+			return errors.New(hMsh)
+		}
+		if taskRec != nil {
+			// для аудита
+			taskRec.State = models.AStateRequestChanges
+			taskRec.Comment = data.Comment
+			taskRec.DecidedAt = &now
+			aprovalStagesHandler.Audit(*taskRec)
+		}
+		return nil
+	})
 	if err != nil {
 		return "", err
+	}
+
+	return "", nil
+}
+
+func (i impl) Reject(spaceID, requestID, taskID, userID string, data vacancyapimodels.ApprovalReject) (hMsh string, err error) {
+	rec, taskRec, hMsh, err := i.approvalPrepare(spaceID, requestID, taskID, userID)
+	if hMsh != "" || err != nil {
+		return hMsh, err
 	}
 	if !rec.Status.AllowReject() {
 		return fmt.Sprintf("невозможно отклонить заявку в текущем статусе: %v", rec.Status), nil
 	}
-	_, stage := rec.GetCurrentApprovalStage()
-	if stage != nil {
-		if userID != stage.SpaceUserID {
-			return "за текущий этап отвечает другой сотрудник", nil
-		}
-		err = i.updateVr(i.store, spaceID, id, data)
-		if err != nil {
-			return "", errors.Wrap(err, "ошибка обновления данных заявки при согласовании")
-		}
+
+	err = db.DB.Transaction(func(tx *gorm.DB) error {
+		aprovalStagesHandler := aprovaltaskhandler.NewHandlerWithTx(tx)
+		now := time.Now()
+		//меняем статус задачи согласования
 		updMap := map[string]interface{}{
-			"ApprovalStatus": models.AStatusRejected,
+			"State":     models.AStateRejected,
+			"Comment":   data.Comment,
+			"DecidedAt": now,
 		}
-		err = i.approvalStageStore.Update(spaceID, stage.ID, updMap)
+		approvalTaskStore := approvaltaskstore.NewInstance(tx)
+		err = approvalTaskStore.Update(spaceID, taskID, updMap)
 		if err != nil {
-			return "", errors.Wrap(err, "ошибка обновления статуса согласования")
+			return err
 		}
+
+		//меняем статус заявки
+		hMsh, err = i.ChangeStatus(spaceID, requestID, userID, models.VRStatusRejected)
+		if err != nil {
+			return err
+		}
+		if hMsh != "" {
+			return errors.New(hMsh)
+		}
+		if taskRec != nil {
+			// для аудита
+			taskRec.State = models.AStateRejected
+			taskRec.Comment = data.Comment
+			taskRec.DecidedAt = &now
+			aprovalStagesHandler.Audit(*taskRec)
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
 	}
 
 	go func(rec dbmodels.VacancyRequest) {
 		code := models.PushVRRejected
 		logger := log.WithField("space_id", spaceID).
-			WithField("rec_id", id).
+			WithField("rec_id", requestID).
 			WithField("event_code", code)
 		user, err := i.spaceUserStore.GetByID(userID)
 		if err != nil {
@@ -393,8 +525,34 @@ func (i impl) Reject(spaceID, id, userID string, data vacancyapimodels.VacancyRe
 		notification := models.GetPushVRRejected(rec.VacancyName, user.GetFullName(), user.Role.ToHuman())
 		i.sendNotification(rec, notification)
 	}(*rec)
+	return "", nil
+}
 
-	return i.ChangeStatus(spaceID, id, userID, models.VRStatusNotAccepted)
+func (i impl) approvalPrepare(spaceID, requestID, taskID, userID string) (vrRec *dbmodels.VacancyRequest, taskRec *dbmodels.ApprovalTask, hMsh string, err error) {
+	vacancyRequest, err := i.getRec(spaceID, requestID)
+	if err != nil {
+		return nil, nil, "", err
+	}
+	if vacancyRequest == nil {
+		return nil, nil, "Заявка не найдена", nil
+	}
+
+	if !vacancyRequest.Status.IsAllowChange(models.VRStatusCreated) {
+		return nil, nil, fmt.Sprintf("невозможно отклонить заявку в текущем статусе: %v", vacancyRequest.Status), nil
+	}
+
+	task, err := i.approvalTaskStore.GetByID(spaceID, taskID)
+	if err != nil {
+		return nil, nil, "", errors.Wrap(err, "ошибка получения задачи на согласование")
+	}
+	if task == nil || task.RequestID != requestID {
+		return nil, nil, "Задача на согласование не найдена", nil
+	}
+
+	if task.AssigneeUserID != userID {
+		return nil, nil, "На данную задачу назначен другой пользователь", nil
+	}
+	return vacancyRequest, task, "", nil
 }
 
 func (i impl) getRec(spaceID, id string) (item *dbmodels.VacancyRequest, err error) {
@@ -462,7 +620,7 @@ func (i impl) publish(spaceID, id, userID string) error {
 	if err != nil {
 		return err
 	}
-	if rec.Status != models.VRStatusAccepted {
+	if rec.Status != models.VRStatusApproved {
 		return errors.New("необходимо согласовать заявку")
 	}
 	data := vacancyapimodels.VacancyData{
@@ -489,9 +647,12 @@ func (i impl) publish(spaceID, id, userID string) error {
 	if err != nil {
 		return err
 	}
-	_, err = i.vacancyHandler.Create(spaceID, userID, data)
+	_, hMsg, err := i.vacancyHandler.Create(spaceID, userID, data)
 	if err != nil {
 		return err
+	}
+	if hMsg != "" {
+		return errors.New(hMsg)
 	}
 	return nil
 }
@@ -501,7 +662,7 @@ func (i impl) CreateVacancy(spaceID, id, userID string) (hMsh string, err error)
 	if err != nil {
 		return "", err
 	}
-	if rec.Status != models.VRStatusAccepted {
+	if rec.Status != models.VRStatusApproved {
 		return "для создания вакансии, необходимо согласовать заявку", nil
 	}
 	exist, err := i.checkVacancyExist(spaceID, id, userID)
@@ -573,11 +734,19 @@ func createCompany(tx *gorm.DB, spaceID, name string) (string, error) {
 func (i impl) sendNotification(rec dbmodels.VacancyRequest, data models.NotificationData) {
 	//отправляем автору
 	pushhandler.Instance.SendNotification(rec.AuthorID, data)
-	for _, stage := range rec.ApprovalStages {
+	approvalTasks, err := i.approvalTaskStore.List(rec.SpaceID, rec.ID)
+	if err != nil {
+		log.
+			WithError(err).
+			WithField("space_id", rec.SpaceID).
+			WithField("rec_id", rec.ID).Error("Ошибка получения списка пользователей из цепочки согласования для отправки уведомлений")
+		return
+	}
+	for _, stage := range approvalTasks {
 		//отправляем списку пользователей из цепочки согласования
-		if rec.AuthorID == stage.SpaceUserID {
+		if rec.AuthorID == stage.AssigneeUserID {
 			continue
 		}
-		pushhandler.Instance.SendNotification(stage.SpaceUserID, data)
+		pushhandler.Instance.SendNotification(stage.AssigneeUserID, data)
 	}
 }

@@ -71,50 +71,56 @@ func (v VacancyStatus) IsClosed() bool {
 type VRStatus string
 
 const (
-	VRStatusCreated       VRStatus = "Создана"
-	VRStatusCanceled      VRStatus = "Отменена"
-	VRStatusNotAccepted   VRStatus = "Не согласована"
-	VRStatusAccepted      VRStatus = "Согласована"
-	VRStatusUnderRevision VRStatus = "На доработке"
-	VRStatusUnderAccepted VRStatus = "На согласовании"
-	VRStatusTemplate      VRStatus = "Шаблон"
+	VRStatusDraft      VRStatus = "DRAFT"
+	VRStatusCreated    VRStatus = "CREATED"
+	VRStatusInApproval VRStatus = "IN_APPROVAL"
+	VRStatusApproved   VRStatus = "APPROVED"
+	VRStatusRejected   VRStatus = "REJECTED"
+	VRStatusInHr       VRStatus = "IN_HR"
+	VRStatusCancelled  VRStatus = "CANCELLED"
+	VRStatusDone       VRStatus = "DONE"
 )
 
 func (v VRStatus) IsAllowChange(newStatus VRStatus) bool {
 	if v == newStatus {
 		return true
 	}
+
 	switch newStatus {
-	case VRStatusCanceled:
-		return true
-	case VRStatusNotAccepted:
-		return v == VRStatusCreated || v == VRStatusUnderRevision || v == VRStatusUnderAccepted
-	case VRStatusAccepted:
-		return v == VRStatusUnderAccepted
-	case VRStatusUnderRevision:
-		return v == VRStatusUnderAccepted || v == VRStatusNotAccepted
-	case VRStatusUnderAccepted:
-		return v == VRStatusCreated || v == VRStatusUnderRevision
 	case VRStatusCreated:
-		return v == VRStatusTemplate
+		return v == VRStatusInApproval || v == VRStatusDraft || v == VRStatusRejected
+	case VRStatusInApproval:
+		return v == VRStatusCreated || v == VRStatusRejected
+	case VRStatusApproved:
+		return v == VRStatusInApproval
+	case VRStatusRejected:
+		return v == VRStatusCreated || v == VRStatusInApproval || v == VRStatusApproved
+	case VRStatusInHr:
+		return v == VRStatusApproved
+	case VRStatusCancelled:
+		return true
+	case VRStatusDone:
+		return v == VRStatusInHr
 	}
 	return false
 }
 
 func (v VRStatus) AllowAccept() bool {
-	return v == VRStatusUnderAccepted || v == VRStatusAccepted
+	return v == VRStatusInApproval
 }
 
 func (v VRStatus) AllowReject() bool {
-	return v == VRStatusUnderAccepted
+	return v == VRStatusInApproval
 }
 
-type ApprovalStatus string
+type ApprovalState string
 
 const (
-	AStatusApproved ApprovalStatus = "Согласованно"
-	AStatusRejected ApprovalStatus = "Не согласованно"
-	AStatusAwaiting ApprovalStatus = "Ждет согласования"
+	AStatePending        ApprovalState = "PENDING"
+	AStateApproved       ApprovalState = "APPROVED"
+	AStateRequestChanges ApprovalState = "REQUEST_CHANGES"
+	AStateRejected       ApprovalState = "REJECTED"
+	AStateRemoved        ApprovalState = "REMOVED"
 )
 
 type VacancyPubStatus string

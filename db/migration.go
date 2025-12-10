@@ -51,8 +51,11 @@ func AutoMigrateDB() error {
 		return errors.Wrap(err, "ошибка создания структуры CompanyStruct")
 	}
 
-	if err := DB.AutoMigrate(&dbmodels.ApprovalStage{}); err != nil {
-		return errors.Wrap(err, "ошибка создания структуры ApprovalStage")
+	if err := DB.AutoMigrate(&dbmodels.ApprovalTask{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры ApprovalTask")
+	}
+	if err := DB.AutoMigrate(&dbmodels.ApprovalHistory{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры ApprovalHistory")
 	}
 
 	if err := DB.AutoMigrate(&dbmodels.VacancyRequest{}); err != nil {

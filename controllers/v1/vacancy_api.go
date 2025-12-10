@@ -75,9 +75,12 @@ func (c *vacancyApiController) create(ctx *fiber.Ctx) error {
 	}
 	spaceID := middleware.GetUserSpace(ctx)
 	userID := middleware.GetUserID(ctx)
-	id, err := vacancyhandler.Instance.Create(spaceID, userID, payload)
+	id, hMsg, err := vacancyhandler.Instance.Create(spaceID, userID, payload)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка создания вакансии")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(id))
 }

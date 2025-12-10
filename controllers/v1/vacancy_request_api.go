@@ -3,7 +3,7 @@ package apiv1
 import (
 	"github.com/gofiber/fiber/v2"
 	"hr-tools-backend/controllers"
-	aprovalstageshandler "hr-tools-backend/lib/aproval-stages"
+	vacancyhandler "hr-tools-backend/lib/vacancy"
 	vacancyreqhandler "hr-tools-backend/lib/vacancy-req"
 	"hr-tools-backend/middleware"
 	"hr-tools-backend/models"
@@ -19,24 +19,31 @@ func InitVacancyRequestApiRouters(app *fiber.App) {
 	controller := vacancyReqApiController{}
 	app.Route("vacancy_request", func(router fiber.Router) {
 		router.Use(middleware.LicenseRequired())
-		
+
 		router.Post("list", controller.list)
 		router.Post("", controller.create)
 		router.Route(":id", func(idRoute fiber.Router) {
 			idRoute.Put("", controller.update)
 			idRoute.Get("", controller.get)
+			idRoute.Get("vacancies", controller.vacancies)
 			idRoute.Delete("", controller.delete)
 			idRoute.Put("pin", controller.pin)
 			idRoute.Put("favorite", controller.favorite)
-			idRoute.Put("approval_stages", controller.saveStages)
 			idRoute.Put("on_create", controller.onCreate)     // перевести шаблон на статус заявка создана
 			idRoute.Put("on_approval", controller.onApproval) // на согласование
-			idRoute.Put("approve", controller.approve)        // согласовать
 			idRoute.Put("publish", controller.publish)        // создать вакансию
-			idRoute.Put("reject", controller.reject)          // отклонить
-			idRoute.Put("to_revision", controller.toRevision) // на доработку
 			idRoute.Put("cancel", controller.cancel)          // отменить
 			idRoute.Post("comment", controller.addComment)
+			idRoute.Route("approvals", func(approvals fiber.Router) {
+				approvals.Get("", controller.getApprovals)
+				approvals.Put("", controller.saveApprovals)
+				approvals.Route(":taskId", func(taskRoute fiber.Router) {
+					taskRoute.Post("approve", controller.approve)                // согласовать
+					taskRoute.Post("request_changes", controller.requestChanges) // на доработку
+					taskRoute.Post("reject", controller.reject)                  // отклонить
+				})
+			})
+			idRoute.Get("approval_history", controller.getApprovalHistory)
 		})
 	})
 }
@@ -131,6 +138,33 @@ func (c *vacancyReqApiController) get(ctx *fiber.Ctx) error {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения заявки")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(resp))
+}
+
+// @Summary Получение списка связанных вакансий
+// @Tags Заявка
+// @Description Получение списка связанных вакансий
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    string  				    	true         "rec ID"
+// @Success 200 {object} apimodels.ScrollerResponse{data=[]vacancyapimodels.VacancyView}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/vacancy_request/{id}/vacancies [get]
+func (c *vacancyReqApiController) vacancies(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	spaceID := middleware.GetUserSpace(ctx)
+	filter := vacancyapimodels.VacancyFilter{
+		VacancyRequestID: id,
+	}
+	list, rowCount, err := vacancyhandler.Instance.List(spaceID, id, filter)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения заявки")
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewScrollerResponse(list, rowCount))
 }
 
 // @Summary Удаление
@@ -237,43 +271,6 @@ func (c *vacancyReqApiController) list(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewScrollerResponse(list, rowCount))
 }
 
-// @Summary Обновление цепочки согласования
-// @Tags Заявка
-// @Description Обновление цепочки согласования
-// @Param   Authorization		header		string	true	"Authorization token"
-// @Param	body body	 []vacancyapimodels.ApprovalStages	true	"request body"
-// @Param   id          		path    string  				    	true         "rec ID"
-// @Success 200 {object} apimodels.Response
-// @Failure 400 {object} apimodels.Response
-// @Failure 403
-// @Failure 500 {object} apimodels.Response
-// @router /api/v1/space/vacancy_request/{id}/approval_stages [put]
-func (c *vacancyReqApiController) saveStages(ctx *fiber.Ctx) error {
-	id, err := c.GetID(ctx)
-	if err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
-	}
-
-	var payload vacancyapimodels.ApprovalStages
-	if err = c.BodyParser(ctx, &payload); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
-	}
-
-	if err = payload.Validate(); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
-	}
-
-	spaceID := middleware.GetUserSpace(ctx)
-	hMsg, err := aprovalstageshandler.Instance.Save(spaceID, id, payload.ApprovalStages)
-	if err != nil {
-		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка обновления цепочки согласования")
-	}
-	if hMsg != "" {
-		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
-	}
-	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
-}
-
 // @Summary Перевести шаблон на статус заявка создана
 // @Tags Заявка
 // @Description Перевести шаблон на статус заявка создана
@@ -318,112 +315,9 @@ func (c *vacancyReqApiController) onApproval(ctx *fiber.Ctx) error {
 	}
 	spaceID := middleware.GetUserSpace(ctx)
 	userID := middleware.GetUserID(ctx)
-	hMsg, err := vacancyreqhandler.Instance.ChangeStatus(spaceID, id, userID, models.VRStatusUnderAccepted)
+	hMsg, err := vacancyreqhandler.Instance.ChangeStatus(spaceID, id, userID, models.VRStatusInApproval)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка отравки заявки на согласование")
-	}
-	if hMsg != "" {
-		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
-	}
-	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
-}
-
-// @Summary Согласовать
-// @Tags Заявка
-// @Description Согласовать
-// @Param   Authorization		header		string	true	"Authorization token"
-// @Param	body body	 vacancyapimodels.VacancyRequestData	true	"request body"
-// @Param   id          		path    string  				    	true         "rec ID"
-// @Success 200 {object} apimodels.Response
-// @Failure 400 {object} apimodels.Response
-// @Failure 403
-// @Failure 500 {object} apimodels.Response
-// @router /api/v1/space/vacancy_request/{id}/approve [put]
-func (c *vacancyReqApiController) approve(ctx *fiber.Ctx) error {
-	id, err := c.GetID(ctx)
-	if err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
-	}
-
-	var payload vacancyapimodels.VacancyRequestData
-	if err = c.BodyParser(ctx, &payload); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
-	}
-
-	if err = payload.Validate(); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
-	}
-
-	spaceID := middleware.GetUserSpace(ctx)
-	userID := middleware.GetUserID(ctx)
-	hMsg, err := vacancyreqhandler.Instance.Approve(spaceID, id, userID, payload)
-	if err != nil {
-		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка согласования заявки")
-	}
-	if hMsg != "" {
-		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
-	}
-	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
-}
-
-// @Summary Отклонить
-// @Tags Заявка
-// @Description Отклонить
-// @Param   Authorization		header		string	true	"Authorization token"
-// @Param	body body	 vacancyapimodels.VacancyRequestData	true	"request body"
-// @Param   id          		path    string  				    	true         "rec ID"
-// @Success 200 {object} apimodels.Response
-// @Failure 400 {object} apimodels.Response
-// @Failure 403
-// @Failure 500 {object} apimodels.Response
-// @router /api/v1/space/vacancy_request/{id}/reject [put]
-func (c *vacancyReqApiController) reject(ctx *fiber.Ctx) error {
-	id, err := c.GetID(ctx)
-	if err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
-	}
-
-	var payload vacancyapimodels.VacancyRequestData
-	if err = c.BodyParser(ctx, &payload); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
-	}
-
-	if err = payload.Validate(); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
-	}
-
-	spaceID := middleware.GetUserSpace(ctx)
-	userID := middleware.GetUserID(ctx)
-	hMsg, err := vacancyreqhandler.Instance.Reject(spaceID, id, userID, payload)
-	if err != nil {
-		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка отклонения заявки")
-	}
-	if hMsg != "" {
-		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
-	}
-	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
-}
-
-// @Summary На доработку
-// @Tags Заявка
-// @Description На доработку
-// @Param   Authorization		header		string	true	"Authorization token"
-// @Param   id          		path    string  				    	true         "rec ID"
-// @Success 200 {object} apimodels.Response
-// @Failure 400 {object} apimodels.Response
-// @Failure 403
-// @Failure 500 {object} apimodels.Response
-// @router /api/v1/space/vacancy_request/{id}/to_revision [put]
-func (c *vacancyReqApiController) toRevision(ctx *fiber.Ctx) error {
-	id, err := c.GetID(ctx)
-	if err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
-	}
-	spaceID := middleware.GetUserSpace(ctx)
-	userID := middleware.GetUserID(ctx)
-	hMsg, err := vacancyreqhandler.Instance.ChangeStatus(spaceID, id, userID, models.VRStatusUnderRevision)
-	if err != nil {
-		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка перевода заявки в доработку")
 	}
 	if hMsg != "" {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
@@ -448,7 +342,7 @@ func (c *vacancyReqApiController) cancel(ctx *fiber.Ctx) error {
 	}
 	spaceID := middleware.GetUserSpace(ctx)
 	userID := middleware.GetUserID(ctx)
-	hMsg, err := vacancyreqhandler.Instance.ChangeStatus(spaceID, id, userID, models.VRStatusCanceled)
+	hMsg, err := vacancyreqhandler.Instance.ChangeStatus(spaceID, id, userID, models.VRStatusCancelled)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка отмены заявки")
 	}
