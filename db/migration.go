@@ -173,6 +173,10 @@ func AutoMigrateDB() error {
 		return errors.Wrap(err, "ошибка создания структуры LicensePlan")
 	}
 
+	if err := DB.AutoMigrate(&dbmodels.ExtApiAudit{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры ExtApiAudit")
+	}
+
 	log.Info("Миграция прошла успешно")
 	return nil
 }

@@ -5,13 +5,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"hr-tools-backend/db"
+	externalservices "hr-tools-backend/lib/external-services"
+	extapiauditstore "hr-tools-backend/lib/external-services/ext-api-audit-store"
 	hhapimodels "hr-tools-backend/models/api/hh"
+	dbmodels "hr-tools-backend/models/db"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 type Provider interface {
@@ -58,12 +63,14 @@ var Instance Provider
 type impl struct {
 	host        string
 	redirectUri string
+	auditStore  extapiauditstore.Provider
 }
 
 func NewProvider(redirectUri string) {
 	Instance = &impl{
 		host:        host,
 		redirectUri: redirectUri,
+		auditStore:  extapiauditstore.NewInstance(db.DB),
 	}
 }
 
@@ -87,6 +94,7 @@ const (
 const (
 	tokenExpiredError     string = "token-expired"
 	tokenDeactivatedError string = "token deactivated"
+	serviceName           string = "HH"
 )
 
 func (i impl) GetLoginUri(clientID, spaceID string) (string, error) {
@@ -119,7 +127,7 @@ func (i impl) RequestToken(ctx context.Context, req hhapimodels.RequestToken) (*
 		WithField("external_request", uri).
 		WithField("request_body", fmt.Sprintf("%+v", data.Encode()))
 
-	err = i.sendRequest(logger, r, &resp, "", true)
+	err = i.sendRequest(ctx, logger, r, &resp, "", true)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +148,7 @@ func (i impl) RefreshToken(ctx context.Context, req hhapimodels.RefreshToken) (t
 		WithField("external_request", uri).
 		WithField("request_body", fmt.Sprintf("%+v", data.Encode()))
 
-	errData, err := i.sendRequestWithErrorData(logger, r, &resp, "", true)
+	errData, err := i.sendRequestWithErrorData(ctx, logger, r, &resp, "", true)
 	if err != nil {
 		if errData != nil && errData.ErrorDescription == tokenDeactivatedError {
 			return nil, true, nil
@@ -157,7 +165,7 @@ func (i impl) Me(ctx context.Context, accessToken string) (me *hhapimodels.MeRes
 	r, _ := http.NewRequestWithContext(ctx, "GET", uri, nil)
 	r.Header.Add("Content-Type", "application/json")
 	resp := hhapimodels.MeResponse{}
-	errData, err := i.sendRequestWithErrorData(logger, r, &resp, accessToken, true)
+	errData, err := i.sendRequestWithErrorData(ctx, logger, r, &resp, accessToken, true)
 	if err != nil {
 		if errData != nil && errData.OauthError == tokenExpiredError {
 			return nil, true, nil
@@ -183,7 +191,8 @@ func (i impl) VacancyPublish(ctx context.Context, accessToken string, request hh
 	logger = logger.
 		WithField("request_body", string(body))
 
-	errData, err := i.sendRequestWithErrorData(logger, r, &resp, accessToken, true)
+	rCtx := externalservices.GetAuditContext(ctx, uri, body)
+	errData, err := i.sendRequestWithErrorData(rCtx, logger, r, &resp, accessToken, true)
 	if err != nil {
 		if errData != nil {
 			return "", errData.GetPublishErrorReason(), nil
@@ -209,7 +218,8 @@ func (i impl) VacancyUpdate(ctx context.Context, accessToken, vacancyID string, 
 	logger = logger.
 		WithField("request_body", string(body))
 
-	return i.sendRequest(logger, r, nil, accessToken, true)
+	rCtx := externalservices.GetAuditContext(ctx, uri, body)
+	return i.sendRequest(rCtx, logger, r, nil, accessToken, true)
 }
 
 func (i impl) VacancyClose(ctx context.Context, accessToken, employerID, vacancyID string) error {
@@ -220,7 +230,8 @@ func (i impl) VacancyClose(ctx context.Context, accessToken, employerID, vacancy
 		WithField("external_request", uri)
 	r, _ := http.NewRequestWithContext(ctx, "PUT", uri, nil)
 	r.Header.Add("Content-Type", "application/json")
-	return i.sendRequest(logger, r, nil, accessToken, true)
+	rCtx := externalservices.GetAuditContext(ctx, uri, nil)
+	return i.sendRequest(rCtx, logger, r, nil, accessToken, true)
 }
 
 func (i impl) Negotiations(ctx context.Context, accessToken, vacancyID string, page, perPage int) (hhapimodels.NegotiationResponse, error) {
@@ -253,7 +264,7 @@ func (i impl) NegotiationMarkRead(ctx context.Context, accessToken, vacancyID, n
 	r.Header.Add("Content-Type", "application/json")
 	resp := hhapimodels.ResumeResponse{}
 
-	err = i.sendRequest(logger, r, &resp, accessToken, true)
+	err = i.sendRequest(ctx, logger, r, &resp, accessToken, true)
 	if err != nil {
 		return err
 	}
@@ -269,7 +280,7 @@ func (i impl) GetResume(ctx context.Context, accessToken, resumeUrl string) (hha
 	r.Header.Add("Content-Type", "application/json")
 	resp := hhapimodels.ResumeResponse{}
 
-	err := i.sendRequest(logger, r, &resp, accessToken, true)
+	err := i.sendRequest(ctx, logger, r, &resp, accessToken, true)
 	if err != nil {
 		return hhapimodels.ResumeResponse{}, err
 	}
@@ -285,7 +296,7 @@ func (i impl) GetVacancy(ctx context.Context, accessToken, vacancyID string) (*h
 	r.Header.Add("Content-Type", "application/json")
 	resp := hhapimodels.VacancyInfo{}
 
-	err := i.sendRequest(logger, r, &resp, accessToken, true)
+	err := i.sendRequest(ctx, logger, r, &resp, accessToken, true)
 	if err != nil {
 		return nil, err
 	}
@@ -303,7 +314,7 @@ func (i impl) GetMessages(ctx context.Context, accessToken, vacancyID, negotiati
 	r.Header.Add("Content-Type", "application/json")
 	resp := hhapimodels.NegotiationMessagesResponse{}
 
-	err := i.sendRequest(logger, r, &resp, accessToken, true)
+	err := i.sendRequest(ctx, logger, r, &resp, accessToken, true)
 	if err != nil {
 		return hhapimodels.NegotiationMessagesResponse{}, err
 	}
@@ -325,7 +336,7 @@ func (i impl) SendNewMessage(ctx context.Context, accessToken, vacancyID, negoti
 		WithField("external_request", uri).
 		WithField("request_body", fmt.Sprintf("%+v", data.Encode()))
 
-	return i.sendRequest(logger, r, nil, "", true)
+	return i.sendRequest(ctx, logger, r, nil, "", true)
 }
 
 func (i impl) getNegotiations(ctx context.Context, accessToken, vacancyID string) (*hhapimodels.NegotiationCollections, error) {
@@ -337,7 +348,7 @@ func (i impl) getNegotiations(ctx context.Context, accessToken, vacancyID string
 	r.Header.Add("Content-Type", "application/json")
 	resp := hhapimodels.NegotiationCollections{}
 
-	err := i.sendRequest(logger, r, &resp, accessToken, true)
+	err := i.sendRequest(ctx, logger, r, &resp, accessToken, true)
 	if err != nil {
 		return nil, err
 	}
@@ -353,7 +364,7 @@ func (i impl) getNegotiationCollection(ctx context.Context, accessToken, originU
 	r.Header.Add("Content-Type", "application/json")
 	resp := hhapimodels.NegotiationResponse{}
 
-	err := i.sendRequest(logger, r, &resp, accessToken, true)
+	err := i.sendRequest(ctx, logger, r, &resp, accessToken, true)
 	if err != nil {
 		return hhapimodels.NegotiationResponse{}, err
 	}
@@ -369,7 +380,7 @@ func (i impl) GetAreas(ctx context.Context) ([]hhapimodels.Area, error) {
 	r.Header.Add("Content-Type", "application/json")
 	resp := []hhapimodels.Area{}
 
-	err := i.sendRequest(logger, r, &resp, "", true)
+	err := i.sendRequest(ctx, logger, r, &resp, "", true)
 	if err != nil {
 		return nil, err
 	}
@@ -382,19 +393,19 @@ func (i impl) DownloadResume(ctx context.Context, accessToken, resumeUrl string)
 	logger := log.
 		WithField("external_request", resumeUrl)
 	var fileBody []byte
-	err := i.sendRequest(logger, r, &fileBody, accessToken, false)
+	err := i.sendRequest(ctx, logger, r, &fileBody, accessToken, false)
 	if err != nil {
 		return nil, err
 	}
 	return fileBody, nil
 }
 
-func (i impl) sendRequest(logger *log.Entry, r *http.Request, resp interface{}, accessToken string, needUnmarshalResponse bool) error {
-	_, err := i.sendRequestWithErrorData(logger, r, resp, accessToken, needUnmarshalResponse)
+func (i impl) sendRequest(ctx context.Context, logger *log.Entry, r *http.Request, resp interface{}, accessToken string, needUnmarshalResponse bool) error {
+	_, err := i.sendRequestWithErrorData(ctx, logger, r, resp, accessToken, needUnmarshalResponse)
 	return err
 }
 
-func (i impl) sendRequestWithErrorData(logger *log.Entry, r *http.Request, resp interface{}, accessToken string, needUnmarshalResponse bool) (errData *hhapimodels.ErrorData, err error) {
+func (i impl) sendRequestWithErrorData(ctx context.Context, logger *log.Entry, r *http.Request, resp interface{}, accessToken string, needUnmarshalResponse bool) (errData *hhapimodels.ErrorData, err error) {
 	r.Header.Add("User-Agent", "HRTools/1.0")
 	if accessToken != "" {
 		r.Header.Add("Authorization", fmt.Sprintf("Bearer %v", accessToken))
@@ -409,6 +420,9 @@ func (i impl) sendRequestWithErrorData(logger *log.Entry, r *http.Request, resp 
 		return nil, errors.Wrap(err, "ошибка отправки запроса в HH")
 	}
 	if response != nil && (response.StatusCode >= 200 && response.StatusCode <= 300) {
+		if len(responseBody) != 0 {
+			i.auditError(ctx, string(responseBody), response.StatusCode)
+		}
 		if resp != nil && needUnmarshalResponse {
 			if responseBody != nil {
 				err = json.Unmarshal(responseBody, resp)
@@ -446,4 +460,23 @@ func addStatusCode(logger *log.Entry, response *http.Response) *log.Entry {
 		return logger.WithField("response_status_code", response.StatusCode)
 	}
 	return logger
+}
+
+func (i impl) auditError(ctx context.Context, response string, status int) {
+	ctxData := externalservices.ExtractAuditData(ctx)
+	if !ctxData.WithAudit {
+		return
+	}
+	rec := dbmodels.ExtApiAudit{
+		BaseSpaceModel: dbmodels.BaseSpaceModel{
+			SpaceID: ctxData.SpaceID,
+		},
+		RecID:    ctxData.RecID,
+		Service:  serviceName,
+		Uri:      ctxData.Uri,
+		Request:  ctxData.Request,
+		Response: response,
+		Status:   status,
+	}
+	i.auditStore.Create(rec)
 }
