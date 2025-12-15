@@ -22,7 +22,7 @@ func InitSpaceProfileRouters(app *fiber.App) {
 	controller := spaceProfileApiController{}
 	app.Route("profile", func(route fiber.Router) {
 		route.Use(middleware.AuthorizationRequired())
-		route.Use(middleware.SpaceAdminRequired())
+		route.Use(middleware.RbacMiddleware())
 		route.Get("", controller.getProfile)
 		route.Put("", controller.updateProfile)
 		route.Post("photo", controller.uploadPhoto)

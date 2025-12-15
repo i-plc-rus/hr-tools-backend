@@ -2,16 +2,22 @@ package models
 
 type UserRole string
 
+var AllAvailableRoles = []UserRole{AdminRole, HRRole, ManagerRole, SpecialistRole}
 const (
-	SpaceAdminRole     UserRole = "SPACE_ADMIN_ROLE"
-	SpaceUserRole      UserRole = "SPACE_USER_ROLE"
+	AdminRole          UserRole = "ADMIN"
+	HRRole             UserRole = "HR"
+	ManagerRole        UserRole = "MANAGER"
+	SpecialistRole     UserRole = "SPECIALIST"
 	UserRoleSuperAdmin UserRole = "SUPER_ADMIN"
+	AllRoles           UserRole = "ALL"
 )
 
 var roleHumanName = map[UserRole]string{
-	SpaceAdminRole:     "Администратор",
-	SpaceUserRole:      "Пользователь",
 	UserRoleSuperAdmin: "Суперадмин системы",
+	AdminRole:          "Администратор",
+	HRRole:             "HR",
+	ManagerRole:        "Руководитель",
+	SpecialistRole:     "Специалист",
 }
 
 func (r UserRole) ToHuman() string {
@@ -23,7 +29,7 @@ func (r UserRole) ToHuman() string {
 }
 
 func (r UserRole) IsSpaceAdmin() bool {
-	return r == SpaceAdminRole
+	return r == AdminRole
 }
 
 const SystemUser = "Система"

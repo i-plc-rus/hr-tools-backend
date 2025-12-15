@@ -23,7 +23,7 @@ func InitSpaceUserRouters(app *fiber.App) {
 	app.Route("users", func(usersRootRoute fiber.Router) {
 		usersRootRoute.Use(middleware.AuthorizationRequired())
 		usersRootRoute.Use(middleware.LicenseRequired())
-		usersRootRoute.Use(middleware.SpaceAdminRequired())
+		usersRootRoute.Use(middleware.RbacMiddleware())
 		
 		usersRootRoute.Post("", controller.CreateUser)
 		usersRootRoute.Post("list", controller.ListUsers)
@@ -38,6 +38,7 @@ func InitSpaceUserRouters(app *fiber.App) {
 	})
 	app.Route("user_profile", func(userRootRoute fiber.Router) {
 		userRootRoute.Use(middleware.AuthorizationRequired())
+		userRootRoute.Use(middleware.RbacMiddleware())
 		userRootRoute.Get("", controller.getProfile)
 		userRootRoute.Put("", controller.updateProfile)
 		userRootRoute.Put("change_password", controller.changePassword)

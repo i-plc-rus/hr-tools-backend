@@ -13,7 +13,7 @@ import (
 	spacestore "hr-tools-backend/lib/space/store"
 	spaceusershander "hr-tools-backend/lib/space/users/hander"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
-	authutils "hr-tools-backend/lib/utils/auth-utils"
+	authhelpers "hr-tools-backend/lib/utils/auth-helpers"
 	"hr-tools-backend/models"
 	spaceapimodels "hr-tools-backend/models/api/space"
 	dbmodels "hr-tools-backend/models/db"
@@ -172,10 +172,10 @@ func (i impl) createSpace(tx *gorm.DB, request spaceapimodels.CreateOrganization
 
 func (i impl) createAdmin(tx *gorm.DB, spaceID string, adminData spaceapimodels.CreateUser) error {
 	admin := dbmodels.SpaceUser{
-		Password:    authutils.GetMD5Hash(adminData.Password),
+		Password:    authhelpers.GetMD5Hash(adminData.Password),
 		FirstName:   adminData.FirstName,
 		LastName:    adminData.LastName,
-		Role:        models.SpaceAdminRole,
+		Role:        models.AdminRole,
 		Email:       adminData.Email,
 		IsActive:    true,
 		PhoneNumber: adminData.PhoneNumber,
@@ -232,15 +232,15 @@ func (i impl) addLicense(tx *gorm.DB, spaceID string) error {
 	endAt := now.Add(time.Hour * 24 * 7)
 	plan := config.Conf.Sales.DefaultPlan
 	rec := dbmodels.License{
-			BaseSpaceModel: dbmodels.BaseSpaceModel{
-				SpaceID: spaceID,
-			},
-			Status:    models.LicenseStatusActive,
-			StartsAt:  &now,
-			EndsAt:    &endAt,
-			Plan:      plan,
-			AutoRenew: false,
-		}
+		BaseSpaceModel: dbmodels.BaseSpaceModel{
+			SpaceID: spaceID,
+		},
+		Status:    models.LicenseStatusActive,
+		StartsAt:  &now,
+		EndsAt:    &endAt,
+		Plan:      plan,
+		AutoRenew: false,
+	}
 	_, err := licensestore.NewInstance(tx).Create(rec)
 	if err != nil {
 		return errors.Wrap(err, "Ошибка добавления лицензии для организации")

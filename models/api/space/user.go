@@ -4,6 +4,7 @@ import (
 	"errors"
 	"hr-tools-backend/models"
 	apimodels "hr-tools-backend/models/api"
+	"slices"
 	"time"
 )
 
@@ -23,27 +24,28 @@ type SpaceUser struct {
 	IsEmailVerified bool   `json:"is_email_verified"` // Email подтвержден
 	NewEmail        string `json:"new_email"`         // Новый email, который станет основным после подтверждения
 	JobTitleName    string `json:"job_title_name"`    // Навание должности
+	RoleName        string `json:"role_name"`
 }
 
 type SpaceUserExt struct {
 	SpaceUser
-	LicenseStatus   models.LicenseStatus `json:"license_status"`    // Статус лицензии
-	LicenseReadOnly bool                 `json:"license_read_only"` // Блокировка мутаций
+	LicenseStatus   models.LicenseStatus                  `json:"license_status"`    // Статус лицензии
+	LicenseReadOnly bool                                  `json:"license_read_only"` // Блокировка мутаций
+	Permissions     map[models.Module][]models.Permission `json:"permissions"`
 }
 
 type SpaceUserCommonData struct {
-	SpaceID         string    `json:"space_id"`
-	Email           string    `json:"email"` // Email пользователя
-	FirstName       string    `json:"first_name"`
-	LastName        string    `json:"last_name"`
-	PhoneNumber     string    `json:"phone_number"`
-	IsAdmin         bool      `json:"is_admin"`
-	Role            string    `json:"role"`
-	TextSign        string    `json:"text_sign"`         // Текст подписи
-	JobTitleID      string    `json:"job_title_id"`      // Идентификатор должности
-	Status          string    `json:"status"`            // Статус пользователя
-	StatusChangedAt time.Time `json:"status_changed_at"` // Дата изменения статуса
-	StatusComment   *string   `json:"status_comment"`    // Комментарий к статусу
+	SpaceID         string          `json:"space_id"`
+	Email           string          `json:"email"` // Email пользователя
+	FirstName       string          `json:"first_name"`
+	LastName        string          `json:"last_name"`
+	PhoneNumber     string          `json:"phone_number"`
+	Role            models.UserRole `json:"role"`
+	TextSign        string          `json:"text_sign"`         // Текст подписи
+	JobTitleID      string          `json:"job_title_id"`      // Идентификатор должности
+	Status          string          `json:"status"`            // Статус пользователя
+	StatusChangedAt time.Time       `json:"status_changed_at"` // Дата изменения статуса
+	StatusComment   *string         `json:"status_comment"`    // Комментарий к статусу
 }
 
 type SpaceUserUpdateData struct {
@@ -52,8 +54,7 @@ type SpaceUserUpdateData struct {
 	FirstName   string  `json:"first_name"`
 	LastName    string  `json:"last_name"`
 	PhoneNumber string  `json:"phone_number"`
-	IsAdmin     *bool   `json:"is_admin"`
-	Role        string  `json:"role"`
+	Role        *string `json:"role"`
 	TextSign    *string `json:"text_sign"`    // Текст подписи
 	JobTitleID  *string `json:"job_title_id"` // Идентификатор должности
 }
@@ -70,6 +71,9 @@ func (r SpaceUserUpdateData) Validate() error {
 	}
 	if r.LastName == "" {
 		return errors.New("не указана фамилия")
+	}
+	if r.Role != nil && !slices.Contains(models.AllAvailableRoles, models.UserRole(*r.Role)) {
+		return errors.New("указаная роль отсутсвует")
 	}
 	return nil
 }
@@ -93,6 +97,9 @@ func (r SpaceUserCommonData) Validate() error {
 	}
 	if r.LastName == "" {
 		return errors.New("не указана фамилия")
+	}
+	if !slices.Contains(models.AllAvailableRoles, models.UserRole(r.Role)) {
+		return errors.New("указаная роль отсутсвует")
 	}
 	return nil
 }
@@ -120,11 +127,12 @@ func (r SpaceUserProfileData) Validate() error {
 
 type SpaceUserProfileView struct {
 	SpaceUserProfileData
-	ID              string `json:"id"`                // Идентфикатор пользователя
-	Role            string `json:"role"`              // Роль
-	IsEmailVerified bool   `json:"is_email_verified"` // Email подтвержден
-	NewEmail        string `json:"new_email"`         // Новый email, который станет основным после подтверждения
-	JobTitleName    string `json:"job_title_name"`    // Должность
+	ID              string          `json:"id"`   // Идентфикатор пользователя
+	Role            models.UserRole `json:"role"` // Роль
+	RoleName        string          `json:"role_name"`
+	IsEmailVerified bool            `json:"is_email_verified"` // Email подтвержден
+	NewEmail        string          `json:"new_email"`         // Новый email, который станет основным после подтверждения
+	JobTitleName    string          `json:"job_title_name"`    // Должность
 }
 
 type PasswordChange struct {

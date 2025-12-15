@@ -4,16 +4,17 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"hr-tools-backend/config"
+	"hr-tools-backend/models"
 	"time"
 )
 
-func GetToken(userID, name, spaceID string, isAdmin bool, role string) (tokenString string, err error) {
+func GetToken(userID, name, spaceID string, isAdmin bool, role models.UserRole) (tokenString string, err error) {
 	claims := jwt.MapClaims{
 		"name":  name,
 		"sub":   userID,
 		"space": spaceID,
 		"admin": isAdmin,
-		"role":  role,
+		"role":  string(role),
 		"exp":   time.Now().Add(time.Second * time.Duration(config.Conf.Auth.JWTExpireInSec)).Unix(),
 		"iat":   time.Now().Unix(),
 	}

@@ -6,7 +6,7 @@ import (
 	spaceauthhandler "hr-tools-backend/lib/space/auth"
 	pushsettingsstore "hr-tools-backend/lib/space/push/settings-store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
-	authutils "hr-tools-backend/lib/utils/auth-utils"
+	authhelpers "hr-tools-backend/lib/utils/auth-helpers"
 	"hr-tools-backend/models"
 	spaceapimodels "hr-tools-backend/models/api/space"
 	dbmodels "hr-tools-backend/models/db"
@@ -67,7 +67,7 @@ func (i impl) CreateUser(request spaceapimodels.CreateUser, authorSpaceID string
 		return "", "пользователь с такой почтой уже существует", nil
 	}
 	rec := dbmodels.SpaceUser{
-		Password:        authutils.GetMD5Hash(request.Password),
+		Password:        authhelpers.GetMD5Hash(request.Password),
 		FirstName:       request.FirstName,
 		LastName:        request.LastName,
 		Email:           request.Email,
@@ -80,11 +80,8 @@ func (i impl) CreateUser(request spaceapimodels.CreateUser, authorSpaceID string
 	if request.JobTitleID != "" {
 		rec.JobTitleID = &request.JobTitleID
 	}
-	if request.IsAdmin {
-		rec.Role = models.SpaceAdminRole
-	} else {
-		rec.Role = models.SpaceUserRole
-	}
+
+	rec.Role = models.UserRole(request.Role)
 
 	err = db.DB.Transaction(func(tx *gorm.DB) error {
 		spaceUserStore := spaceusersstore.NewInstance(db.DB)
@@ -116,15 +113,11 @@ func (i impl) UpdateUser(userID string, request spaceapimodels.UpdateUser) error
 			"last_name":    request.LastName,
 			"phone_number": request.PhoneNumber,
 		}
-		if request.IsAdmin != nil {
-			if *request.IsAdmin {
-				updMap["role"] = models.SpaceAdminRole
-			} else {
-				updMap["role"] = models.SpaceUserRole
-			}
+		if request.Role != nil {
+			updMap["role"] = models.UserRole(*request.Role)
 		}
 		if request.Password != nil && *request.Password != "" {
-			updMap["password"] = authutils.GetMD5Hash(*request.Password)
+			updMap["password"] = authhelpers.GetMD5Hash(*request.Password)
 		}
 
 		if request.JobTitleID != nil && *request.JobTitleID != "" {
@@ -295,11 +288,11 @@ func (i impl) ChangePassword(userID string, payload spaceapimodels.PasswordChang
 	if userDB == nil {
 		return "", errors.New("пользователь не найден")
 	}
-	if userDB.Password != authutils.GetMD5Hash(payload.CurrentPassword) {
+	if userDB.Password != authhelpers.GetMD5Hash(payload.CurrentPassword) {
 		return "Текущий пароль указан не верно", nil
 	}
 	updMap := map[string]interface{}{
-		"password": authutils.GetMD5Hash(payload.NewPassword),
+		"password": authhelpers.GetMD5Hash(payload.NewPassword),
 	}
 	err = i.spaceUserStore.Update(userID, updMap)
 	if err != nil {

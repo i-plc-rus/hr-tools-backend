@@ -5,7 +5,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
 	adminpaneluserstore "hr-tools-backend/lib/admin-panel/store"
-	authutils "hr-tools-backend/lib/utils/auth-utils"
+	authhelpers "hr-tools-backend/lib/utils/auth-helpers"
 	adminpanelapimodels "hr-tools-backend/models/api/admin-panel"
 	dbmodels "hr-tools-backend/models/db"
 )
@@ -34,7 +34,7 @@ func (i impl) CreateUser(request adminpanelapimodels.User) error {
 	rec := dbmodels.AdminPanelUser{
 		IsActive:    true,
 		Role:        request.Role,
-		Password:    authutils.GetMD5Hash(request.Password),
+		Password:    authhelpers.GetMD5Hash(request.Password),
 		FirstName:   request.FirstName,
 		LastName:    request.LastName,
 		Email:       request.Email,
@@ -64,7 +64,7 @@ func (i impl) UpdateUser(userID string, request adminpanelapimodels.UserUpdate) 
 		updMap["LastName"] = *request.LastName
 	}
 	if request.Password != nil {
-		updMap["Password"] = authutils.GetMD5Hash(*request.Password)
+		updMap["Password"] = authhelpers.GetMD5Hash(*request.Password)
 	}
 	if request.Email != nil {
 		updMap["Email"] = *request.Email

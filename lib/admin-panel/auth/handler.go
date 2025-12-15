@@ -8,7 +8,7 @@ import (
 	"hr-tools-backend/config"
 	"hr-tools-backend/db"
 	adminpaneluserstore "hr-tools-backend/lib/admin-panel/store"
-	authutils "hr-tools-backend/lib/utils/auth-utils"
+	authhelpers "hr-tools-backend/lib/utils/auth-helpers"
 	authapimodels "hr-tools-backend/models/api/auth"
 	"time"
 )
@@ -42,7 +42,7 @@ func (i impl) Login(email, password string) (response authapimodels.JWTResponse,
 		logger.Debug("пользователь с такой почтой не найден")
 		return authapimodels.JWTResponse{}, errors.New("пользователь с такой почтой не найден")
 	}
-	if authutils.GetMD5Hash(password) != user.Password {
+	if authhelpers.GetMD5Hash(password) != user.Password {
 		logger.Debug("пользователь не прошел проверку пароля")
 		return authapimodels.JWTResponse{}, errors.New("пользователь не прошел проверку пароля")
 	}

@@ -18,6 +18,7 @@ import (
 	"hr-tools-backend/models"
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -41,6 +42,8 @@ type Provider interface {
 	Approve(spaceID, requestID, taskID, userID string) (hMsh string, err error)
 	RequestChanges(spaceID, requestID, taskID, userID string, data vacancyapimodels.ApprovalRequestChanges) (hMsh string, err error)
 	Reject(spaceID, requestID, taskID, userID string, data vacancyapimodels.ApprovalReject) (hMsh string, err error)
+	GetRbacSelfAllow() models.RbacFunc
+	GetRbacFlowAllow() models.RbacFunc
 }
 
 var Instance Provider
@@ -537,10 +540,6 @@ func (i impl) approvalPrepare(spaceID, requestID, taskID, userID string) (vrRec 
 		return nil, nil, "Заявка не найдена", nil
 	}
 
-	if !vacancyRequest.Status.IsAllowChange(models.VRStatusCreated) {
-		return nil, nil, fmt.Sprintf("невозможно отклонить заявку в текущем статусе: %v", vacancyRequest.Status), nil
-	}
-
 	task, err := i.approvalTaskStore.GetByID(spaceID, taskID)
 	if err != nil {
 		return nil, nil, "", errors.Wrap(err, "ошибка получения задачи на согласование")
@@ -749,4 +748,45 @@ func (i impl) sendNotification(rec dbmodels.VacancyRequest, data models.Notifica
 		}
 		pushhandler.Instance.SendNotification(stage.AssigneeUserID, data)
 	}
+}
+
+func (i impl) GetRbacSelfAllow() models.RbacFunc {
+	return func(spaceID, userID string, role models.UserRole, uri string) bool {
+		recID := extractUriRecID(uri)
+		if recID == "" {
+			return false
+		}
+		rec, err := i.store.GetByID(spaceID, recID)
+		if err != nil {
+			return false
+		}
+		return rec.AuthorID == userID
+	}
+}
+
+func (i impl) GetRbacFlowAllow() models.RbacFunc {
+	return func(spaceID, userID string, role models.UserRole, uri string) bool {
+		recID := extractUriRecID(uri)
+		if recID == "" {
+			return false
+		}
+		list, err := i.approvalTaskStore.List(spaceID, recID)
+		if err != nil {
+			return false
+		}
+		for _, item := range list {
+			if item.AssigneeUserID == userID {
+				return true
+			}
+		}
+		return false
+	}
+}
+
+func extractUriRecID(uri string) string {
+	parts := strings.Split(uri, "/")
+	if len(parts) < 5 {
+		return ""
+	}
+	return parts[5]
 }
