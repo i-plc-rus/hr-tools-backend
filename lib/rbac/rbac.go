@@ -10,7 +10,7 @@ import (
 
 type Provider interface {
 	GetRuleFunc(method, path string) (models.RbacFunc, bool)
-	RegisterRule(module models.Module, permission models.Permission, roles []models.UserRole, swaggerPattern string, handler models.RbacFunc) error
+	RegisterRule(module models.Module, permission models.Permission, roles []models.UserRole, swaggerPattern string, handler models.RbacFunc)
 	GetPermissions(role models.UserRole) map[models.Module][]models.Permission
 }
 
@@ -43,7 +43,7 @@ func (i *impl) GetRuleFunc(method, path string) (models.RbacFunc, bool) {
 	return nil, false
 }
 
-func (i *impl) RegisterRule(module models.Module, permission models.Permission, roles []models.UserRole, swaggerPattern string, handler models.RbacFunc) error {
+func (i *impl) RegisterRule(module models.Module, permission models.Permission, roles []models.UserRole, swaggerPattern string, handler models.RbacFunc) {
 	path, method, err := parseSwaggerPattern(swaggerPattern)
 	if err != nil {
 		panic(err.Error())
@@ -93,7 +93,6 @@ func (i *impl) RegisterRule(module models.Module, permission models.Permission, 
 		}
 	}
 
-	return nil
 }
 
 func (i *impl) GetPermissions(role models.UserRole) map[models.Module][]models.Permission {
@@ -101,7 +100,7 @@ func (i *impl) GetPermissions(role models.UserRole) map[models.Module][]models.P
 }
 
 func isExactPath(path string) bool {
-	return !strings.Contains(path, "{")
+	return !strings.ContainsAny(path, "{")
 }
 
 func pathToRegex(path string) *regexp.Regexp {
@@ -136,7 +135,7 @@ func (i *impl) findInPathRule(pathRule *PathRule, path string) (models.RbacFunc,
 		return handler, true
 	}
 
-	// 3. Проверяем regexp паттерны
+	// 2. Проверяем regexp паттерны
 	for _, patternRule := range pathRule.Patterns {
 		if patternRule.Pattern.MatchString(path) {
 			return patternRule.Handler, true
@@ -144,12 +143,6 @@ func (i *impl) findInPathRule(pathRule *PathRule, path string) (models.RbacFunc,
 	}
 
 	return nil, false
-}
-
-func AllowFunc() models.RbacFunc {
-	return func(spaceID, userID string, role models.UserRole, uri string) bool {
-		return true
-	}
 }
 
 func AllowByRoleFunc(accessRoles []models.UserRole) models.RbacFunc {
