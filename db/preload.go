@@ -7,12 +7,13 @@ import (
 	licensestore "hr-tools-backend/lib/licence/store"
 	pushsettingsstore "hr-tools-backend/lib/space/push/settings-store"
 	spacestore "hr-tools-backend/lib/space/store"
-	authutils "hr-tools-backend/lib/utils/auth-utils"
+	authhelpers "hr-tools-backend/lib/utils/auth-helpers"
 	"hr-tools-backend/models"
 	dbmodels "hr-tools-backend/models/db"
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 func InitPreload() {
@@ -23,6 +24,7 @@ func InitPreload() {
 	fillLanguages()
 	addBaseLicensePlan()
 	addDefLicense()
+	correctRoles()
 }
 
 func addSuperAdmin() {
@@ -42,7 +44,7 @@ func addSuperAdmin() {
 	rec := dbmodels.AdminPanelUser{
 		IsActive:    true,
 		Role:        models.UserRoleSuperAdmin,
-		Password:    authutils.GetMD5Hash(config.Conf.Admin.Password),
+		Password:    authhelpers.GetMD5Hash(config.Conf.Admin.Password),
 		FirstName:   config.Conf.Admin.FirstName,
 		LastName:    config.Conf.Admin.LastName,
 		Email:       config.Conf.Admin.Email,
@@ -148,4 +150,27 @@ func addDefLicense() {
 			return
 		}
 	}
+}
+
+func correctRoles() {
+	log.Info("корректировка ролей")
+
+	DB.Transaction(func(tx *gorm.DB) error {
+		updTx := tx.Model(&dbmodels.SpaceUser{}).Where("Role = ?", "SPACE_USER_ROLE").Update("Role", models.SpecialistRole)
+
+		if updTx.Error != nil {
+			log.WithError(tx.Error).Error("ошибка корректировки записей с ролью SPACE_USER_ROLE")
+			return updTx.Error
+		}
+		log.Infof("скорректировано %v записей с ролью SPACE_USER_ROLE", updTx.RowsAffected)
+
+		updTx = tx.Model(&dbmodels.SpaceUser{}).Where("Role = ?", "SPACE_ADMIN_ROLE").Update("Role", models.AdminRole)
+
+		if updTx.Error != nil {
+			log.WithError(tx.Error).Error("ошибка корректировки записей с ролью SPACE_ADMIN_ROLE")
+			return updTx.Error
+		}
+		log.Infof("скорректировано %v записей с ролью SPACE_ADMIN_ROLE", updTx.RowsAffected)
+		return nil
+	})
 }

@@ -43,9 +43,8 @@ func (r SpaceUser) ToModel() spaceapimodels.SpaceUser {
 			FirstName:       r.FirstName,
 			LastName:        r.LastName,
 			PhoneNumber:     r.PhoneNumber,
-			IsAdmin:         r.Role.IsSpaceAdmin(),
 			SpaceID:         r.SpaceID,
-			Role:            r.Role.ToHuman(),
+			Role:            r.Role,
 			TextSign:        r.TextSign,
 			Status:          r.Status.ToHuman(),
 			StatusChangedAt: r.StatusChangedAt,
@@ -53,6 +52,7 @@ func (r SpaceUser) ToModel() spaceapimodels.SpaceUser {
 		},
 		IsEmailVerified: r.IsEmailVerified,
 		NewEmail:        r.NewEmail,
+		RoleName:       r.Role.ToHuman(),
 	}
 	if r.JobTitle != nil {
 		result.JobTitleID = *r.JobTitleID
@@ -63,8 +63,9 @@ func (r SpaceUser) ToModel() spaceapimodels.SpaceUser {
 
 func (r SpaceUser) ToProfile() spaceapimodels.SpaceUserProfileView {
 	result := spaceapimodels.SpaceUserProfileView{
-		ID:              r.ID,
-		Role:            r.Role.ToHuman(),
+		ID:        r.ID,
+		Role:      r.Role,
+		RoleName: r.Role.ToHuman(),
 		IsEmailVerified: r.IsEmailVerified,
 		NewEmail:        r.NewEmail,
 		SpaceUserProfileData: spaceapimodels.SpaceUserProfileData{

@@ -1,7 +1,6 @@
 package apiv1
 
 import (
-	"github.com/gofiber/fiber/v2"
 	"hr-tools-backend/controllers"
 	vacancyhandler "hr-tools-backend/lib/vacancy"
 	vacancyreqhandler "hr-tools-backend/lib/vacancy-req"
@@ -9,6 +8,8 @@ import (
 	"hr-tools-backend/models"
 	apimodels "hr-tools-backend/models/api"
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 type vacancyReqApiController struct {
@@ -19,7 +20,7 @@ func InitVacancyRequestApiRouters(app *fiber.App) {
 	controller := vacancyReqApiController{}
 	app.Route("vacancy_request", func(router fiber.Router) {
 		router.Use(middleware.LicenseRequired())
-
+		router.Use(middleware.RbacMiddleware())
 		router.Post("list", controller.list)
 		router.Post("", controller.create)
 		router.Route(":id", func(idRoute fiber.Router) {

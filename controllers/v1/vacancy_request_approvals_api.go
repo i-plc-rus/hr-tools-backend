@@ -116,7 +116,7 @@ func (c *vacancyReqApiController) approve(ctx *fiber.Ctx) error {
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/v1/space/vacancy_request/{id}/request_changes [post]
+// @router /api/v1/space/vacancy_request/{id}/approvals/{taskId}/request_changes [post]
 func (c *vacancyReqApiController) requestChanges(ctx *fiber.Ctx) error {
 	requestID, err := c.GetID(ctx)
 	if err != nil {
@@ -158,7 +158,7 @@ func (c *vacancyReqApiController) requestChanges(ctx *fiber.Ctx) error {
 // @Failure 400 {object} apimodels.Response
 // @Failure 403
 // @Failure 500 {object} apimodels.Response
-// @router /api/v1/space/vacancy_request/{id}/approvals/{taskId}/ [post]
+// @router /api/v1/space/vacancy_request/{id}/approvals/{taskId}/reject [post]
 func (c *vacancyReqApiController) reject(ctx *fiber.Ctx) error {
 	requestID, err := c.GetID(ctx)
 	if err != nil {

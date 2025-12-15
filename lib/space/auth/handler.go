@@ -6,8 +6,10 @@ import (
 	"hr-tools-backend/db"
 	emailverify "hr-tools-backend/lib/email-verify"
 	licensestore "hr-tools-backend/lib/licence/store"
+	"hr-tools-backend/lib/rbac"
 	"hr-tools-backend/lib/smtp"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
+	authhelpers "hr-tools-backend/lib/utils/auth-helpers"
 	authutils "hr-tools-backend/lib/utils/auth-utils"
 	"hr-tools-backend/models"
 	authapimodels "hr-tools-backend/models/api/auth"
@@ -83,7 +85,7 @@ func (i impl) RefreshToken(ctx *fiber.Ctx, refreshToken string) (response authap
 		if !user.IsActive {
 			return authapimodels.JWTResponse{}, errors.New("учетная запись деактивирована")
 		}
-		tokenString, err := authutils.GetToken(userID, user.GetFullName(), user.SpaceID, user.Role.IsSpaceAdmin(), string(user.Role))
+		tokenString, err := authutils.GetToken(userID, user.GetFullName(), user.SpaceID, user.Role.IsSpaceAdmin(), user.Role)
 		if err != nil {
 			log.WithError(err).Error("ошибка генерации JWT")
 			return authapimodels.JWTResponse{}, err
@@ -129,7 +131,7 @@ func (i impl) Me(ctx *fiber.Ctx) (spaceUser spaceapimodels.SpaceUserExt, err err
 		logger.
 			WithField("space_id", user.SpaceID).
 			Warn("лицензиия не найдена")
-			
+
 		licence = &dbmodels.License{
 			Status: models.LicenseStatusExpired,
 		}
@@ -138,6 +140,7 @@ func (i impl) Me(ctx *fiber.Ctx) (spaceUser spaceapimodels.SpaceUserExt, err err
 		SpaceUser:       user.ToModel(),
 		LicenseStatus:   licence.Status,
 		LicenseReadOnly: licence.Status.IdReadOnly(),
+		Permissions:     rbac.Instance.GetPermissions(user.Role),
 	}
 	return result, nil
 
@@ -156,7 +159,7 @@ func (i impl) Login(email, password string) (response authapimodels.JWTResponse,
 		logger.Debug("пользователь с такой почтой не найден")
 		return authapimodels.JWTResponse{}, errors.New("пользователь с такой почтой не найден")
 	}
-	if authutils.GetMD5Hash(password) != user.Password {
+	if authhelpers.GetMD5Hash(password) != user.Password {
 		logger.Debug("пользователь не прошел проверку пароля")
 		return authapimodels.JWTResponse{}, errors.New("пользователь не прошел проверку пароля")
 	}
@@ -167,7 +170,7 @@ func (i impl) Login(email, password string) (response authapimodels.JWTResponse,
 	if smtp.Instance.IsConfigured() && !user.Role.IsSpaceAdmin() && !user.IsEmailVerified {
 		return authapimodels.JWTResponse{}, errors.New("необходимо подтвердить почту")
 	}
-	tokenString, err := authutils.GetToken(user.ID, user.GetFullName(), user.SpaceID, user.Role.IsSpaceAdmin(), string(user.Role))
+	tokenString, err := authutils.GetToken(user.ID, user.GetFullName(), user.SpaceID, user.Role.IsSpaceAdmin(), user.Role)
 	if err != nil {
 		logger.WithError(err).Error("ошибка генерации JWT")
 		return authapimodels.JWTResponse{}, err
@@ -271,7 +274,7 @@ func (i impl) PasswordReset(resetCode, newPassword string) error {
 	updMap := map[string]interface{}{
 		"reset_code": "",
 		"reset_time": time.Now(),
-		"password":   authutils.GetMD5Hash(newPassword),
+		"password":   authhelpers.GetMD5Hash(newPassword),
 	}
 	err = i.spaceUsersStore.Update(user.ID, updMap)
 	if err != nil {

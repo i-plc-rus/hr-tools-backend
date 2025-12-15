@@ -31,6 +31,7 @@ import (
 	licencehandler "hr-tools-backend/lib/licence"
 	licenseworker "hr-tools-backend/lib/licence/worker"
 	messagetemplate "hr-tools-backend/lib/message-template"
+	"hr-tools-backend/lib/rbac"
 	spaceauthhandler "hr-tools-backend/lib/space/auth"
 	spacehandler "hr-tools-backend/lib/space/handler"
 	pushhandler "hr-tools-backend/lib/space/push/handler"
@@ -96,6 +97,7 @@ func InitAllServices(ctx context.Context) {
 	vk.NewHandler(ctx)
 	supersethandler.NewHandler(config.Conf.Superset.Host, config.Conf.Superset.Username, config.Conf.Superset.Password, config.Conf.Superset.DashboardParams)
 	licencehandler.NewHandler()
+	rbac.NewHandler()
 	go initWorkers(ctx)
 }
 

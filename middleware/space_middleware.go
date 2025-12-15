@@ -62,7 +62,7 @@ func GetSpaceRole(ctx *fiber.Ctx) models.UserRole {
 
 func SpaceAdminRequired() fiber.Handler {
 	return func(ctx *fiber.Ctx) (err error) {
-		if GetSpaceRole(ctx) != models.SpaceAdminRole {
+		if GetSpaceRole(ctx) != models.AdminRole {
 			return ctx.Status(fiber.StatusForbidden).JSON(apimodels.NewError("операция недоступна"))
 		}
 		return ctx.Next()
