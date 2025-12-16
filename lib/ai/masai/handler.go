@@ -31,6 +31,17 @@ type impl struct {
 	busy    atomic.Bool
 }
 
+var Instance *impl
+
+func NewHandler(ctx context.Context) {
+	log.Infof("Инициализация ИИ: %v, модель: %v", config.Conf.AI.Masai.URL, "masai")
+	Instance = &impl{
+		ctx:     ctx,
+		baseUrl: config.Conf.AI.Masai.URL,
+		session: masaisessionstore.NewInstance(db.DB),
+	}
+}
+
 func GetHandler(ctx context.Context) *impl {
 	log.Infof("Инициализация ИИ: %v, модель: %v", config.Conf.AI.Masai.URL, "masai")
 	return &impl{
@@ -40,12 +51,12 @@ func GetHandler(ctx context.Context) *impl {
 	}
 }
 
-func (i impl) getLogger() *log.Entry {
+func (i *impl) getLogger() *log.Entry {
 	return log.
 		WithField("ai", "masai")
 }
 
-func (i impl) AnalyzeAnswer(vkStepID, applicantID, questionID string, reader io.Reader) (result surveyapimodels.VkAiInterviewResponse, err error) {
+func (i *impl) AnalyzeAnswer(vkStepID, applicantID, questionID string, reader io.Reader) (result surveyapimodels.VkAiInterviewResponse, err error) {
 	//получаем данные по существующим сессиям
 	sessionRecs, err := i.session.GetAll()
 	if err != nil {
@@ -92,7 +103,7 @@ func (i impl) AnalyzeAnswer(vkStepID, applicantID, questionID string, reader io.
 	return i.convertResponse(response), nil
 }
 
-func (i impl) QueryMasai(reader io.Reader, fileName string, sessionRec dbmodels.MasaiSession) (result masaimodels.GradioResponse, err error) {
+func (i *impl) QueryMasai(reader io.Reader, fileName string, sessionRec dbmodels.MasaiSession) (result masaimodels.GradioResponse, err error) {
 	// лочим ресурсы
 	if !lock.Resource.Acquire(i.ctx, "QueryMasai") {
 		return masaimodels.GradioResponse{}, errors.New("ошибка доступа к ресурсам - контекст завершен")
@@ -142,7 +153,7 @@ func (i impl) QueryMasai(reader io.Reader, fileName string, sessionRec dbmodels.
 	return masaimodels.GradioResponse{Elements: updates}, nil
 }
 
-func (i impl) uploadVideo(reader io.Reader, fileName string) (videoPath string, err error) {
+func (i *impl) uploadVideo(reader io.Reader, fileName string) (videoPath string, err error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
@@ -178,7 +189,7 @@ func (i impl) uploadVideo(reader io.Reader, fileName string) (videoPath string, 
 	return result[0], nil
 }
 
-func (i impl) submitJob(videoPath string) (string, error) {
+func (i *impl) submitJob(videoPath string) (string, error) {
 	payload := map[string]interface{}{
 		"data": []interface{}{
 			map[string]interface{}{
@@ -212,7 +223,7 @@ func (i impl) submitJob(videoPath string) (string, error) {
 	return r["event_id"], nil
 }
 
-func (i impl) listenResults(eventID string) (result []byte, err error) {
+func (i *impl) listenResults(eventID string) (result []byte, err error) {
 	// флаг занятости ИИ
 	i.busy.Store(true)
 	defer i.busy.Store(false)
@@ -277,7 +288,7 @@ func (i impl) listenResults(eventID string) (result []byte, err error) {
 	return nil, errors.New("не получено событие complete")
 }
 
-func (i impl) removeSession(id string, force bool) {
+func (i *impl) removeSession(id string, force bool) {
 	if !force && helpers.IsContextDone(i.ctx) {
 		// завершен контекст приложения, не удаляем сессию, тк возможно ИИ еще работает
 		return
@@ -288,7 +299,7 @@ func (i impl) removeSession(id string, force bool) {
 	}
 }
 
-func (i impl) convertResponse(response masaimodels.GradioResponse) (result surveyapimodels.VkAiInterviewResponse) {
+func (i *impl) convertResponse(response masaimodels.GradioResponse) (result surveyapimodels.VkAiInterviewResponse) {
 	result.RecognizedText = response.GetRecognizedText()
 	for k, elem := range response.Elements {
 		if elem.IsPlotValue() {
@@ -323,6 +334,6 @@ func (i impl) convertResponse(response masaimodels.GradioResponse) (result surve
 	return result
 }
 
-func (i impl) IsVideoAiAvailable() bool {
+func (i *impl) IsVideoAiAvailable() bool {
 	return !i.busy.Load()
 }

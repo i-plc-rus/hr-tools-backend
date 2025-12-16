@@ -618,6 +618,9 @@ definitions:
     type: object
   applicantapimodels.ScoreDetail:
     properties:
+      analyze_id:
+        description: Идентификатор записи для retry/skip
+        type: string
       comment_for_similarity:
         description: Комментарий к оценке
         type: string
@@ -632,6 +635,18 @@ definitions:
         type: string
       frames_file_id:
         description: Идентификатор файла с изображением видео кадров
+        type: string
+      last_attempt_at:
+        description: Время последней попытки
+        type: string
+      manual_retry:
+        description: Включен руной ретрай
+        type: boolean
+      manual_skip:
+        description: Включено руное игнорирование анализа
+        type: boolean
+      manual_user_id:
+        description: Идентификатор пользователя включившего ретрай/игнорирование анализа
         type: string
       question_id:
         description: Идентификатор вопроса
@@ -1130,6 +1145,13 @@ definitions:
         description: Причина отказа
         type: string
     type: object
+  dictapimodels.RoleView:
+    properties:
+      code:
+        type: string
+      name:
+        type: string
+    type: object
   filesapimodels.FileView:
     properties:
       applicant_id:
@@ -1502,6 +1524,28 @@ definitions:
     - NegotiationStatusWait
     - NegotiationStatusRejected
     - NegotiationStatusAccepted
+  models.Permission:
+    enum:
+    - CREATE
+    - EDIT
+    - VIEW
+    - MANAGE
+    - FLOW
+    - STAGES
+    - TEAM
+    - FILES
+    - NOTES
+    type: string
+    x-enum-varnames:
+    - CreatePermission
+    - EditPermission
+    - ViewPermission
+    - ManagePermission
+    - FlowPermission
+    - StagesPermission
+    - TeamPermission
+    - FilesPermission
+    - NotesPermission
   models.RejectInitiator:
     enum:
     - Рекрутер
@@ -1679,14 +1723,20 @@ definitions:
     - TripReadinessNever
   models.UserRole:
     enum:
-    - SPACE_ADMIN_ROLE
-    - SPACE_USER_ROLE
+    - ADMIN
+    - HR
+    - MANAGER
+    - SPECIALIST
     - SUPER_ADMIN
+    - ALL
     type: string
     x-enum-varnames:
-    - SpaceAdminRole
-    - SpaceUserRole
+    - AdminRole
+    - HRRole
+    - ManagerRole
+    - SpecialistRole
     - UserRoleSuperAdmin
+    - AllRoles
   models.VRSelectionType:
     enum:
     - Массовый
@@ -1963,8 +2013,6 @@ definitions:
         type: string
       first_name:
         type: string
-      is_admin:
-        type: boolean
       job_title_id:
         description: Идентификатор должности
         type: string
@@ -1975,7 +2023,7 @@ definitions:
       phone_number:
         type: string
       role:
-        type: string
+        $ref: '#/definitions/models.UserRole'
       space_id:
         type: string
       status:
@@ -2106,8 +2154,6 @@ definitions:
         type: string
       id:
         type: string
-      is_admin:
-        type: boolean
       is_email_verified:
         description: Email подтвержден
         type: boolean
@@ -2125,6 +2171,8 @@ definitions:
       phone_number:
         type: string
       role:
+        $ref: '#/definitions/models.UserRole'
+      role_name:
         type: string
       space_id:
         type: string
@@ -2150,8 +2198,6 @@ definitions:
         type: string
       id:
         type: string
-      is_admin:
-        type: boolean
       is_email_verified:
         description: Email подтвержден
         type: boolean
@@ -2173,9 +2219,17 @@ definitions:
       new_email:
         description: Новый email, который станет основным после подтверждения
         type: string
+      permissions:
+        additionalProperties:
+          items:
+            $ref: '#/definitions/models.Permission'
+          type: array
+        type: object
       phone_number:
         type: string
       role:
+        $ref: '#/definitions/models.UserRole'
+      role_name:
         type: string
       space_id:
         type: string
@@ -2271,7 +2325,10 @@ definitions:
         description: Телефон
         type: string
       role:
+        allOf:
+        - $ref: '#/definitions/models.UserRole'
         description: Роль
+      role_name:
         type: string
       text_sign:
         description: Текст подписи
@@ -2306,8 +2363,6 @@ definitions:
         type: string
       first_name:
         type: string
-      is_admin:
-        type: boolean
       job_title_id:
         description: Идентификатор должности
         type: string
@@ -4793,6 +4848,46 @@ paths:
       summary: Список
       tags:
       - Справочник. Причины отказа
+  /api/v1/dict/role/list:
+    get:
+      description: Список ролей
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dictapimodels.CityData'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dictapimodels.RoleView'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Список ролей
+      tags:
+      - Справочник. Роли
   /api/v1/gpt/generate_vacancy_description:
     post:
       description: Сгенерировать описание вакансии
@@ -6057,6 +6152,94 @@ paths:
           schema:
             $ref: '#/definitions/apimodels.Response'
       summary: Загрузить резюме кандидата
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/analyze-retry/video/{id}:
+    put:
+      description: |-
+        Перезапустить анализ видео ответа
+        Перезапустить анализ видео ответа
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID видео анализа (AnalyzeID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/applicantapimodels.ApplicantData'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/analyze-skip/video/{id}:
+    put:
+      description: |-
+        Пропустить анализ видео ответа
+        Пропустить анализ видео ответа
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID видео анализа (AnalyzeID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/applicantapimodels.ApplicantData'
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
       tags:
       - Кандидат
   /api/v1/space/applicant/doc/{id}:
@@ -8969,7 +9152,44 @@ paths:
       summary: Обновление цепочки согласования
       tags:
       - Согласование заявок
-  /api/v1/space/vacancy_request/{id}/approvals/{taskId}/:
+  /api/v1/space/vacancy_request/{id}/approvals/{taskId}/approve:
+    post:
+      description: Согласовать
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: task rec ID
+        in: path
+        name: taskId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Согласовать
+      tags:
+      - Согласование заявок
+  /api/v1/space/vacancy_request/{id}/approvals/{taskId}/reject:
     post:
       description: Отклонить
       parameters:
@@ -9014,15 +9234,23 @@ paths:
       summary: Отклонить
       tags:
       - Согласование заявок
-  /api/v1/space/vacancy_request/{id}/approvals/{taskId}/approve:
+  /api/v1/space/vacancy_request/{id}/approvals/{taskId}/request_changes:
     post:
-      description: Согласовать
+      description: На доработку
       parameters:
       - description: Authorization token
         in: header
         name: Authorization
         required: true
         type: string
+      - description: request body
+        in: body
+        name: body
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/vacancyapimodels.ApprovalRequestChanges'
+          type: array
       - description: rec ID
         in: path
         name: id
@@ -9048,7 +9276,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apimodels.Response'
-      summary: Согласовать
+      summary: На доработку
       tags:
       - Согласование заявок
   /api/v1/space/vacancy_request/{id}/cancel:
@@ -9289,51 +9517,6 @@ paths:
       summary: Создать вакансию
       tags:
       - Заявка
-  /api/v1/space/vacancy_request/{id}/request_changes:
-    post:
-      description: На доработку
-      parameters:
-      - description: Authorization token
-        in: header
-        name: Authorization
-        required: true
-        type: string
-      - description: request body
-        in: body
-        name: body
-        required: true
-        schema:
-          items:
-            $ref: '#/definitions/vacancyapimodels.ApprovalRequestChanges'
-          type: array
-      - description: rec ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: task rec ID
-        in: path
-        name: taskId
-        required: true
-        type: string
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/apimodels.Response'
-      summary: На доработку
-      tags:
-      - Согласование заявок
   /api/v1/space/vacancy_request/{id}/vacancies:
     get:
       description: Получение списка связанных вакансий

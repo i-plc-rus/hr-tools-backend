@@ -2383,6 +2383,71 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/dict/role/list": {
+            "get": {
+                "description": "Список ролей",
+                "tags": [
+                    "Справочник. Роли"
+                ],
+                "summary": "Список ролей",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dictapimodels.CityData"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/dictapimodels.RoleView"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/gpt/generate_vacancy_description": {
             "post": {
                 "description": "Сгенерировать описание вакансии",
@@ -3162,6 +3227,142 @@ const docTemplate = `{
                         "description": "Authorization token",
                         "name": "Authorization",
                         "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/applicantapimodels.ApplicantData"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/applicant/analyze-retry/video/{id}": {
+            "put": {
+                "description": "Перезапустить анализ видео ответа\nПерезапустить анализ видео ответа",
+                "tags": [
+                    "Кандидат"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID видео анализа (AnalyzeID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/applicantapimodels.ApplicantData"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/applicant/analyze-skip/video/{id}": {
+            "put": {
+                "description": "Пропустить анализ видео ответа\nПропустить анализ видео ответа",
+                "tags": [
+                    "Кандидат"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID видео анализа (AnalyzeID)",
+                        "name": "id",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -8891,7 +9092,62 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/space/vacancy_request/{id}/approvals/{taskId}/": {
+        "/api/v1/space/vacancy_request/{id}/approvals/{taskId}/approve": {
+            "post": {
+                "description": "Согласовать",
+                "tags": [
+                    "Согласование заявок"
+                ],
+                "summary": "Согласовать",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "rec ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "task rec ID",
+                        "name": "taskId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/vacancy_request/{id}/approvals/{taskId}/reject": {
             "post": {
                 "description": "Отклонить",
                 "tags": [
@@ -8958,13 +9214,13 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/space/vacancy_request/{id}/approvals/{taskId}/approve": {
+        "/api/v1/space/vacancy_request/{id}/approvals/{taskId}/request_changes": {
             "post": {
-                "description": "Согласовать",
+                "description": "На доработку",
                 "tags": [
                     "Согласование заявок"
                 ],
-                "summary": "Согласовать",
+                "summary": "На доработку",
                 "parameters": [
                     {
                         "type": "string",
@@ -8972,6 +9228,18 @@ const docTemplate = `{
                         "name": "Authorization",
                         "in": "header",
                         "required": true
+                    },
+                    {
+                        "description": "request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/vacancyapimodels.ApprovalRequestChanges"
+                            }
+                        }
                     },
                     {
                         "type": "string",
@@ -9341,73 +9609,6 @@ const docTemplate = `{
                         "type": "string",
                         "description": "rec ID",
                         "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/apimodels.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/apimodels.Response"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden"
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/apimodels.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/space/vacancy_request/{id}/request_changes": {
-            "post": {
-                "description": "На доработку",
-                "tags": [
-                    "Согласование заявок"
-                ],
-                "summary": "На доработку",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Authorization token",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "description": "request body",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/vacancyapimodels.ApprovalRequestChanges"
-                            }
-                        }
-                    },
-                    {
-                        "type": "string",
-                        "description": "rec ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "task rec ID",
-                        "name": "taskId",
                         "in": "path",
                         "required": true
                     }
@@ -11248,6 +11449,10 @@ const docTemplate = `{
         "applicantapimodels.ScoreDetail": {
             "type": "object",
             "properties": {
+                "analyze_id": {
+                    "description": "Идентификатор записи для retry/skip",
+                    "type": "string"
+                },
                 "comment_for_similarity": {
                     "description": "Комментарий к оценке",
                     "type": "string"
@@ -11266,6 +11471,22 @@ const docTemplate = `{
                 },
                 "frames_file_id": {
                     "description": "Идентификатор файла с изображением видео кадров",
+                    "type": "string"
+                },
+                "last_attempt_at": {
+                    "description": "Время последней попытки",
+                    "type": "string"
+                },
+                "manual_retry": {
+                    "description": "Включен руной ретрай",
+                    "type": "boolean"
+                },
+                "manual_skip": {
+                    "description": "Включено руное игнорирование анализа",
+                    "type": "boolean"
+                },
+                "manual_user_id": {
+                    "description": "Идентификатор пользователя включившего ретрай/игнорирование анализа",
                     "type": "string"
                 },
                 "question_id": {
@@ -12010,6 +12231,17 @@ const docTemplate = `{
                 }
             }
         },
+        "dictapimodels.RoleView": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "filesapimodels.FileView": {
             "type": "object",
             "properties": {
@@ -12499,6 +12731,31 @@ const docTemplate = `{
                 "NegotiationStatusAccepted"
             ]
         },
+        "models.Permission": {
+            "type": "string",
+            "enum": [
+                "CREATE",
+                "EDIT",
+                "VIEW",
+                "MANAGE",
+                "FLOW",
+                "STAGES",
+                "TEAM",
+                "FILES",
+                "NOTES"
+            ],
+            "x-enum-varnames": [
+                "CreatePermission",
+                "EditPermission",
+                "ViewPermission",
+                "ManagePermission",
+                "FlowPermission",
+                "StagesPermission",
+                "TeamPermission",
+                "FilesPermission",
+                "NotesPermission"
+            ]
+        },
         "models.RejectInitiator": {
             "type": "string",
             "enum": [
@@ -12714,14 +12971,20 @@ const docTemplate = `{
         "models.UserRole": {
             "type": "string",
             "enum": [
-                "SPACE_ADMIN_ROLE",
-                "SPACE_USER_ROLE",
-                "SUPER_ADMIN"
+                "ADMIN",
+                "HR",
+                "MANAGER",
+                "SPECIALIST",
+                "SUPER_ADMIN",
+                "ALL"
             ],
             "x-enum-varnames": [
-                "SpaceAdminRole",
-                "SpaceUserRole",
-                "UserRoleSuperAdmin"
+                "AdminRole",
+                "HRRole",
+                "ManagerRole",
+                "SpecialistRole",
+                "UserRoleSuperAdmin",
+                "AllRoles"
             ]
         },
         "models.VRSelectionType": {
@@ -13110,9 +13373,6 @@ const docTemplate = `{
                 "first_name": {
                     "type": "string"
                 },
-                "is_admin": {
-                    "type": "boolean"
-                },
                 "job_title_id": {
                     "description": "Идентификатор должности",
                     "type": "string"
@@ -13127,7 +13387,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "role": {
-                    "type": "string"
+                    "$ref": "#/definitions/models.UserRole"
                 },
                 "space_id": {
                     "type": "string"
@@ -13326,9 +13586,6 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
-                "is_admin": {
-                    "type": "boolean"
-                },
                 "is_email_verified": {
                     "description": "Email подтвержден",
                     "type": "boolean"
@@ -13352,6 +13609,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "role": {
+                    "$ref": "#/definitions/models.UserRole"
+                },
+                "role_name": {
                     "type": "string"
                 },
                 "space_id": {
@@ -13388,9 +13648,6 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
-                "is_admin": {
-                    "type": "boolean"
-                },
                 "is_email_verified": {
                     "description": "Email подтвержден",
                     "type": "boolean"
@@ -13422,10 +13679,22 @@ const docTemplate = `{
                     "description": "Новый email, который станет основным после подтверждения",
                     "type": "string"
                 },
+                "permissions": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/models.Permission"
+                        }
+                    }
+                },
                 "phone_number": {
                     "type": "string"
                 },
                 "role": {
+                    "$ref": "#/definitions/models.UserRole"
+                },
+                "role_name": {
                     "type": "string"
                 },
                 "space_id": {
@@ -13560,6 +13829,13 @@ const docTemplate = `{
                 },
                 "role": {
                     "description": "Роль",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.UserRole"
+                        }
+                    ]
+                },
+                "role_name": {
                     "type": "string"
                 },
                 "text_sign": {
@@ -13607,9 +13883,6 @@ const docTemplate = `{
                 },
                 "first_name": {
                     "type": "string"
-                },
-                "is_admin": {
-                    "type": "boolean"
                 },
                 "job_title_id": {
                     "description": "Идентификатор должности",

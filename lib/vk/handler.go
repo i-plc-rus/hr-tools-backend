@@ -54,6 +54,8 @@ type Provider interface {
 	ScoreAnswer(videoSurveyRec dbmodels.ApplicantVkVideoSurvey) (err error)
 	GenerateReport(vkRec dbmodels.ApplicantVkStep) (ok bool, err error)
 	UploadStreamVideoAnswer(ctx context.Context, id, questionID string, reader io.Reader, fileName, contentType string) (info minio.UploadInfo, err error)
+	VideoRetry(analyzeID, userID string) error
+	VideoSkip(analyzeID, userID string) error
 }
 
 var Instance Provider
@@ -805,6 +807,36 @@ func (i impl) GenerateReport(vkRec dbmodels.ApplicantVkStep) (ok bool, err error
 		return false, errors.Wrap(err, "ошибка сохранения анкеты")
 	}
 	return true, nil
+}
+
+func (i impl) VideoRetry(analyzeID, userID string) error {
+	rec, err := i.vkVideoAnalyzeStore.GetByID(analyzeID)
+	if err != nil {
+		return err
+	}
+	if rec == nil {
+		return errors.New("запись не найдена")
+	}
+	rec.ManualSkip = false
+	rec.ManualRetry = true
+	rec.ManualUserID = userID
+	_, err = i.vkVideoAnalyzeStore.Save(*rec)
+	return err
+}
+
+func (i impl) VideoSkip(analyzeID, userID string) error {
+	rec, err := i.vkVideoAnalyzeStore.GetByID(analyzeID)
+	if err != nil {
+		return err
+	}
+	if rec == nil {
+		return errors.New("запись не найдена")
+	}
+	rec.ManualSkip = true
+	rec.ManualRetry = false
+	rec.ManualUserID = userID
+	_, err = i.vkVideoAnalyzeStore.Save(*rec)
+	return err
 }
 
 func (i impl) sendLink(applicantRec dbmodels.Applicant, chatText, emailText, emailTitle string) (isSend bool) {

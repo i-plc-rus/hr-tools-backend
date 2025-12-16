@@ -63,6 +63,9 @@ func InitApplicantApiRouters(app *fiber.App) {
 			idRouter.Put("survey", controller.surveyUpdate)
 			idRouter.Put("survey_regen", controller.surveyRegen)
 		})
+
+		router.Put("analyze-retry/video/:id", controller.videoRetry)
+		router.Put("analyze-skip/video/:id", controller.videoSkip)
 	})
 }
 
@@ -956,4 +959,46 @@ func (c *applicantApiController) getFile(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.SendStream(body)
+}
+
+// @Description  Перезапустить анализ видео ответа
+// @Tags Кандидат
+// @Description  Перезапустить анализ видео ответа
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    string  				    	true         "ID видео анализа (AnalyzeID)"
+// @Param	body body	 applicantapimodels.ApplicantData	true	"request body"
+// @Success 200 {object} apimodels.Response{data=string}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/analyze-retry/video/{id} [put]
+func (c *applicantApiController) videoRetry(ctx *fiber.Ctx) error {
+	recID, err := c.GetID(ctx)
+	userID := middleware.GetUserID(ctx)
+	err = vk.Instance.VideoRetry(recID, userID)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка повторной отправки видео на анализ")
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Description  Пропустить анализ видео ответа
+// @Tags Кандидат
+// @Description  Пропустить анализ видео ответа
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    string  				    	true         "ID видео анализа (AnalyzeID)"
+// @Param	body body	 applicantapimodels.ApplicantData	true	"request body"
+// @Success 200 {object} apimodels.Response{data=string}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/analyze-skip/video/{id} [put]
+func (c *applicantApiController) videoSkip(ctx *fiber.Ctx) error {
+	recID, err := c.GetID(ctx)
+	userID := middleware.GetUserID(ctx)
+	err = vk.Instance.VideoSkip(recID, userID)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка повторной отправки видео на анализ")
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
