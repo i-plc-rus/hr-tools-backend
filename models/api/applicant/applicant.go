@@ -46,17 +46,22 @@ type ScoreAI struct {
 }
 
 type ScoreDetail struct {
-	QuestionID           string `json:"question_id"`             // Идентификатор вопроса
-	QuestionText         string `json:"question_text"`           // Текст вопроса
-	TranscriptText       string `json:"transcript_text"`         // Ответ данный кандидатом (транскрипция)
-	VideoFileID          string `json:"file_id"`                 // Идентификатор видео файла отправленный кандидатом
-	VoiceAmplitudeFileID string `json:"voice_amplitude_file_id"` // Идентификатор файла с изображением амплитуды голоса
-	FramesFileID         string `json:"frames_file_id"`          // Идентификатор файла с изображением видео кадров
-	EmotionFileID        string `json:"emotion_file_id"`         // Идентификатор файла с изображением графика эмоциий
-	SentimentFileID      string `json:"sentiment_file_id"`       // Идентификатор файла с изображением графика настроения
-	Similarity           int    `json:"similarity"`              // Оценка ответа
-	CommentForSimilarity string `json:"comment_for_similarity"`  // Комментарий к оценке
-	Error                string `json:"error"`                   // Ошибка анализа
+	QuestionID           string     `json:"question_id"`             // Идентификатор вопроса
+	QuestionText         string     `json:"question_text"`           // Текст вопроса
+	TranscriptText       string     `json:"transcript_text"`         // Ответ данный кандидатом (транскрипция)
+	VideoFileID          string     `json:"file_id"`                 // Идентификатор видео файла отправленный кандидатом
+	VoiceAmplitudeFileID string     `json:"voice_amplitude_file_id"` // Идентификатор файла с изображением амплитуды голоса
+	FramesFileID         string     `json:"frames_file_id"`          // Идентификатор файла с изображением видео кадров
+	EmotionFileID        string     `json:"emotion_file_id"`         // Идентификатор файла с изображением графика эмоциий
+	SentimentFileID      string     `json:"sentiment_file_id"`       // Идентификатор файла с изображением графика настроения
+	Similarity           int        `json:"similarity"`              // Оценка ответа
+	CommentForSimilarity string     `json:"comment_for_similarity"`  // Комментарий к оценке
+	Error                string     `json:"error"`                   // Ошибка анализа
+	AnalyzeID            string     `json:"analyze_id"`              // Идентификатор записи для retry/skip
+	LastAttemptAt        *time.Time `json:"last_attempt_at"`         // Время последней попытки
+	ManualRetry          bool       `json:"manual_retry"`            // Включен руной ретрай
+	ManualSkip           bool       `json:"manual_skip"`             // Включено руное игнорирование анализа
+	ManualUserID         string     `json:"manual_user_id"`          //Идентификатор пользователя включившего ретрай/игнорирование анализа
 }
 
 type ApplicantViewExt struct {
@@ -392,6 +397,11 @@ func VkScoreAIConvert(rec dbmodels.Applicant) ScoreAI {
 			detail.Similarity = evaluation.Similarity
 			detail.CommentForSimilarity = evaluation.CommentForSimilarity
 			detail.Error = evaluation.Error
+			detail.AnalyzeID = evaluation.ID
+			detail.LastAttemptAt = evaluation.LastAttemptAt
+			detail.ManualRetry = evaluation.ManualRetry
+			detail.ManualSkip = evaluation.ManualRetry
+			detail.ManualUserID = evaluation.ManualUserID
 		}
 		result.Details = append(result.Details, detail)
 	}

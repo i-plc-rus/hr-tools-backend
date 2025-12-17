@@ -268,8 +268,7 @@ func (c *publicsurveyApiController) getAiInfo(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(apimodels.NewError("Ошибка получения информации о доступности AI " + err.Error()))
 	}
 
-	masaiInstance := masaihandler.GetHandler(ctx.UserContext())
-	isVideoAiAvailable := masaiInstance.IsVideoAiAvailable()
+	isVideoAiAvailable := masaihandler.Instance.IsVideoAiAvailable()
 
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(fiber.Map{
 		"text_ai_available":  isTextAvailable,

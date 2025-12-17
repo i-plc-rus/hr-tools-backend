@@ -183,4 +183,9 @@ type ApplicantVkVideoSurvey struct {
 	IsSemanticEvaluated  bool
 	Similarity           int    // совпадение
 	CommentForSimilarity string // краткий комментарий оценки
+	RetryCount           int
+	LastAttemptAt        *time.Time
+	ManualRetry          bool
+	ManualSkip           bool
+	ManualUserID         string
 }

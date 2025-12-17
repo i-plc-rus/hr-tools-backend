@@ -9,6 +9,7 @@ import (
 
 type Provider interface {
 	Save(rec dbmodels.ApplicantVkVideoSurvey) (id string, err error)
+	GetByID(analyzeID string) (*dbmodels.ApplicantVkVideoSurvey, error)
 	GetByStepQuestion(applicantVkStepID, questionID string) (*dbmodels.ApplicantVkVideoSurvey, error)
 	GetByApplicantVkStep(applicantVkStepID string) ([]dbmodels.ApplicantVkVideoSurvey, error)
 	GetForScore() ([]dbmodels.ApplicantVkVideoSurvey, error)
@@ -40,6 +41,21 @@ func (i impl) Save(rec dbmodels.ApplicantVkVideoSurvey) (id string, err error) {
 		return "", err
 	}
 	return rec.ID, nil
+}
+
+func (i impl) GetByID(analyzeID string) (*dbmodels.ApplicantVkVideoSurvey, error) {
+	rec := dbmodels.ApplicantVkVideoSurvey{}
+	err := i.db.
+		Where("id = ?", analyzeID).
+		First(&rec).
+		Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &rec, nil
 }
 
 func (i impl) GetByStepQuestion(applicantVkStepID, questionID string) (*dbmodels.ApplicantVkVideoSurvey, error) {
