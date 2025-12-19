@@ -115,6 +115,7 @@ type Configuration struct {
 			Question5 string `default:"Стаж по выбранной специальности" env:"SURVEY_VK_STEP0_Q5"`
 		}
 		VideoNormalizeBitrate string `default:"1000" env:"VIDEO_NORMALIZE_BITRATE"`
+		VideoNormalizeEnabled bool   `default:"true" env:"VIDEO_NORMALIZE_ENABLED"`
 	}
 	NotifyBot struct {
 		AddrErr string `default:"http://93.189.231.84:8080/error" env:"NOTIFY_BOT_ERR"`

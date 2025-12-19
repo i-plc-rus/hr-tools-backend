@@ -9203,9 +9203,7 @@ paths:
         name: body
         required: true
         schema:
-          items:
-            $ref: '#/definitions/vacancyapimodels.ApprovalReject'
-          type: array
+          $ref: '#/definitions/vacancyapimodels.ApprovalReject'
       - description: rec ID
         in: path
         name: id
