@@ -9168,10 +9168,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/vacancyapimodels.ApprovalReject"
-                            }
+                            "$ref": "#/definitions/vacancyapimodels.ApprovalReject"
                         }
                     },
                     {

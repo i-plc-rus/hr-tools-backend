@@ -657,13 +657,15 @@ func (i impl) UploadStreamVideoAnswer(ctx context.Context, id, questionID string
 		}
 	}
 
-	// Нормализация видео
-	normalizedVideo, err := videonormalize.Run(ctx, fileInfo, info.Location)
-	if err != nil {
-		log.WithError(err).Error(err, "ошибка нормализации видео")
-		// продолжаем работу даже если нормализация видео не удалась
-	} else {
-		info.Location = normalizedVideo // используем нормализованный файл
+	// Нормализация видео если включено в настройках
+	if config.Conf.Survey.VideoNormalizeEnabled {
+		normalizedVideo, err := videonormalize.Run(ctx, fileInfo, info.Location)
+		if err != nil {
+			log.WithError(err).Error(err, "ошибка нормализации видео")
+			// продолжаем работу даже если нормализация видео не удалась
+		} else {
+			info.Location = normalizedVideo // используем нормализованный файл
+		}
 	}
 
 	rec.VideoInterview.Answers[questionID] = dbmodels.VkVideoAnswer{
