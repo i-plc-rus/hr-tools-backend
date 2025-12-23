@@ -1,14 +1,15 @@
 package vacancyreqstore
 
 import (
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Provider interface {
@@ -52,6 +53,7 @@ func (i impl) GetByID(spaceID, id string) (*dbmodels.VacancyRequest, error) {
 		Where("space_id = ?", spaceID).
 		Preload(clause.Associations).
 		Preload("Comments.Author").
+		Preload("ApprovalTasks.AssigneeUser").
 		First(&rec).
 		Error
 	if err != nil {
@@ -127,7 +129,8 @@ func (i impl) List(spaceID, userID string, filter vacancyapimodels.VrFilter) (li
 	page, limit := filter.GetPage()
 	i.setPage(tx, page, limit)
 	tx = tx.Preload(clause.Associations).
-		Preload("Comments.Author")
+		Preload("Comments.Author").
+		Preload("ApprovalTasks.AssigneeUser")
 	err = tx.Find(&list).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

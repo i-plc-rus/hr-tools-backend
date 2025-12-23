@@ -10,9 +10,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// @Summary Обновление цепочки согласования
+// @Summary Получить цепочку согласования
 // @Tags Согласование заявок
-// @Description Обновление цепочки согласования
+// @Description Получить цепочку согласования
 // @Param   Authorization		header	string								true	"Authorization token"
 // @Param	body 				body	[]vacancyapimodels.ApprovalTaskView	true	"request body"
 // @Param   id          		path    string  				    		true    "rec ID"
