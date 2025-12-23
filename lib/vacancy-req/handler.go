@@ -258,7 +258,7 @@ func (i impl) List(spaceID, userID string, filter vacancyapimodels.VrFilter) (li
 	if err != nil {
 		return nil, 0, err
 	}
-	result := make([]vacancyapimodels.VacancyRequestView, 0, len(list))
+	result := make([]vacancyapimodels.VacancyRequestView, 0, len(recList))
 	for _, rec := range recList {
 		result = append(result, vacancyapimodels.VacancyRequestConvert(rec))
 	}

@@ -1,11 +1,12 @@
 package vacancyapimodels
 
 import (
-	"github.com/pkg/errors"
 	"hr-tools-backend/models"
 	apimodels "hr-tools-backend/models/api"
 	dbmodels "hr-tools-backend/models/db"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type VacancyRequestData struct {
@@ -82,17 +83,18 @@ type VacancyRequestPreView struct {
 
 type VacancyRequestView struct {
 	VacancyRequestData
-	ID                string          `json:"id"`
-	CreationDate      time.Time       `json:"creation_date"`
-	Status            models.VRStatus `json:"status"`
-	DepartmentName    string          `json:"department_name"`
-	JobTitleName      string          `json:"job_title_name"`
-	City              string          `json:"city"`
-	CompanyStructName string          `json:"company_struct_name"`
-	Pinned            bool            `json:"pinned"`
-	Favorite          bool            `json:"favorite"`
-	OpenVacancies     int             `json:"open_vacancies"` // кол-во вакансий открытых по заявке
-	Comments          []CommentView   `json:"comments"`
+	ID                string             `json:"id"`
+	CreationDate      time.Time          `json:"creation_date"`
+	Status            models.VRStatus    `json:"status"`
+	DepartmentName    string             `json:"department_name"`
+	JobTitleName      string             `json:"job_title_name"`
+	City              string             `json:"city"`
+	CompanyStructName string             `json:"company_struct_name"`
+	Pinned            bool               `json:"pinned"`
+	Favorite          bool               `json:"favorite"`
+	OpenVacancies     int                `json:"open_vacancies"` // кол-во вакансий открытых по заявке
+	Comments          []CommentView      `json:"comments"`
+	ApprovalTasks     []ApprovalTaskView `json:"approval_tasks"` // список согласующих
 }
 
 func VacancyRequestConvert(rec dbmodels.VacancyRequest) VacancyRequestView {
@@ -153,18 +155,29 @@ func VacancyRequestConvert(rec dbmodels.VacancyRequest) VacancyRequestView {
 		result.CompanyStructName = rec.CompanyStruct.Name
 	}
 	result.OpenVacancies = len(rec.Vacancies)
-	for _, comment := range rec.Comments {
-		commentView := CommentView{
-			Comment: Comment{
-				Date:     comment.Date,
-				AuthorID: comment.AuthorID,
-				Comment:  comment.Comment,
-			},
+
+	result.Comments = make([]CommentView, 0)
+	if rec.Comments != nil {
+		for _, comment := range rec.Comments {
+			commentView := CommentView{
+				Comment: Comment{
+					Date:     comment.Date,
+					AuthorID: comment.AuthorID,
+					Comment:  comment.Comment,
+				},
+			}
+			if comment.Author != nil {
+				commentView.AuthorFIO = comment.Author.GetFullName()
+			}
+			result.Comments = append(result.Comments, commentView)
 		}
-		if comment.Author != nil {
-			commentView.AuthorFIO = comment.Author.GetFullName()
+	}
+	// конвертим согласующих
+	result.ApprovalTasks = make([]ApprovalTaskView, 0)
+	if rec.ApprovalTasks != nil {
+		for _, task := range rec.ApprovalTasks {
+			result.ApprovalTasks = append(result.ApprovalTasks, ApprovalStageConvert(task))
 		}
-		result.Comments = append(result.Comments, commentView)
 	}
 	return result
 }

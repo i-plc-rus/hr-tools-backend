@@ -1,10 +1,11 @@
 package dbmodels
 
 import (
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"hr-tools-backend/models"
 	"time"
+
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type VacancyRequest struct {
@@ -44,6 +45,7 @@ type VacancyRequest struct {
 	Pinned          bool
 	Vacancies       []Vacancy
 	Comments        []VacancyRequestComment `gorm:"foreignKey:VacancyRequestID"`
+	ApprovalTasks   []ApprovalTask          `gorm:"foreignKey:RequestID"`
 }
 
 type VacancyRequestComment struct {
