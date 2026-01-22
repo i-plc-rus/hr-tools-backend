@@ -3049,6 +3049,11 @@ definitions:
     type: object
   vacancyapimodels.VacancyRequestView:
     properties:
+      approval_tasks:
+        description: список согласующих
+        items:
+          $ref: '#/definitions/vacancyapimodels.ApprovalTaskView'
+        type: array
       chief_fio:
         description: фио непосредственного руководителя
         type: string
@@ -9077,7 +9082,7 @@ paths:
       - Согласование заявок
   /api/v1/space/vacancy_request/{id}/approvals:
     get:
-      description: Обновление цепочки согласования
+      description: Получить цепочку согласования
       parameters:
       - description: Authorization token
         in: header
@@ -9112,7 +9117,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apimodels.Response'
-      summary: Обновление цепочки согласования
+      summary: Получить цепочку согласования
       tags:
       - Согласование заявок
     put:
@@ -9246,9 +9251,7 @@ paths:
         name: body
         required: true
         schema:
-          items:
-            $ref: '#/definitions/vacancyapimodels.ApprovalRequestChanges'
-          type: array
+          $ref: '#/definitions/vacancyapimodels.ApprovalRequestChanges'
       - description: rec ID
         in: path
         name: id

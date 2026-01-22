@@ -8979,11 +8979,11 @@ const docTemplate = `{
         },
         "/api/v1/space/vacancy_request/{id}/approvals": {
             "get": {
-                "description": "Обновление цепочки согласования",
+                "description": "Получить цепочку согласования",
                 "tags": [
                     "Согласование заявок"
                 ],
-                "summary": "Обновление цепочки согласования",
+                "summary": "Получить цепочку согласования",
                 "parameters": [
                     {
                         "type": "string",
@@ -9232,10 +9232,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/vacancyapimodels.ApprovalRequestChanges"
-                            }
+                            "$ref": "#/definitions/vacancyapimodels.ApprovalRequestChanges"
                         }
                     },
                     {
@@ -14933,6 +14930,13 @@ const docTemplate = `{
         "vacancyapimodels.VacancyRequestView": {
             "type": "object",
             "properties": {
+                "approval_tasks": {
+                    "description": "список согласующих",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/vacancyapimodels.ApprovalTaskView"
+                    }
+                },
                 "chief_fio": {
                     "description": "фио непосредственного руководителя",
                     "type": "string"
