@@ -109,7 +109,7 @@ func (c *vacancyReqApiController) approve(ctx *fiber.Ctx) error {
 // @Tags Согласование заявок
 // @Description На доработку
 // @Param   Authorization		header	string										true	"Authorization token"
-// @Param	body 				body	[]vacancyapimodels.ApprovalRequestChanges	true	"request body"
+// @Param	body 				body	vacancyapimodels.ApprovalRequestChanges	true	"request body"
 // @Param   id          		path    string  				    				true    "rec ID"
 // @Param   taskId          	path    string  				    				true    "task rec ID"
 // @Success 200 {object} apimodels.Response
