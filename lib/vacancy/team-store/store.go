@@ -1,10 +1,11 @@
 package teamstore
 
 import (
+	dbmodels "hr-tools-backend/models/db"
+
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	dbmodels "hr-tools-backend/models/db"
 )
 
 type Provider interface {
@@ -40,7 +41,7 @@ func (i impl) GetByID(spaceID, vacancyID, userID string) (*dbmodels.VacancyTeam,
 	rec := dbmodels.VacancyTeam{}
 	err := i.db.
 		Model(&dbmodels.VacancyTeam{}).
-		Where("id = ?", userID).
+		Where("user_id = ?", userID).
 		Where("space_id = ?", spaceID).
 		Where("vacancy_id = ?", vacancyID).
 		Preload(clause.Associations).
@@ -89,16 +90,12 @@ func (i impl) List(spaceID, vacancyID string) (list []dbmodels.VacancyTeam, err 
 }
 
 func (i impl) Delete(spaceID, vacancyID, userID string) (err error) {
-	delRec := dbmodels.VacancyTeam{
-		BaseSpaceModel: dbmodels.BaseSpaceModel{
-			SpaceID: spaceID,
-		},
-		UserID: userID,
-		VacancyID: vacancyID,
-	}
 	err = i.db.
-		Delete(&delRec).
-		Error
+		Model(&dbmodels.VacancyTeam{}).
+		Where("space_id = ?", spaceID).
+		Where("vacancy_id = ?", vacancyID).
+		Where("user_id = ?", userID).
+		Delete(&dbmodels.VacancyTeam{}).Error
 
 	if err != nil {
 		return err

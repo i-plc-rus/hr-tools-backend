@@ -10,9 +10,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// @Summary Получить цепочку согласования
+// @Summary Обновление цепочки согласования
 // @Tags Согласование заявок
-// @Description Получить цепочку согласования
+// @Description Обновление цепочки согласования
 // @Param   Authorization		header	string								true	"Authorization token"
 // @Param	body 				body	[]vacancyapimodels.ApprovalTaskView	true	"request body"
 // @Param   id          		path    string  				    		true    "rec ID"
@@ -109,7 +109,7 @@ func (c *vacancyReqApiController) approve(ctx *fiber.Ctx) error {
 // @Tags Согласование заявок
 // @Description На доработку
 // @Param   Authorization		header	string										true	"Authorization token"
-// @Param	body 				body	[]vacancyapimodels.ApprovalRequestChanges	true	"request body"
+// @Param	body 				body	           vacancyapimodels.ApprovalRequestChanges	true	"request body"
 // @Param   id          		path    string  				    				true    "rec ID"
 // @Param   taskId          	path    string  				    				true    "task rec ID"
 // @Success 200 {object} apimodels.Response

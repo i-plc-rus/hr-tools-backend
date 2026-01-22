@@ -237,7 +237,7 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyData) 
 				Comment:        "Создана вакансия по заявке",
 				Changes: dbmodels.EntityChanges{
 					Description: "Создана вакансия по заявке",
-					Data: vrChanges,
+					Data:        vrChanges,
 				},
 			}
 			aprovalStagesHandler.AuditCommon(auditRec)
@@ -673,7 +673,7 @@ func (i impl) UsersList(spaceID, vacancyID string, filter vacancyapimodels.Perso
 func (i impl) ExecuteFromTeam(spaceID, vacancyID, userID string) (hMsg string, err error) {
 	vt, err := i.teamStore.GetByID(spaceID, vacancyID, userID)
 	if err != nil || vt == nil {
-		return "", err
+		return "", errors.New("пользователь не в команде")
 	}
 	if vt.Responsible {
 		return "Перед исключением из команды, необходимо назначить другого ответственного", nil
