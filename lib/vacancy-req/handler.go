@@ -274,13 +274,41 @@ func (i impl) ChangeStatus(spaceID, id, userID string, status models.VRStatus) (
 	if err != nil {
 		return "", err
 	}
+	oldStatus := rec.Status
 	if !rec.Status.IsAllowChange(status) {
 		return fmt.Sprintf("изменение статуса на %v недопустимо", status), nil
 	}
-	updMap := map[string]interface{}{
-		"status": status,
+	if oldStatus == status {
+		return "", nil
 	}
-	err = i.store.Update(spaceID, id, updMap)
+	err = db.DB.Transaction(func(tx *gorm.DB) error {
+		store := vacancyreqstore.NewInstance(tx)
+		updMap := map[string]any{
+			"status": status,
+		}
+		err = store.Update(spaceID, id, updMap)
+		if err != nil {
+			return err
+		}
+		if status == models.VRStatusInApproval {
+			// Все предыдущие решения согласующих аннулируются
+			approvalTaskStore := approvaltaskstore.NewInstance(tx)
+			taskList, err := approvalTaskStore.List(spaceID, id)
+			if err != nil {
+				return err
+			}
+			taskUpdMap := map[string]interface{}{
+				"State":     models.AStatePending,
+				"Comment":   "",
+				"DecidedAt": nil,
+			}
+
+			for _, task := range taskList {
+				approvalTaskStore.Update(spaceID, task.ID, taskUpdMap)
+			}
+		}
+		return nil
+	})
 	if err != nil {
 		return "", err
 	}

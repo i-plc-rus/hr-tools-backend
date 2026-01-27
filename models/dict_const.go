@@ -90,7 +90,7 @@ func (v VRStatus) IsAllowChange(newStatus VRStatus) bool {
 	case VRStatusCreated:
 		return v == VRStatusInApproval || v == VRStatusDraft || v == VRStatusRejected
 	case VRStatusInApproval:
-		return v == VRStatusCreated || v == VRStatusRejected
+		return v == VRStatusCreated || v == VRStatusRejected || v == VRStatusDraft
 	case VRStatusApproved:
 		return v == VRStatusInApproval
 	case VRStatusRejected:
