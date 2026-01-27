@@ -443,7 +443,7 @@ func (i impl) RequestChanges(spaceID, requestID, taskID, userID string, data vac
 		}
 
 		//меняем статус заявки
-		hMsh, err = i.ChangeStatus(spaceID, requestID, userID, models.VRStatusCreated)
+		hMsh, err = i.ChangeStatus(spaceID, requestID, userID, models.VRStatusDraft)
 		if err != nil {
 			return err
 		}

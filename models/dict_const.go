@@ -101,6 +101,8 @@ func (v VRStatus) IsAllowChange(newStatus VRStatus) bool {
 		return true
 	case VRStatusDone:
 		return v == VRStatusInHr
+	case VRStatusDraft:
+		return v == VRStatusInApproval || v == VRStatusCreated
 	}
 	return false
 }
