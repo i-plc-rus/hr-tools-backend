@@ -14937,6 +14937,12 @@ const docTemplate = `{
                         "$ref": "#/definitions/vacancyapimodels.ApprovalTaskView"
                     }
                 },
+                "author_fio": {
+                    "type": "string"
+                },
+                "author_id": {
+                    "type": "string"
+                },
                 "chief_fio": {
                     "description": "фио непосредственного руководителя",
                     "type": "string"

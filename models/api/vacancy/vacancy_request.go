@@ -95,6 +95,8 @@ type VacancyRequestView struct {
 	OpenVacancies     int                `json:"open_vacancies"` // кол-во вакансий открытых по заявке
 	Comments          []CommentView      `json:"comments"`
 	ApprovalTasks     []ApprovalTaskView `json:"approval_tasks"` // список согласующих
+	AuthorID          string             `json:"author_id"`
+	AuthorFIO         string             `json:"author_fio"`
 }
 
 func VacancyRequestConvert(rec dbmodels.VacancyRequest) VacancyRequestView {
@@ -123,6 +125,10 @@ func VacancyRequestConvert(rec dbmodels.VacancyRequest) VacancyRequestView {
 		Status:       rec.Status,
 		Pinned:       rec.Pinned,
 		Favorite:     rec.Favorite,
+		AuthorID:     rec.AuthorID,
+	}
+	if rec.Author != nil {
+		result.AuthorFIO = rec.Author.GetFullName()
 	}
 	if rec.CompanyID != nil {
 		result.CompanyID = *rec.CompanyID
