@@ -89,6 +89,11 @@ func (i impl) GetGuestToken(ctx context.Context, spaceID, dashboardCode string) 
 	if err != nil {
 		return "", "", "", errors.Wrap(err, "ошибка получения гостевого токена")
 	}
+	log.
+		WithField("space_id", spaceID).
+		WithField("username", i.username).
+		WithField("dashboard_id", dashboardID).
+		Info("superset - получен гостевой токен")
 	i.cache.Set(cacheKey, guestToken, reportCacheTTL)
 	return guestToken, dashboardID, "", nil
 }
