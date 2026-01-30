@@ -180,6 +180,10 @@ func AutoMigrateDB() error {
 		return errors.Wrap(err, "ошибка создания структуры ExtApiAudit")
 	}
 
+	if err := DB.AutoMigrate(&dbmodels.PromptExecution{}); err != nil {
+		return errors.Wrap(err, "ошибка создания структуры PromptExecution")
+	}
+
 	log.Info("Миграция прошла успешно")
 	return nil
 }

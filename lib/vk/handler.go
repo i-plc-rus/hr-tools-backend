@@ -44,6 +44,7 @@ type Provider interface {
 	RunStep0(applicant dbmodels.Applicant) (ok bool, err error)
 	GetSurveyStep0(id string) (*surveyapimodels.VkStep0SurveyView, error)                                                              // анкета для фронта
 	HandleSurveyStep0(id string, answers surveyapimodels.VkStep0SurveyAnswers) (result surveyapimodels.VkStep0SurveyResult, err error) // ответы от фронта, сохранение в бд, анализ проходит или нет
+	Step1GetData(spaceID, applicantID string) (aiData surveyapimodels.AiData, err error)
 	RunStep1(applicant dbmodels.Applicant) (ok bool, err error)
 	UpdateStep1(spaceID, applicantID string, stepData surveyapimodels.VkStep1Update) (hMsg string, err error)
 	RegenStep1(spaceID, applicantID string, stepData surveyapimodels.VkStep1Regen) (hMsg string, err error)
@@ -276,6 +277,24 @@ func (i impl) HandleSurveyStep0(id string, request surveyapimodels.VkStep0Survey
 			Error("ВК. Шаг 0. Ошибка обновления статуса кандидата после провального прохождения опроса")
 	}
 	return result, nil
+}
+
+func (i impl) Step1GetData(spaceID, applicantID string) (aiData surveyapimodels.AiData, err error) {
+	applicant, err := i.applicantStore.GetByID(spaceID, applicantID)
+	if err != nil {
+		return surveyapimodels.AiData{}, errors.Wrap(err, "ошибка получения кандидата")
+	}
+	if applicant == nil {
+		return surveyapimodels.AiData{}, errors.New("кандидат не найден")
+	}
+	vacancy, err := i.vacancyStore.GetByID(applicant.SpaceID, applicant.VacancyID)
+	if err != nil {
+		return surveyapimodels.AiData{}, errors.Wrap(err, "ошибка получения вакансии")
+	}
+	if vacancy == nil {
+		return surveyapimodels.AiData{}, errors.New("вакансия не найдена")
+	}
+	return i.getStep1Data(applicant.Applicant, *vacancy, nil)
 }
 
 func (i impl) RunStep1(applicant dbmodels.Applicant) (ok bool, err error) {

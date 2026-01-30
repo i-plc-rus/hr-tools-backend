@@ -3598,6 +3598,197 @@ paths:
       summary: Изменение пользователя
       tags:
       - Админ панель. Пользователи
+  /api/v1/ai/{id}/result:
+    get:
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Результат отправки промпта в ИИ
+      tags:
+      - ИИ
+  /api/v1/ai/prompt:
+    post:
+      description: Отправка чистого промпта, без проверок и преобразований
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Промпт
+        in: formData
+        name: prompt
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Отправка промпта в ИИ
+      tags:
+      - ИИ
+  /api/v1/ai/questions_prompt/check:
+    post:
+      description: Отправка промпта в ИИ с проверкой ответа на соответствие ожидаемой
+        структуре
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Промпт
+        in: formData
+        name: prompt
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Отправка промпта в ИИ (генерация вопросов шаг 1)
+      tags:
+      - ИИ
+  /api/v1/ai/questions_prompt/check_on_applicant:
+    post:
+      description: Заполение шаблона промпта данными кандидата/вакансии, отправка
+        результата в ИИ, проверка ответа на соответствие ожидаемой структуре
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Шиблон промпта, содержащий тэги {{}}
+        in: formData
+        name: prompt_template
+        required: true
+        type: string
+      - description: Ид кандидата
+        in: formData
+        name: applicant_id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Отправка промпта в ИИ (генерация вопросов шаг 1 (для кандидата))
+      tags:
+      - ИИ
+  /api/v1/ai/questions_prompt/validate_template:
+    post:
+      description: Проверка шаблона промпта, формирование конечного промпта из шаблона
+        с данными по вакансии, кандидату и тп
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Шиблон промпта, содержащий тэги {{}}
+        in: formData
+        name: prompt_template
+        required: true
+        type: string
+      - description: Ид кандидата
+        in: formData
+        name: applicant_id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Проверка шаблона промпта (генерация вопросов шаг 1 (для кандидата))
+      tags:
+      - ИИ
+  /api/v1/ai/status:
+    get:
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Проверка наличия выполняемых запросов
+      tags:
+      - ИИ
   /api/v1/auth/check-email:
     post:
       description: Проверить почту
