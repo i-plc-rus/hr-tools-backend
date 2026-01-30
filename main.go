@@ -77,6 +77,7 @@ func main() {
 	apiv1.InitSpaceUserRouters(apiV1)
 	apiv1.InitGptApiRouters(apiV1)
 	apiv1.InitOAuthApiRouters(apiV1)
+	apiv1.InitAIRouters(apiV1)
 
 	//dict
 	dicts := fiber.New()
