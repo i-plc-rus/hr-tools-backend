@@ -67,6 +67,10 @@ var (
 		return c.Route().Path
 	}
 	FuncTagResBody FuncTag = func(c *fiber.Ctx, d *data) interface{} {
+		ignoreLog := c.GetRespHeader(helpers.HeaderLogIgnore)
+		if ignoreLog != "" {
+			return ""
+		}
 		contentType := c.GetRespHeader(fiber.HeaderContentDisposition, "")
 		if contentType != "" {
 			return ""

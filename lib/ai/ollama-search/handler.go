@@ -18,6 +18,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type Provider interface {
+	QueryOllama(prompt string) (string, error)
+	ExtractAnswer(response string) string
+}
+
 type impl struct {
 	ctx         context.Context
 	ollamaURL   string
@@ -277,6 +282,10 @@ func ParseVk1IntroOutroAIResponse(response string) (intro, outro string, err err
 		return "", "", err
 	}
 	return answerData.ScriptIntro, answerData.ScriptOutro, nil
+}
+
+func (i impl) ExtractAnswer(response string) string {
+	return extractAnswer(response)
 }
 
 func extractAnswer(response string) string {

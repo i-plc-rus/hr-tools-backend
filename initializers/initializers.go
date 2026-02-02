@@ -7,6 +7,7 @@ import (
 	adminpanelhandler "hr-tools-backend/lib/admin-panel"
 	adminpanelauthhandler "hr-tools-backend/lib/admin-panel/auth"
 	masaihandler "hr-tools-backend/lib/ai/masai"
+	promptcheckhandler "hr-tools-backend/lib/ai/prompt-check"
 	"hr-tools-backend/lib/analytics"
 	"hr-tools-backend/lib/applicant"
 	applicanthistoryhandler "hr-tools-backend/lib/applicant-history"
@@ -99,6 +100,7 @@ func InitAllServices(ctx context.Context) {
 	supersethandler.NewHandler(config.Conf.Superset.Host, config.Conf.Superset.Username, config.Conf.Superset.Password, config.Conf.Superset.DashboardParams)
 	licencehandler.NewHandler()
 	masaihandler.NewHandler(ctx)
+	promptcheckhandler.NewHandler(ctx)
 	rbac.NewHandler()
 	go initWorkers(ctx)
 }
