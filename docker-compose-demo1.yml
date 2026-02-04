@@ -1,9 +1,9 @@
 services:
-  db:
+  db-demo-1:
     image: postgres:13.15
     restart: unless-stopped
     env_file:
-      - .env_demo1
+      - .env
     #ports:
     #  - 127.0.0.1:5433:5432
     #ports:
@@ -15,16 +15,16 @@ services:
     networks:
       - dokploy-network
 
-  hr-tools-backend:
+  hr-tools-backend-demo-1:
     build:
       context: .
       dockerfile: Dockerfile
     env_file:
-      - .env_demo1
+      - .env
     #container_name: hr-tools-backend
     depends_on:
-      - db
-      - minio
+      - db-demo-1
+      - minio-demo-1
     #ports:
     #  - 8080:8080
     expose:
@@ -32,7 +32,7 @@ services:
       #- "30128:8080"
     networks:
       - dokploy-network
-  minio:
+  minio-demo-1:
     restart: unless-stopped
     image: docker.io/bitnami/minio:2024.11.7
     #ports:
@@ -43,7 +43,7 @@ services:
     volumes:
       - 'minio_data:/bitnami/minio/data'
     env_file:
-      - .env_demo1
+      - .env
     networks:
       - dokploy-network
 
