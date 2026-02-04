@@ -14,6 +14,11 @@ services:
       - db-data-demo-1-0:/var/lib/postgresql/data
     networks:
       - dokploy-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   hr-tools-backend-demo-1:
     build:
@@ -23,8 +28,10 @@ services:
       - .env
     #container_name: hr-tools-backend
     depends_on:
-      - db-demo-1
-      - minio-demo-1
+      db-demo-1:
+        condition: service_healthy
+      minio-demo-1:
+        condition: service_started
     #ports:
     #  - 8080:8080
     expose:
