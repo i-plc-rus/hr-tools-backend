@@ -13,7 +13,7 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
     networks:
-      - dokploy-network-demo1
+      - dokploy-network
 
   hr-tools-backend:
     build:
@@ -31,7 +31,7 @@ services:
       - "8080"
       #- "30128:8080"
     networks:
-      - dokploy-network-demo1
+      - dokploy-network
   minio:
     restart: unless-stopped
     image: docker.io/bitnami/minio:2024.11.7
@@ -45,7 +45,7 @@ services:
     env_file:
       - .env_demo1
     networks:
-      - dokploy-network-demo1
+      - dokploy-network
 
   # nginx:
   #   image: nginx:latest
@@ -94,7 +94,7 @@ services:
   #   restart: "no"
 
 networks:
-  dokploy-network-demo1:
+  dokploy-network:
     external: true
 
 volumes:
