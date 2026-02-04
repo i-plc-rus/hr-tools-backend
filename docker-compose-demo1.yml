@@ -11,7 +11,7 @@ services:
     expose:
       - "5432"
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - db-data-demo-1-0:/var/lib/postgresql/data
     networks:
       - dokploy-network
 
@@ -98,6 +98,6 @@ networks:
     external: true
 
 volumes:
-  db-data: {}
+  db-data-demo-1-0: {}
   minio_data: {}
   # ollama_data:
