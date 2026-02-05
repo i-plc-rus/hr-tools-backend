@@ -4,6 +4,7 @@ import (
 	"errors"
 	"hr-tools-backend/models"
 	apimodels "hr-tools-backend/models/api"
+	"net/mail"
 	"slices"
 	"time"
 )
@@ -21,10 +22,13 @@ type UpdateUser struct {
 type SpaceUser struct {
 	ID string `json:"id"`
 	SpaceUserCommonData
-	IsEmailVerified bool   `json:"is_email_verified"` // Email подтвержден
-	NewEmail        string `json:"new_email"`         // Новый email, который станет основным после подтверждения
-	JobTitleName    string `json:"job_title_name"`    // Навание должности
-	RoleName        string `json:"role_name"`
+	IsEmailVerified bool      `json:"is_email_verified"` // Email подтвержден
+	NewEmail        string    `json:"new_email"`         // Новый email, который станет основным после подтверждения
+	JobTitleName    string    `json:"job_title_name"`    // Навание должности
+	RoleName        string    `json:"role_name"`
+	Status          string    `json:"status"`            // Статус пользователя
+	StatusChangedAt time.Time `json:"status_changed_at"` // Дата изменения статуса
+	StatusComment   *string   `json:"status_comment"`    // Комментарий к статусу
 }
 
 type SpaceUserExt struct {
@@ -35,17 +39,14 @@ type SpaceUserExt struct {
 }
 
 type SpaceUserCommonData struct {
-	SpaceID         string          `json:"space_id"`
-	Email           string          `json:"email"` // Email пользователя
-	FirstName       string          `json:"first_name"`
-	LastName        string          `json:"last_name"`
-	PhoneNumber     string          `json:"phone_number"`
-	Role            models.UserRole `json:"role"`
-	TextSign        string          `json:"text_sign"`         // Текст подписи
-	JobTitleID      string          `json:"job_title_id"`      // Идентификатор должности
-	Status          string          `json:"status"`            // Статус пользователя
-	StatusChangedAt time.Time       `json:"status_changed_at"` // Дата изменения статуса
-	StatusComment   *string         `json:"status_comment"`    // Комментарий к статусу
+	SpaceID     string          `json:"space_id"`
+	Email       string          `json:"email"` // Email пользователя
+	FirstName   string          `json:"first_name"`
+	LastName    string          `json:"last_name"`
+	PhoneNumber string          `json:"phone_number"`
+	Role        models.UserRole `json:"role"`
+	TextSign    string          `json:"text_sign"`    // Текст подписи
+	JobTitleID  string          `json:"job_title_id"` // Идентификатор должности
 }
 
 type SpaceUserUpdateData struct {
@@ -62,6 +63,9 @@ type SpaceUserUpdateData struct {
 func (r SpaceUserUpdateData) Validate() error {
 	if r.Email == "" {
 		return errors.New("не указан емайл")
+	}
+	if _, err := mail.ParseAddress(r.Email); err != nil {
+		return errors.New("емайл указан неверно")
 	}
 	if r.PhoneNumber == "" {
 		return errors.New("не указан телефон")
@@ -88,6 +92,9 @@ func (r CreateUser) Validate() error {
 func (r SpaceUserCommonData) Validate() error {
 	if r.Email == "" {
 		return errors.New("не указан емайл")
+	}
+	if _, err := mail.ParseAddress(r.Email); err != nil {
+		return errors.New("емайл указан неверно")
 	}
 	if r.PhoneNumber == "" {
 		return errors.New("не указан телефон")
@@ -179,6 +186,36 @@ func (r UpdateUserStatus) Validate() error {
 	}
 	if !validStatuses[r.Status] {
 		return errors.New("неверный статус. Допустимые значения: WORKING, VACATION, DISMISSED")
+	}
+	return nil
+}
+
+type CreateSpaceAdmin struct {
+	FirstName   string `json:"first_name"`   // Имя
+	LastName    string `json:"last_name"`    // Фамилия
+	PhoneNumber string `json:"phone_number"` // Телефон
+	Password    string `json:"password"`     // Пароль
+	Email       string `json:"email"`        // Email пользователя
+}
+
+func (r CreateSpaceAdmin) Validate() error {
+	if r.FirstName == "" {
+		return errors.New("не указано имя")
+	}
+	if r.LastName == "" {
+		return errors.New("не указана фамилия")
+	}
+	if r.PhoneNumber == "" {
+		return errors.New("не указан телефон")
+	}
+	if r.Password == "" {
+		return errors.New("не указан пароль")
+	}
+	if r.Email == "" {
+		return errors.New("не указан емайл")
+	}
+	if _, err := mail.ParseAddress(r.Email); err != nil {
+		return errors.New("емайл указан неверно")
 	}
 	return nil
 }
