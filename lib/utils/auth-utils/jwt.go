@@ -34,6 +34,9 @@ func GetRefreshToken(userID, name string) (tokenString string, err error) {
 }
 
 func GetClaims(ctx *fiber.Ctx) jwt.MapClaims {
-	token := ctx.Locals("user").(*jwt.Token)
+	token, ok := ctx.Locals("user").(*jwt.Token)
+	if !ok {
+		return jwt.MapClaims{}
+	}
 	return token.Claims.(jwt.MapClaims)
 }

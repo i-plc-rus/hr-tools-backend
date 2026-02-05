@@ -1,0 +1,103 @@
+services:
+  db:
+    image: postgres:13.15
+    restart: unless-stopped
+    env_file:
+      - .env_demo
+    #ports:
+    #  - 127.0.0.1:5433:5432
+    #ports:
+    #  - "5432:5432"
+    expose:
+      - "5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - dokploy-network
+
+  hr-tools-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env_demo
+    #container_name: hr-tools-backend
+    depends_on:
+      - db
+      - minio
+    #ports:
+    #  - 8080:8080
+    expose:
+      - "8080"
+      #- "30128:8080"
+    networks:
+      - dokploy-network
+  minio:
+    restart: unless-stopped
+    image: docker.io/bitnami/minio:2024.11.7
+    ports:
+      - 9001:9001
+    expose:
+      - "9000"
+      - "9001"
+    volumes:
+      - 'minio_data:/bitnami/minio/data'
+    env_file:
+      - .env_demo
+    networks:
+      - dokploy-network
+
+  # nginx:
+  #   image: nginx:latest
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   depends_on:
+  #     - hr-tools-backend
+  #   volumes:
+  #     - ./config/nginx.conf:/etc/nginx/nginx.conf
+  #     - /etc/letsencrypt/archive/:/etc/letsencrypt/archive/
+  #   networks:
+  #     - backend
+  
+  # Через докер лучше не запускать, тк время обработки увеличивается многократно
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   environment:
+  #     - OLLAMA_HOST=0.0.0.0:11434
+  #   platform: linux/arm64
+  #   restart: unless-stopped
+  #   # загрузка моделей
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+      
+  # ollama-setup:
+  #   image: ollama/ollama:latest
+  #   depends_on:
+  #     ollama:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   command: >
+  #     sh -c "sleep 10 &&
+  #            ollama pull deepseek-r1:8b &&
+  #            echo 'Модели загружены успешно'"
+  #   restart: "no"
+
+networks:
+  dokploy-network:
+    external: true
+
+volumes:
+  db-data: {}
+  minio_data: {}
+  # ollama_data:
