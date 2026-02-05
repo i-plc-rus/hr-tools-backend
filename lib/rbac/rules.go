@@ -6,6 +6,7 @@ import (
 )
 
 var (
+	AdminRoleSet                  = []models.UserRole{models.AdminRole}
 	AdminHrManagerRoleSet         = []models.UserRole{models.AdminRole, models.HRRole, models.ManagerRole}
 	AdminHrRoleSet                = []models.UserRole{models.AdminRole, models.HRRole}
 	AdminManagerRoleSet           = []models.UserRole{models.AdminRole, models.ManagerRole}
@@ -21,6 +22,7 @@ func (i *impl) initRules() {
 	i.analytics()
 	i.profile()
 	i.companyProfile()
+	i.dict()
 }
 
 func (i *impl) addUsersRbac() {
@@ -119,4 +121,52 @@ func (i *impl) companyProfile() {
 	i.RegisterRule(models.CompanyProfileModule, models.EditPermission, AdminManagerRoleSet, "/api/v1/space/profile [put]", AllowByRoleFunc(AdminManagerRoleSet))
 	i.RegisterRule(models.CompanyProfileModule, models.EditPermission, AdminManagerRoleSet, "/api/v1/space/profile/photo [post]", AllowByRoleFunc(AdminManagerRoleSet))
 	i.RegisterRule(models.CompanyProfileModule, models.EditPermission, AdminManagerRoleSet, "/api/v1/space/profile/send_license_request [put]", AllowByRoleFunc(AdminManagerRoleSet))
+	i.RegisterRule(models.CompanyProfileModule, models.EditPermission, AdminRoleSet, "/api/v1/space/settings/{code} [put]", nil)
+	i.RegisterRule(models.CompanyProfileModule, models.EditPermission, AdminRoleSet, "/api/v1/space/settings/list [get]", nil)
+}
+
+func (i *impl) dict() {
+	// VIEW
+	i.RegisterRule(models.DictModule, models.ViewPermission, AllRoles, "/api/v1/dict/city/{id} [get]", nil)
+	i.RegisterRule(models.DictModule, models.ViewPermission, AllRoles, "/api/v1/dict/city/find [post]", nil)
+
+	i.RegisterRule(models.DictModule, models.ViewPermission, AllRoles, "/api/v1/dict/company/{id} [get]", nil)
+	i.RegisterRule(models.DictModule, models.ViewPermission, AllRoles, "/api/v1/dict/company/find [post]", nil)
+
+	i.RegisterRule(models.DictModule, models.ViewPermission, AllRoles, "/api/v1/dict/company_struct/find [post]", nil)
+	i.RegisterRule(models.DictModule, models.ViewPermission, AllRoles, "/api/v1/dict/company_struct/{id} [get]", nil)
+
+	i.RegisterRule(models.DictModule, models.ViewPermission, AllRoles, "/api/v1/dict/department/{id} [get]", nil)
+	i.RegisterRule(models.DictModule, models.ViewPermission, AllRoles, "/api/v1/dict/department/find [post]", nil)
+
+	i.RegisterRule(models.DictModule, models.ViewPermission, AllRoles, "/api/v1/dict/job_title/{id} [get]", nil)
+	i.RegisterRule(models.DictModule, models.ViewPermission, AllRoles, "/api/v1/dict/job_title/find [post]", nil)
+
+	i.RegisterRule(models.DictModule, models.ViewPermission, AllRoles, "/api/v1/dict/lang/find [post]", nil)
+
+	i.RegisterRule(models.DictModule, models.ViewPermission, AllRoles, "/api/v1/dict/reject_reason/find [post]", nil)
+	i.RegisterRule(models.DictModule, models.ViewPermission, AllRoles, "/api/v1/dict/reject_reason/{id} [get]", nil)
+
+	i.RegisterRule(models.DictModule, models.ViewPermission, AllRoles, "/api/v1/dict/role/list [get]", nil)
+
+	// CREATE/EDIT
+	i.RegisterRule(models.DictModule, models.CreatePermission, AdminRoleSet, "/api/v1/dict/company [post]", nil)
+	i.RegisterRule(models.DictModule, models.EditPermission, AdminRoleSet, "/api/v1/dict/company/{id} [put]", nil)
+	i.RegisterRule(models.DictModule, models.EditPermission, AdminRoleSet, "/api/v1/dict/company/{id} [delete]", nil)
+
+	i.RegisterRule(models.DictModule, models.CreatePermission, AdminRoleSet, "/api/v1/dict/company_struct [post]", nil)
+	i.RegisterRule(models.DictModule, models.EditPermission, AdminRoleSet, "/api/v1/dict/company_struct/{id} [put]", nil)
+	i.RegisterRule(models.DictModule, models.EditPermission, AdminRoleSet, "/api/v1/dict/company_struct/{id} [delete]", nil)
+
+	i.RegisterRule(models.DictModule, models.CreatePermission, AdminRoleSet, "/api/v1/dict/department [post]", nil)
+	i.RegisterRule(models.DictModule, models.EditPermission, AdminRoleSet, "/api/v1/dict/department/{id} [put]", nil)
+	i.RegisterRule(models.DictModule, models.EditPermission, AdminRoleSet, "/api/v1/dict/department/{id} [delete]", nil)
+
+	i.RegisterRule(models.DictModule, models.CreatePermission, AdminRoleSet, "/api/v1/dict/job_title [post]", nil)
+	i.RegisterRule(models.DictModule, models.EditPermission, AdminRoleSet, "/api/v1/dict/job_title/{id} [put]", nil)
+	i.RegisterRule(models.DictModule, models.EditPermission, AdminRoleSet, "/api/v1/dict/job_title/{id} [delete]", nil)
+
+	i.RegisterRule(models.DictModule, models.CreatePermission, AdminRoleSet, "/api/v1/dict/reject_reason [post]", nil)
+	i.RegisterRule(models.DictModule, models.EditPermission, AdminRoleSet, "/api/v1/dict/reject_reason/{id} [put]", nil)
+	i.RegisterRule(models.DictModule, models.EditPermission, AdminRoleSet, "/api/v1/dict/reject_reason/{id} [delete]", nil)
 }
