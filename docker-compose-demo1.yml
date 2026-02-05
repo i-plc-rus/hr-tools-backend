@@ -30,8 +30,8 @@ services:
     depends_on:
       db-demo-1:
         condition: service_healthy
-      minio-demo-1:
-        condition: service_started
+      #minio-demo-1:
+      #  condition: service_started
     #ports:
     #  - 8080:8080
     expose:
@@ -39,20 +39,20 @@ services:
       #- "30128:8080"
     networks:
       - dokploy-network
-  minio-demo-1:
-    restart: unless-stopped
-    image: docker.io/bitnami/minio:2024.11.7
-    #ports:
-    #  - 9001:9001
-    expose:
-      - "9000"
-      - "9001"
-    volumes:
-      - 'minio_data:/bitnami/minio/data'
-    env_file:
-      - .env
-    networks:
-      - dokploy-network
+  # minio:
+  #   restart: unless-stopped
+  #   image: docker.io/bitnami/minio:2024.11.7
+  #   #ports:
+  #   #  - 9001:9001
+  #   expose:
+  #     - "9000"
+  #     - "9001"
+  #   volumes:
+  #     - 'minio_data:/bitnami/minio/data'
+  #   env_file:
+  #     - .env
+  #   networks:
+  #     - dokploy-network
 
   # nginx:
   #   image: nginx:latest
@@ -106,5 +106,5 @@ networks:
 
 volumes:
   db-data-demo-1-0: {}
-  minio_data: {}
+  #minio_data: {}
   # ollama_data:
