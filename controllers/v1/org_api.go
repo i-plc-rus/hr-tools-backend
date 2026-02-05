@@ -1,6 +1,7 @@
 package apiv1
 
 import (
+	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"hr-tools-backend/controllers"
 	"hr-tools-backend/lib/dadata"
@@ -79,7 +80,7 @@ func (c *orgApiController) createOrg(ctx *fiber.Ctx) error {
 	}
 	err := spacehandler.Instance.CreateOrganizationSpace(payload)
 	if err != nil {
-		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка создания организации")
+		return c.SendError(ctx, c.GetLogger(ctx), err, fmt.Sprintf("Ошибка создания организации: %v", err.Error()))
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
