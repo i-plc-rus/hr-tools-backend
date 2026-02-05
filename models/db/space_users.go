@@ -39,20 +39,20 @@ func (r SpaceUser) ToModel() spaceapimodels.SpaceUser {
 	result := spaceapimodels.SpaceUser{
 		ID: r.ID,
 		SpaceUserCommonData: spaceapimodels.SpaceUserCommonData{
-			Email:           r.Email,
-			FirstName:       r.FirstName,
-			LastName:        r.LastName,
-			PhoneNumber:     r.PhoneNumber,
-			SpaceID:         r.SpaceID,
-			Role:            r.Role,
-			TextSign:        r.TextSign,
-			Status:          r.Status.ToHuman(),
-			StatusChangedAt: r.StatusChangedAt,
-			StatusComment:   r.StatusComment,
+			Email:       r.Email,
+			FirstName:   r.FirstName,
+			LastName:    r.LastName,
+			PhoneNumber: r.PhoneNumber,
+			SpaceID:     r.SpaceID,
+			Role:        r.Role,
+			TextSign:    r.TextSign,
 		},
 		IsEmailVerified: r.IsEmailVerified,
 		NewEmail:        r.NewEmail,
-		RoleName:       r.Role.ToHuman(),
+		RoleName:        r.Role.ToHuman(),
+		Status:          r.Status.ToHuman(),
+		StatusChangedAt: r.StatusChangedAt,
+		StatusComment:   r.StatusComment,
 	}
 	if r.JobTitle != nil {
 		result.JobTitleID = *r.JobTitleID
@@ -63,9 +63,9 @@ func (r SpaceUser) ToModel() spaceapimodels.SpaceUser {
 
 func (r SpaceUser) ToProfile() spaceapimodels.SpaceUserProfileView {
 	result := spaceapimodels.SpaceUserProfileView{
-		ID:        r.ID,
-		Role:      r.Role,
-		RoleName: r.Role.ToHuman(),
+		ID:              r.ID,
+		Role:            r.Role,
+		RoleName:        r.Role.ToHuman(),
 		IsEmailVerified: r.IsEmailVerified,
 		NewEmail:        r.NewEmail,
 		SpaceUserProfileData: spaceapimodels.SpaceUserProfileData{
