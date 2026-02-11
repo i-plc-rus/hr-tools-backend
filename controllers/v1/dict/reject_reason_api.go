@@ -17,8 +17,8 @@ type rejectReasonDictApiController struct {
 func InitRejectReasonDictApiRouters(app *fiber.App) {
 	controller := rejectReasonDictApiController{}
 	app.Route("reject_reason", func(router fiber.Router) {
+		router.Use(middleware.RbacMiddleware())
 		router.Post("find", controller.find)
-		router.Use(middleware.SpaceAdminRequired())
 		router.Post("", controller.create)
 		router.Put(":id", controller.update)
 		router.Get(":id", controller.get)

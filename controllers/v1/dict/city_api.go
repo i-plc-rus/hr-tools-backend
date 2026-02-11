@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"hr-tools-backend/controllers"
 	cityprovider "hr-tools-backend/lib/dicts/city"
+	"hr-tools-backend/middleware"
 	apimodels "hr-tools-backend/models/api"
 	dictapimodels "hr-tools-backend/models/api/dict"
 )
@@ -15,6 +16,7 @@ type cityDictApiController struct {
 func InitCityDictApiRouters(app *fiber.App) {
 	controller := cityDictApiController{}
 	app.Route("city", func(router fiber.Router) {
+		router.Use(middleware.RbacMiddleware())
 		router.Post("find", controller.cityFindByName)
 		router.Get(":id", controller.cityGet)
 	})

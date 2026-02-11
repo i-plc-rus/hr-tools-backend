@@ -2,6 +2,7 @@ package dict
 
 import (
 	"hr-tools-backend/controllers"
+	"hr-tools-backend/middleware"
 	apimodels "hr-tools-backend/models/api"
 	dictapimodels "hr-tools-backend/models/api/dict"
 
@@ -15,6 +16,7 @@ type roleDictApiController struct {
 func InitRoleDictApiRouters(app *fiber.App) {
 	controller := roleDictApiController{}
 	app.Route("role", func(router fiber.Router) {
+		router.Use(middleware.RbacMiddleware())
 		router.Get("list", controller.list)
 	})
 }

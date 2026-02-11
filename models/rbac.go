@@ -12,6 +12,7 @@ const (
 	AnalyticsModule      Module = "ANALYTICS"
 	ProfileModule        Module = "PROFILE"
 	CompanyProfileModule Module = "COMPANY_PROFILE"
+	DictModule           Module = "DICT"
 )
 
 type Permission string
@@ -24,6 +25,6 @@ const (
 	FlowPermission   Permission = "FLOW"
 	StagesPermission Permission = "STAGES"
 	TeamPermission   Permission = "TEAM"
-	FilesPermission   Permission = "FILES"
-	NotesPermission   Permission = "NOTES"
+	FilesPermission  Permission = "FILES"
+	NotesPermission  Permission = "NOTES"
 )
