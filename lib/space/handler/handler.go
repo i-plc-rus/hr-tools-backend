@@ -170,7 +170,7 @@ func (i impl) createSpace(tx *gorm.DB, request spaceapimodels.CreateOrganization
 	return spaceID, nil
 }
 
-func (i impl) createAdmin(tx *gorm.DB, spaceID string, adminData spaceapimodels.CreateUser) error {
+func (i impl) createAdmin(tx *gorm.DB, spaceID string, adminData spaceapimodels.CreateSpaceAdmin) error {
 	admin := dbmodels.SpaceUser{
 		Password:    authhelpers.GetMD5Hash(adminData.Password),
 		FirstName:   adminData.FirstName,

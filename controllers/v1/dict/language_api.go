@@ -3,6 +3,7 @@ package dict
 import (
 	"hr-tools-backend/controllers"
 	languagesprovider "hr-tools-backend/lib/dicts/languages"
+	"hr-tools-backend/middleware"
 	apimodels "hr-tools-backend/models/api"
 	dictapimodels "hr-tools-backend/models/api/dict"
 
@@ -16,6 +17,7 @@ type langDictApiController struct {
 func InitLangDictApiRouters(app *fiber.App) {
 	controller := langDictApiController{}
 	app.Route("lang", func(router fiber.Router) {
+		router.Use(middleware.RbacMiddleware())
 		router.Post("find", controller.langFindByName)
 	})
 }

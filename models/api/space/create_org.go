@@ -2,22 +2,33 @@ package spaceapimodels
 
 import (
 	"errors"
+	"regexp"
 	"time"
 )
 
 type CreateOrganization struct {
-	OrganizationName string     `json:"organization_name"`
-	Inn              string     `json:"inn"`
-	Kpp              string     `json:"kpp"`
-	OGRN             string     `json:"ogrn"`
-	FullName         string     `json:"full_name"`
-	DirectorName     string     `json:"director_name"`
-	AdminData        CreateUser `json:"admin_data"`
+	OrganizationName string           `json:"organization_name"`
+	Inn              string           `json:"inn"`
+	Kpp              string           `json:"kpp"`
+	OGRN             string           `json:"ogrn"`
+	FullName         string           `json:"full_name"`
+	DirectorName     string           `json:"director_name"`
+	AdminData        CreateSpaceAdmin `json:"admin_data"`
 }
 
 func (r CreateOrganization) Validate() error {
-	//TODO заглушка
-	return nil
+	if r.OrganizationName == "" {
+		return errors.New("Укажите organization_name")
+	}
+	if r.Inn == "" {
+		return errors.New("Укажите inn")
+	}
+	re := regexp.MustCompile(`^(([0-9]{12})|([0-9]{10}))?$`)
+	if !re.MatchString(r.Inn) {
+		return errors.New("Указан некорректный inn")
+	}
+
+	return r.AdminData.Validate()
 }
 
 type ProfileData struct {

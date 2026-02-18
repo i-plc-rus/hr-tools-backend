@@ -16,8 +16,8 @@ type companyStructDictApiController struct {
 func InitCompanyStructDictApiRouters(app *fiber.App) {
 	controller := companyStructDictApiController{}
 	app.Route("company_struct", func(router fiber.Router) {
+		router.Use(middleware.RbacMiddleware())
 		router.Post("find", controller.findByName)
-		router.Use(middleware.SpaceAdminRequired())
 		router.Post("", controller.create)
 		router.Put(":id", controller.update)
 		router.Get(":id", controller.get)
