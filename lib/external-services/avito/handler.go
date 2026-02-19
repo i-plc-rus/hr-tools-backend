@@ -118,6 +118,10 @@ func (i *impl) RequestToken(spaceID, code string) {
 	}
 }
 
+func (i *impl) RemoveToken(spaceID string) (err error) {
+	return i.removeToken(spaceID)
+}
+
 func (i *impl) CheckConnected(ctx context.Context, spaceID string) bool {
 	logger := i.getLogger(spaceID, "")
 	accessToken, hMsg, err := i.getToken(ctx, spaceID)
@@ -878,3 +882,9 @@ func (i *impl) checkToken(spaceID string, accessToken string) (valid bool) {
 	}
 	return true
 }
+
+func (i *impl) removeToken(spaceID string) error {
+	i.tokenMap.Delete(spaceID)
+	return i.extStore.DeleteRec(spaceID, TokenCode)
+}
+
