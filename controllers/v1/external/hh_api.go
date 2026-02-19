@@ -22,6 +22,7 @@ func InitHHApiRouters(app *fiber.App) {
 	app.Route("hh", func(router fiber.Router) {
 		router.Get("check_connected", controller.isConnect)
 		router.Get("connect_uri", controller.connect)
+		router.Get("remove", controller.remove)
 		router.Route(":id", func(vacancyRoute fiber.Router) {
 			vacancyRoute.Put("publish", controller.publish)
 			vacancyRoute.Put("update", controller.update)
@@ -64,6 +65,25 @@ func (c *hhApiController) connect(ctx *fiber.Ctx) error {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения ссылки для авторизации на HeadHunter")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(resp))
+}
+
+// @Summary Удаление авторизации
+// @Tags Интеграция HeadHunter
+// @Description Удаление авторизации
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/ext/hh/remove [get]
+func (c *hhApiController) remove(ctx *fiber.Ctx) error {
+
+	spaceID := middleware.GetUserSpace(ctx)
+	err := c.handler.RemoveToken(spaceID)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка удаления токена авторизации на HeadHunter")
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }
 
 // @Summary Публикация вакансии

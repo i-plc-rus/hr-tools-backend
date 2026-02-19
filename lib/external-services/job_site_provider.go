@@ -10,6 +10,7 @@ import (
 type JobSiteProvider interface {
 	GetConnectUri(spaceID string) (uri string, err error)
 	RequestToken(spaceID, code string)
+	RemoveToken(spaceID string) (err error)
 	CheckConnected(ctx context.Context, spaceID string) bool
 	VacancyPublish(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error)
 	VacancyUpdate(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error)
