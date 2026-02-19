@@ -13617,7 +13617,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "admin_data": {
-                    "$ref": "#/definitions/spaceapimodels.CreateUser"
+                    "$ref": "#/definitions/spaceapimodels.CreateSpaceAdmin"
                 },
                 "director_name": {
                     "type": "string"
@@ -13635,6 +13635,31 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "organization_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "spaceapimodels.CreateSpaceAdmin": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "description": "Email пользователя",
+                    "type": "string"
+                },
+                "first_name": {
+                    "description": "Имя",
+                    "type": "string"
+                },
+                "last_name": {
+                    "description": "Фамилия",
+                    "type": "string"
+                },
+                "password": {
+                    "description": "Пароль",
+                    "type": "string"
+                },
+                "phone_number": {
+                    "description": "Телефон",
                     "type": "string"
                 }
             }
@@ -13666,18 +13691,6 @@ const docTemplate = `{
                     "$ref": "#/definitions/models.UserRole"
                 },
                 "space_id": {
-                    "type": "string"
-                },
-                "status": {
-                    "description": "Статус пользователя",
-                    "type": "string"
-                },
-                "status_changed_at": {
-                    "description": "Дата изменения статуса",
-                    "type": "string"
-                },
-                "status_comment": {
-                    "description": "Комментарий к статусу",
                     "type": "string"
                 },
                 "text_sign": {
