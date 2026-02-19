@@ -5469,6 +5469,47 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/space/ext/avito/remove": {
+            "get": {
+                "description": "Удаление авторизации",
+                "tags": [
+                    "Интеграция Avito"
+                ],
+                "summary": "Удаление авторизации",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/space/ext/avito/{id}/attach": {
             "put": {
                 "description": "Привязать существующую вакансию",
@@ -5778,6 +5819,47 @@ const docTemplate = `{
                     "Интеграция HeadHunter"
                 ],
                 "summary": "Получение ссылки для авторизации",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/ext/hh/remove": {
+            "get": {
+                "description": "Удаление авторизации",
+                "tags": [
+                    "Интеграция HeadHunter"
+                ],
+                "summary": "Удаление авторизации",
                 "parameters": [
                     {
                         "type": "string",
