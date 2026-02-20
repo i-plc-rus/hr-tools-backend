@@ -6,6 +6,7 @@ import (
 	applicantstore "hr-tools-backend/lib/applicant/store"
 	pushhandler "hr-tools-backend/lib/space/push/handler"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	"hr-tools-backend/models"
 	applicantapimodels "hr-tools-backend/models/api/applicant"
@@ -26,12 +27,19 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler() {
-	Instance = impl{
+	instance := impl{
 		store:          applicanthistorystore.NewInstance(db.DB),
 		userStore:      spaceusersstore.NewInstance(db.DB),
 		applicantStore: applicantstore.NewInstance(db.DB),
 		vacancyStore:   vacancystore.NewInstance(db.DB),
 	}
+	initchecker.CheckInit(
+		"store", instance.store,
+		"userStore", instance.userStore,
+		"applicantStore", instance.applicantStore,
+		"vacancyStore", instance.vacancyStore,
+	)
+	Instance = instance
 }
 
 func NewTxHandler(tx *gorm.DB) Provider {

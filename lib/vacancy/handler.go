@@ -17,6 +17,7 @@ import (
 	hhhandler "hr-tools-backend/lib/external-services/hh"
 	pushhandler "hr-tools-backend/lib/space/push/handler"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	vacancyreqstore "hr-tools-backend/lib/vacancy-req/store"
 	selectionstagestore "hr-tools-backend/lib/vacancy/selection-stage-store"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
@@ -59,7 +60,7 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler() {
-	Instance = impl{
+	instance := impl{
 		store:                 vacancystore.NewInstance(db.DB),
 		selectionStageStore:   selectionstagestore.NewInstance(db.DB),
 		companyProvider:       companyprovider.Instance,
@@ -72,6 +73,20 @@ func NewHandler() {
 		teamStore:             teamstore.NewInstance(db.DB),
 		spaceUserStore:        spaceusersstore.NewInstance(db.DB),
 	}
+	initchecker.CheckInit(
+		"store", instance.store,
+		"selectionStageStore", instance.selectionStageStore,
+		"companyProvider", instance.companyProvider,
+		"departmentProvider", instance.departmentProvider,
+		"jobTitleProvider", instance.jobTitleProvider,
+		"cityStore", instance.cityStore,
+		"companyStructProvider", instance.companyStructProvider,
+		"applicantHistory", instance.applicantHistory,
+		"applicantStore", instance.applicantStore,
+		"teamStore", instance.teamStore,
+		"spaceUserStore", instance.spaceUserStore,
+	)
+	Instance = instance
 }
 
 type impl struct {

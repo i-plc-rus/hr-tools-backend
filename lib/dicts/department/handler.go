@@ -6,6 +6,7 @@ import (
 	"hr-tools-backend/db"
 	companystructprovider "hr-tools-backend/lib/dicts/company-struct"
 	"hr-tools-backend/lib/dicts/department/store"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	dictapimodels "hr-tools-backend/models/api/dict"
 	dbmodels "hr-tools-backend/models/db"
 	"strings"
@@ -22,10 +23,15 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler() {
-	Instance = impl{
+	instance := impl{
 		store:         store.NewInstance(db.DB),
 		companyStruct: companystructprovider.Instance,
 	}
+	initchecker.CheckInit(
+		"store", instance.store,
+		"companyStruct", instance.companyStruct,
+	)
+	Instance = instance
 }
 
 type impl struct {

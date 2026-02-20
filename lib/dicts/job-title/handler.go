@@ -5,6 +5,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"hr-tools-backend/db"
 	"hr-tools-backend/lib/dicts/job-title/store"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	dictapimodels "hr-tools-backend/models/api/dict"
 	dbmodels "hr-tools-backend/models/db"
 )
@@ -20,9 +21,13 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler() {
-	Instance = impl{
+	instance := impl{
 		store: store.NewInstance(db.DB),
 	}
+	initchecker.CheckInit(
+		"store", instance.store,
+	)
+	Instance = instance
 }
 
 type impl struct {

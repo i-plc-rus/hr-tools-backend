@@ -11,6 +11,7 @@ import (
 	"hr-tools-backend/config"
 	"hr-tools-backend/db"
 	filesdbstorage "hr-tools-backend/lib/file-storage/storage"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	filesapimodels "hr-tools-backend/models/api/files"
 	dbmodels "hr-tools-backend/models/db"
 	s3client "hr-tools-backend/s3"
@@ -34,10 +35,15 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler() {
-	Instance = &impl{
+	instance := impl{
 		s3client:       s3client.Client,
 		filesDBStorage: filesdbstorage.NewInstance(db.DB),
 	}
+	initchecker.CheckInit(
+		"s3client", instance.s3client,
+		"filesDBStorage", instance.filesDBStorage,
+	)
+	Instance = instance
 }
 
 type impl struct {

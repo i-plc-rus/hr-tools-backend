@@ -9,6 +9,7 @@ import (
 	"hr-tools-backend/db"
 	adminpaneluserstore "hr-tools-backend/lib/admin-panel/store"
 	authhelpers "hr-tools-backend/lib/utils/auth-helpers"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	authapimodels "hr-tools-backend/models/api/auth"
 	"time"
 )
@@ -20,9 +21,13 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler() {
-	Instance = impl{
+	instance := impl{
 		store: adminpaneluserstore.NewInstance(db.DB),
 	}
+	initchecker.CheckInit(
+		"store", instance.store,
+	)
+	Instance = instance
 }
 
 type impl struct {
