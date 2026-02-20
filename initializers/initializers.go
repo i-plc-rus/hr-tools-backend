@@ -69,112 +69,84 @@ func InitAllServices(ctx context.Context) {
 	lock.InitResourceLock(ctx)
 
 	filestorage.NewHandler()
-	initchecker.CheckInit("filestorage", filestorage.Instance)
-
 	cityprovider.NewHandler()
-	initchecker.CheckInit("cityprovider", cityprovider.Instance)
-
 	pushhandler.NewHandler()
-	initchecker.CheckInit("pushhandler", pushhandler.Instance)
-	
 	hhclient.NewProvider(config.Conf.HH.RedirectUri)
-	initchecker.CheckInit("hhclient", hhclient.Instance)
-
 	avitoclient.NewProvider()
-	initchecker.CheckInit("avitoclient", avitoclient.Instance)
-
 	applicanthistoryhandler.NewHandler()
-	initchecker.CheckInit("applicanthistoryhandler", applicanthistoryhandler.Instance)
-
 	spaceusershander.NewHandler()
-	initchecker.CheckInit("spaceusershander", spaceusershander.Instance)
-
 	spacehandler.NewHandler(config.Conf.Sales.Email)
-	initchecker.CheckInit("spacehandler", spacehandler.Instance)
-
 	spaceauthhandler.NewHandler()
-	initchecker.CheckInit("spaceauthhandler", spaceauthhandler.Instance)
-	
 	adminpanelauthhandler.NewHandler()
-	initchecker.CheckInit("adminpanelauthhandler", adminpanelauthhandler.Instance)
-
 	adminpanelhandler.NewHandler()
-	initchecker.CheckInit("adminpanelhandler", adminpanelhandler.Instance)
-
 	companyprovider.NewHandler()
-	initchecker.CheckInit("companyprovider", companyprovider.Instance)
-
 	companystructprovider.NewHandler()
-	initchecker.CheckInit("companystructprovider", companystructprovider.Instance)
-
 	departmentprovider.NewHandler()
-	initchecker.CheckInit("departmentprovider", departmentprovider.Instance)
-
 	jobtitleprovider.NewHandler()
-	initchecker.CheckInit("jobtitleprovider", jobtitleprovider.Instance)
-
 	languagesprovider.NewHandler()
-	initchecker.CheckInit("languagesprovider", languagesprovider.Instance)
-
 	rejectreasonprovider.NewHandler()
-	initchecker.CheckInit("rejectreasonprovider", rejectreasonprovider.Instance)
-
 	aprovaltaskhandler.NewHandler()
-	initchecker.CheckInit("aprovaltaskhandler", aprovaltaskhandler.Instance)
-
 	vacancyhandler.NewHandler()
-	initchecker.CheckInit("vacancyhandler", vacancyhandler.Instance)
-
 	vacancyreqhandler.NewHandler()
-	initchecker.CheckInit("vacancyreqhandler", vacancyreqhandler.Instance)
-
 	spacesettingshandler.NewHandler()
-	initchecker.CheckInit("spacesettingshandler", spacesettingshandler.Instance)
-
 	gpthandler.NewHandler(false)
-	initchecker.CheckInit("gpthandler", gpthandler.Instance)
-
 	hhhandler.NewHandler()
-	initchecker.CheckInit("hhhandler", hhhandler.Instance)
-
 	avitohandler.NewHandler()
-	initchecker.CheckInit("avitohandler", avitohandler.Instance)
-
 	applicant.NewHandler()
-	initchecker.CheckInit("applicant", applicant.Instance)
-
 	messagetemplate.NewHandler()
-	initchecker.CheckInit("messagetemplate", messagetemplate.Instance)
-
 	xlsexport.NewHandler()
-	initchecker.CheckInit("xlsexport", xlsexport.Instance)
-
 	analytics.NewHandler()
-	initchecker.CheckInit("analytics", analytics.Instance)
-
 	negotiationchathandler.NewHandler()
-	initchecker.CheckInit("negotiationchathandler", negotiationchathandler.Instance)
-
 	survey.NewHandler()
-	initchecker.CheckInit("survey", survey.Instance)
-
 	vk.NewHandler(ctx)
-	initchecker.CheckInit("vk", vk.Instance)
-
 	supersethandler.NewHandler(config.Conf.Superset.Host, config.Conf.Superset.Username, config.Conf.Superset.Password, config.Conf.Superset.DashboardParams)
-	initchecker.CheckInit("supersethandler", supersethandler.Instance)
-
 	licencehandler.NewHandler()
-	initchecker.CheckInit("licencehandler", licencehandler.Instance)
-
 	masaihandler.NewHandler(ctx)
-	initchecker.CheckInit("masaihandler", masaihandler.Instance)
-
 	promptcheckhandler.NewHandler(ctx)
-	initchecker.CheckInit("promptcheckhandler", promptcheckhandler.Instance)
-	
 	rbac.NewHandler()
+
+	checkInstances()
+
 	go initWorkers(ctx)
+}
+
+func checkInstances() {
+	initchecker.CheckInit(
+		"filestorage", filestorage.Instance,
+		"cityprovider", cityprovider.Instance,
+		"pushhandler", pushhandler.Instance,
+		"hhclient", hhclient.Instance,
+		"avitoclient", avitoclient.Instance,
+		"applicanthistoryhandler", applicanthistoryhandler.Instance,
+		"spaceusershander", spaceusershander.Instance,
+		"spacehandler", spacehandler.Instance,
+		"spaceauthhandler", spaceauthhandler.Instance,
+		"adminpanelauthhandler", adminpanelauthhandler.Instance,
+		"adminpanelhandler", adminpanelhandler.Instance,
+		"companyprovider", companyprovider.Instance,
+		"companystructprovider", companystructprovider.Instance,
+		"departmentprovider", departmentprovider.Instance,
+		"jobtitleprovider", jobtitleprovider.Instance,
+		"languagesprovider", languagesprovider.Instance,
+		"rejectreasonprovider", rejectreasonprovider.Instance,
+		"aprovaltaskhandler", aprovaltaskhandler.Instance,
+		"vacancyhandler", vacancyhandler.Instance,
+		"vacancyreqhandler", vacancyreqhandler.Instance,
+		"spacesettingshandler", spacesettingshandler.Instance,
+		"gpthandler", gpthandler.Instance,
+		"hhhandler", hhhandler.Instance,
+		"avitohandler", avitohandler.Instance,
+		"applicant", applicant.Instance,
+		"messagetemplate", messagetemplate.Instance,
+		"xlsexport", xlsexport.Instance,
+		"analytics", analytics.Instance,
+		"negotiationchathandler", negotiationchathandler.Instance,
+		"survey", survey.Instance,
+		"vk", vk.Instance,
+		"supersethandler", supersethandler.Instance,
+		"licencehandler", licencehandler.Instance,
+		"masaihandler", masaihandler.Instance,
+		"promptcheckhandler", promptcheckhandler.Instance)
 }
 
 // запускаем с промежутком в 10 сек чтоб размыть нагрузку
