@@ -9,6 +9,7 @@ import (
 	xlsexport "hr-tools-backend/lib/export/xls"
 	pushhandler "hr-tools-backend/lib/space/push/handler"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	vacancyhandler "hr-tools-backend/lib/vacancy"
 	selectionstagestore "hr-tools-backend/lib/vacancy/selection-stage-store"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
@@ -50,7 +51,7 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler() {
-	Instance = impl{
+	instance := impl{
 		store:               applicantstore.NewInstance(db.DB),
 		selectionStageStore: selectionstagestore.NewInstance(db.DB),
 		vacancyProvider:     vacancyhandler.Instance,
@@ -58,6 +59,15 @@ func NewHandler() {
 		userStore:           spaceusersstore.NewInstance(db.DB),
 		vacancyStore:        vacancystore.NewInstance(db.DB),
 	}
+	initchecker.CheckInit(
+		"store", instance.store,
+		"selectionStageStore", instance.selectionStageStore,
+		"vacancyProvider", instance.vacancyProvider,
+		"applicantHistory", instance.applicantHistory,
+		"userStore", instance.userStore,
+		"vacancyStore", instance.vacancyStore,
+	)
+	Instance = instance
 }
 
 type impl struct {

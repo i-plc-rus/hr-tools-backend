@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"hr-tools-backend/lib/applicant"
 	xlsexport "hr-tools-backend/lib/export/xls"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	applicantapimodels "hr-tools-backend/models/api/applicant"
 )
 
@@ -15,9 +16,13 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler() {
-	Instance = impl{
+	instance := impl{
 		applicantProvider: applicant.Instance,
 	}
+	initchecker.CheckInit(
+		"applicantProvider", instance.applicantProvider,
+	)
+	Instance = instance
 }
 
 type impl struct {

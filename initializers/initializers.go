@@ -41,6 +41,7 @@ import (
 	spaceusershander "hr-tools-backend/lib/space/users/hander"
 	supersethandler "hr-tools-backend/lib/superset"
 	"hr-tools-backend/lib/survey"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	"hr-tools-backend/lib/utils/lock"
 	vacancyhandler "hr-tools-backend/lib/vacancy"
 	vacancyreqhandler "hr-tools-backend/lib/vacancy-req"
@@ -66,41 +67,112 @@ func InitAllServices(ctx context.Context) {
 	InitSmtp()
 	connectionhub.Init()
 	lock.InitResourceLock(ctx)
+
 	filestorage.NewHandler()
+	initchecker.CheckInit("filestorage", filestorage.Instance)
+
 	cityprovider.NewHandler()
+	initchecker.CheckInit("cityprovider", cityprovider.Instance)
+
 	pushhandler.NewHandler()
+	initchecker.CheckInit("pushhandler", pushhandler.Instance)
+	
 	hhclient.NewProvider(config.Conf.HH.RedirectUri)
+	initchecker.CheckInit("hhclient", hhclient.Instance)
+
 	avitoclient.NewProvider()
+	initchecker.CheckInit("avitoclient", avitoclient.Instance)
+
 	applicanthistoryhandler.NewHandler()
+	initchecker.CheckInit("applicanthistoryhandler", applicanthistoryhandler.Instance)
+
 	spaceusershander.NewHandler()
+	initchecker.CheckInit("spaceusershander", spaceusershander.Instance)
+
 	spacehandler.NewHandler(config.Conf.Sales.Email)
+	initchecker.CheckInit("spacehandler", spacehandler.Instance)
+
 	spaceauthhandler.NewHandler()
+	initchecker.CheckInit("spaceauthhandler", spaceauthhandler.Instance)
+	
 	adminpanelauthhandler.NewHandler()
+	initchecker.CheckInit("adminpanelauthhandler", adminpanelauthhandler.Instance)
+
 	adminpanelhandler.NewHandler()
+	initchecker.CheckInit("adminpanelhandler", adminpanelhandler.Instance)
+
 	companyprovider.NewHandler()
-	departmentprovider.NewHandler()
-	jobtitleprovider.NewHandler()
-	languagesprovider.NewHandler()
-	rejectreasonprovider.NewHandler()
+	initchecker.CheckInit("companyprovider", companyprovider.Instance)
+
 	companystructprovider.NewHandler()
+	initchecker.CheckInit("companystructprovider", companystructprovider.Instance)
+
+	departmentprovider.NewHandler()
+	initchecker.CheckInit("departmentprovider", departmentprovider.Instance)
+
+	jobtitleprovider.NewHandler()
+	initchecker.CheckInit("jobtitleprovider", jobtitleprovider.Instance)
+
+	languagesprovider.NewHandler()
+	initchecker.CheckInit("languagesprovider", languagesprovider.Instance)
+
+	rejectreasonprovider.NewHandler()
+	initchecker.CheckInit("rejectreasonprovider", rejectreasonprovider.Instance)
+
 	aprovaltaskhandler.NewHandler()
+	initchecker.CheckInit("aprovaltaskhandler", aprovaltaskhandler.Instance)
+
 	vacancyhandler.NewHandler()
+	initchecker.CheckInit("vacancyhandler", vacancyhandler.Instance)
+
 	vacancyreqhandler.NewHandler()
+	initchecker.CheckInit("vacancyreqhandler", vacancyreqhandler.Instance)
+
 	spacesettingshandler.NewHandler()
+	initchecker.CheckInit("spacesettingshandler", spacesettingshandler.Instance)
+
 	gpthandler.NewHandler(false)
+	initchecker.CheckInit("gpthandler", gpthandler.Instance)
+
 	hhhandler.NewHandler()
+	initchecker.CheckInit("hhhandler", hhhandler.Instance)
+
 	avitohandler.NewHandler()
+	initchecker.CheckInit("avitohandler", avitohandler.Instance)
+
 	applicant.NewHandler()
+	initchecker.CheckInit("applicant", applicant.Instance)
+
 	messagetemplate.NewHandler()
+	initchecker.CheckInit("messagetemplate", messagetemplate.Instance)
+
 	xlsexport.NewHandler()
+	initchecker.CheckInit("xlsexport", xlsexport.Instance)
+
 	analytics.NewHandler()
+	initchecker.CheckInit("analytics", analytics.Instance)
+
 	negotiationchathandler.NewHandler()
+	initchecker.CheckInit("negotiationchathandler", negotiationchathandler.Instance)
+
 	survey.NewHandler()
+	initchecker.CheckInit("survey", survey.Instance)
+
 	vk.NewHandler(ctx)
+	initchecker.CheckInit("vk", vk.Instance)
+
 	supersethandler.NewHandler(config.Conf.Superset.Host, config.Conf.Superset.Username, config.Conf.Superset.Password, config.Conf.Superset.DashboardParams)
+	initchecker.CheckInit("supersethandler", supersethandler.Instance)
+
 	licencehandler.NewHandler()
+	initchecker.CheckInit("licencehandler", licencehandler.Instance)
+
 	masaihandler.NewHandler(ctx)
+	initchecker.CheckInit("masaihandler", masaihandler.Instance)
+
 	promptcheckhandler.NewHandler(ctx)
+	initchecker.CheckInit("promptcheckhandler", promptcheckhandler.Instance)
+	
 	rbac.NewHandler()
 	go initWorkers(ctx)
 }

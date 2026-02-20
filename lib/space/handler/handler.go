@@ -14,6 +14,7 @@ import (
 	spaceusershander "hr-tools-backend/lib/space/users/hander"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	authhelpers "hr-tools-backend/lib/utils/auth-helpers"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	"hr-tools-backend/models"
 	spaceapimodels "hr-tools-backend/models/api/space"
 	dbmodels "hr-tools-backend/models/db"
@@ -33,11 +34,16 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler(salesEmail string) {
-	Instance = impl{
+	instance := impl{
 		spaceStore:     spacestore.NewInstance(db.DB),
 		spaceUserStore: spaceusersstore.NewInstance(db.DB),
 		salesEmail:     salesEmail,
 	}
+	initchecker.CheckInit(
+		"spaceStore", instance.spaceStore,
+		"spaceUserStore", instance.spaceUserStore,
+	)
+	Instance = instance
 }
 
 type impl struct {

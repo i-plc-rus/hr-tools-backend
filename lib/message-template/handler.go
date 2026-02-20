@@ -16,6 +16,7 @@ import (
 	"hr-tools-backend/lib/smtp"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	"hr-tools-backend/models"
 	applicantapimodels "hr-tools-backend/models/api/applicant"
@@ -39,7 +40,7 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler() {
-	Instance = &impl{
+	instance := &impl{
 		msgTemplateStore:   messagetemplatestore.NewInstance(db.DB),
 		applicantStore:     applicantstore.NewInstance(db.DB),
 		spaceSettingsStore: spacesettingsstore.NewInstance(db.DB),
@@ -48,6 +49,16 @@ func NewHandler() {
 		fileStorage:        filestorage.Instance,
 		applicantHistory:   applicanthistoryhandler.Instance,
 	}
+	initchecker.CheckInit(
+		"msgTemplateStore", instance.msgTemplateStore,
+		"applicantStore", instance.applicantStore,
+		"spaceSettingsStore", instance.spaceSettingsStore,
+		"spaceUsersStore", instance.spaceUsersStore,
+		"vacancyStore", instance.vacancyStore,
+		"fileStorage", instance.fileStorage,
+		"applicantHistory", instance.applicantHistory,
+	)
+	Instance = instance
 }
 
 type impl struct {

@@ -8,6 +8,7 @@ import (
 	avitohandler "hr-tools-backend/lib/external-services/avito"
 	hhhandler "hr-tools-backend/lib/external-services/hh"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	"hr-tools-backend/models"
 	negotiationapimodels "hr-tools-backend/models/api/negotiation"
 
@@ -23,10 +24,15 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler() {
-	Instance = impl{
+	instance := impl{
 		applicantStore: applicantstore.NewInstance(db.DB),
 		userStore:      spaceusersstore.NewInstance(db.DB),
 	}
+	initchecker.CheckInit(
+		"applicantStore", instance.applicantStore,
+		"userStore", instance.userStore,
+	)
+	Instance = instance
 }
 
 type impl struct {

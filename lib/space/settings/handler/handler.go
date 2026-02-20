@@ -3,6 +3,7 @@ package spacesettingshandler
 import (
 	"hr-tools-backend/db"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	"hr-tools-backend/models"
 	spaceapimodels "hr-tools-backend/models/api/space"
 
@@ -17,9 +18,13 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler() {
-	Instance = impl{
+	instance := impl{
 		spaceSettingsStore: spacesettingsstore.NewInstance(db.DB),
 	}
+	initchecker.CheckInit(
+		"spaceSettingsStore", instance.spaceSettingsStore,
+	)
+	Instance = instance
 }
 
 type impl struct {

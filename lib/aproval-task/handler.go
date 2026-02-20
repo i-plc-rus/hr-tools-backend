@@ -9,6 +9,7 @@ import (
 	approvaltaskhistorystore "hr-tools-backend/lib/aproval-task/history-store"
 	approvaltaskstore "hr-tools-backend/lib/aproval-task/store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	"hr-tools-backend/models"
 	vacancyapimodels "hr-tools-backend/models/api/vacancy"
 	dbmodels "hr-tools-backend/models/db"
@@ -25,11 +26,17 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler() {
-	Instance = impl{
+	instance := impl{
 		store:                approvaltaskstore.NewInstance(db.DB),
 		spaceUsersStore:      spaceusersstore.NewInstance(db.DB),
 		approvalHistoryStore: approvaltaskhistorystore.NewInstance(db.DB),
 	}
+	initchecker.CheckInit(
+		"store", instance.store,
+		"spaceUsersStore", instance.spaceUsersStore,
+		"approvalHistoryStore", instance.approvalHistoryStore,
+	)
+	Instance = instance
 }
 
 func NewHandlerWithTx(tx *gorm.DB) Provider {
@@ -158,7 +165,7 @@ func (i impl) Audit(data dbmodels.ApprovalTask) {
 	}
 }
 
-func (i impl) AuditCommon(rec dbmodels.ApprovalHistory){
+func (i impl) AuditCommon(rec dbmodels.ApprovalHistory) {
 	_, err := i.approvalHistoryStore.Create(rec)
 	if err != nil {
 		i.GetLogger(rec.SpaceID, rec.RequestID).WithError(err).Error("Ошибка добавления истории по задаче согласования заявки")

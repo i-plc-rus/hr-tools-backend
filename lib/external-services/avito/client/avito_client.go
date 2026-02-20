@@ -8,6 +8,7 @@ import (
 	"hr-tools-backend/db"
 	externalservices "hr-tools-backend/lib/external-services"
 	extapiauditstore "hr-tools-backend/lib/external-services/ext-api-audit-store"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	avitoapimodels "hr-tools-backend/models/api/avito"
 	dbmodels "hr-tools-backend/models/db"
 	"io"
@@ -71,10 +72,14 @@ type impl struct {
 }
 
 func NewProvider() {
-	Instance = &impl{
+	instance := &impl{
 		host:       host,
 		auditStore: extapiauditstore.NewInstance(db.DB),
 	}
+	initchecker.CheckInit(
+		"auditStore", instance.auditStore,
+	)
+	Instance = instance
 }
 
 const (

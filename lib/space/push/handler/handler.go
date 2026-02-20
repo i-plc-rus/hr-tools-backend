@@ -1,19 +1,18 @@
 package pushhandler
 
 import (
-	// "bytes"
 	"hr-tools-backend/config"
 	"hr-tools-backend/db"
 	"hr-tools-backend/lib/smtp"
 	pushdatastore "hr-tools-backend/lib/space/push/data-store"
 	pushsettingsstore "hr-tools-backend/lib/space/push/settings-store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	vacancyreqstore "hr-tools-backend/lib/vacancy-req/store"
 	connectionhub "hr-tools-backend/lib/ws/hub/connection-hub"
 	"hr-tools-backend/models"
 	dbmodels "hr-tools-backend/models/db"
 	wsmodels "hr-tools-backend/models/ws"
-	// "text/template"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -26,13 +25,21 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler() {
-	Instance = impl{
+	instance := impl{
 		spaceUserStore:    spaceusersstore.NewInstance(db.DB),
 		pushSettingsStore: pushsettingsstore.NewInstance(db.DB),
 		pushDataStore:     pushdatastore.NewInstance(db.DB),
 		vrStore:           vacancyreqstore.NewInstance(db.DB),
 		systemEmail:       config.Conf.Smtp.EmailSendVerification,
 	}
+	initchecker.CheckInit(
+		"spaceUserStore", instance.spaceUserStore,
+		"pushSettingsStore", instance.pushSettingsStore,
+		"pushDataStore", instance.pushDataStore,
+		"vrStore", instance.vrStore,
+	)
+
+	Instance = instance
 }
 
 type impl struct {

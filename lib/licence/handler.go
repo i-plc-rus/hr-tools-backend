@@ -5,6 +5,7 @@ import (
 	licensepaymentstore "hr-tools-backend/lib/licence/payment-store"
 	licenseplanstore "hr-tools-backend/lib/licence/plan-store"
 	licensestore "hr-tools-backend/lib/licence/store"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	"hr-tools-backend/models"
 	licenseapimodels "hr-tools-backend/models/api/license"
 	dbmodels "hr-tools-backend/models/db"
@@ -25,11 +26,17 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler() {
-	Instance = &impl{
+	instance := &impl{
 		licenseStore:        licensestore.NewInstance(db.DB),
 		licensePaymentStore: licensepaymentstore.NewInstance(db.DB),
 		licensePlanStore:    licenseplanstore.NewInstance(db.DB),
 	}
+	initchecker.CheckInit(
+		"licenseStore", instance.licenseStore,
+		"licensePaymentStore", instance.licensePaymentStore,
+		"licensePlanStore", instance.licensePlanStore,
+	)
+	Instance = instance
 }
 
 type impl struct {

@@ -7,6 +7,7 @@ import (
 	ailogstore "hr-tools-backend/lib/gpt/store"
 	yagptclient "hr-tools-backend/lib/gpt/yagpt-client"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	"hr-tools-backend/models"
 	gptmodels "hr-tools-backend/models/api/gpt"
 	dbmodels "hr-tools-backend/models/db"
@@ -32,11 +33,16 @@ type impl struct {
 var Instance Provider
 
 func NewHandler(useFakeAi bool) {
-	Instance = impl{
+	instance := impl{
 		spaceSettingsStore: spacesettingsstore.NewInstance(db.DB),
 		logStore:           ailogstore.NewInstance(db.DB),
 		useFakeAi:          useFakeAi,
 	}
+	initchecker.CheckInit(
+		"spaceSettingsStore", instance.spaceSettingsStore,
+		"logStore", instance.logStore,
+	)
+	Instance = instance
 }
 
 func GetHandler(useFakeAi bool) *impl {
@@ -81,7 +87,6 @@ const (
 1. Сгенерировать комментарий для каждого вопроса, объясняющий оценку, с учётом приоритетов HR и данных кандидата.
 2. Сгенерировать итоговый комментарий, суммирующий соответствие кандидата вакансии.
 3. Формат: {"details": [ { "question_id": "", "score": <число>, "comment": "<текст>" } ], "comment": "<итоговый текст>" }`
-
 )
 
 func (i impl) GenerateVacancyDescription(spaceID, text string) (resp gptmodels.GenVacancyDescResponse, err error) {

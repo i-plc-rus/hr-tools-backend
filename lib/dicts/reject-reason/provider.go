@@ -3,6 +3,7 @@ package rejectreasonprovider
 import (
 	"hr-tools-backend/db"
 	rejectreasondictstore "hr-tools-backend/lib/dicts/reject-reason/store"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	"hr-tools-backend/models"
 	dictapimodels "hr-tools-backend/models/api/dict"
 	dbmodels "hr-tools-backend/models/db"
@@ -53,9 +54,13 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler() {
-	Instance = impl{
+	instance := impl{
 		store: rejectreasondictstore.NewInstance(db.DB),
 	}
+	initchecker.CheckInit(
+		"store", instance.store,
+	)
+	Instance = instance
 }
 
 type impl struct {

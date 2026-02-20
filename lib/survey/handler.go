@@ -10,6 +10,7 @@ import (
 	gpthandler "hr-tools-backend/lib/gpt"
 	applicantsurveystore "hr-tools-backend/lib/survey/applicant-survey-store"
 	vacancysurveystore "hr-tools-backend/lib/survey/vacancy-survey-store"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	"hr-tools-backend/models"
 	surveyapimodels "hr-tools-backend/models/api/survey"
@@ -34,12 +35,19 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler() {
-	Instance = impl{
+	instance := impl{
 		vSurveyStore:   vacancysurveystore.NewInstance(db.DB),
 		vacancyStore:   vacancystore.NewInstance(db.DB),
 		applicantStore: applicantstore.NewInstance(db.DB),
 		aSurveyStore:   applicantsurveystore.NewInstance(db.DB),
 	}
+	initchecker.CheckInit(
+		"vSurveyStore", instance.vSurveyStore,
+		"vacancyStore", instance.vacancyStore,
+		"applicantStore", instance.applicantStore,
+		"aSurveyStore", instance.aSurveyStore,
+	)
+	Instance = instance
 }
 
 type impl struct {

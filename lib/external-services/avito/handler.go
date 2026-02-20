@@ -15,6 +15,7 @@ import (
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	"hr-tools-backend/lib/utils/helpers"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	"hr-tools-backend/models"
 	avitoapimodels "hr-tools-backend/models/api/avito"
@@ -32,7 +33,7 @@ import (
 var Instance externalservices.JobSiteProvider
 
 func NewHandler() {
-	Instance = &impl{
+	instance := &impl{
 		client:             avitoclient.Instance,
 		extStore:           extservicestore.NewInstance(db.DB),
 		spaceUserStore:     spaceusersstore.NewInstance(db.DB),
@@ -44,6 +45,16 @@ func NewHandler() {
 		refreshMap:         map[string]avitoapimodels.ResponseToken{},
 		refreshMx:          sync.Mutex{},
 	}
+	initchecker.CheckInit(
+		"client", instance.client,
+		"extStore", instance.extStore,
+		"spaceUserStore", instance.spaceUserStore,
+		"vacancyStore", instance.vacancyStore,
+		"spaceSettingsStore", instance.spaceSettingsStore,
+		"applicantStore", instance.applicantStore,
+		"applicantHistory", instance.applicantHistory,
+	)
+	Instance = instance
 }
 
 type impl struct {
@@ -887,4 +898,3 @@ func (i *impl) removeToken(spaceID string) error {
 	i.tokenMap.Delete(spaceID)
 	return i.extStore.DeleteRec(spaceID, TokenCode)
 }
-

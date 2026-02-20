@@ -11,6 +11,7 @@ import (
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	authhelpers "hr-tools-backend/lib/utils/auth-helpers"
 	authutils "hr-tools-backend/lib/utils/auth-utils"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	"hr-tools-backend/models"
 	authapimodels "hr-tools-backend/models/api/auth"
 	spaceapimodels "hr-tools-backend/models/api/space"
@@ -39,14 +40,21 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler() {
-	Instance = impl{
+	instance := impl{
 		emailVerify:     emailverify.NewInstance(config.Conf.Smtp.EmailSendVerification),
 		spaceUsersStore: spaceusersstore.NewInstance(db.DB),
 		licenseStore:    licensestore.NewInstance(db.DB),
-		systemEmail:     config.Conf.Smtp.EmailSendVerification,
-		recoveryTitle:   config.Conf.Recovery.MailTitle,
-		recoveryBody:    config.Conf.Recovery.MailBody,
+
+		systemEmail:   config.Conf.Smtp.EmailSendVerification,
+		recoveryTitle: config.Conf.Recovery.MailTitle,
+		recoveryBody:  config.Conf.Recovery.MailBody,
 	}
+	initchecker.CheckInit(
+		"emailVerify", instance.emailVerify,
+		"spaceUsersStore", instance.spaceUsersStore,
+		"licenseStore", instance.licenseStore,
+	)
+	Instance = instance
 }
 
 type impl struct {

@@ -10,6 +10,7 @@ import (
 	"hr-tools-backend/db"
 	masaisessionstore "hr-tools-backend/lib/ai/masai/session-store"
 	"hr-tools-backend/lib/utils/helpers"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	"hr-tools-backend/lib/utils/lock"
 	masaimodels "hr-tools-backend/models/api/masai"
 	surveyapimodels "hr-tools-backend/models/api/survey"
@@ -35,11 +36,15 @@ var Instance *impl
 
 func NewHandler(ctx context.Context) {
 	log.Infof("Инициализация ИИ: %v, модель: %v", config.Conf.AI.Masai.URL, "masai")
-	Instance = &impl{
+	instance := &impl{
 		ctx:     ctx,
 		baseUrl: config.Conf.AI.Masai.URL,
 		session: masaisessionstore.NewInstance(db.DB),
 	}
+	initchecker.CheckInit(
+		"session", instance.session,
+	)
+	Instance = instance
 }
 
 func GetHandler(ctx context.Context) *impl {

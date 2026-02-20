@@ -6,6 +6,7 @@ import (
 	"hr-tools-backend/db"
 	ollamasearchhandler "hr-tools-backend/lib/ai/ollama-search"
 	promptcheckstore "hr-tools-backend/lib/ai/prompt-check-store"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	"hr-tools-backend/lib/vk"
 	aiapimodels "hr-tools-backend/models/api/ai"
 	surveyapimodels "hr-tools-backend/models/api/survey"
@@ -31,11 +32,16 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler(ctx context.Context) {
-	Instance = &impl{
+	instance := &impl{
 		ctx:              ctx,
 		promptCheckStore: promptcheckstore.NewInstance(db.DB),
 		ollama:           ollamasearchhandler.GetHandler(ctx),
 	}
+	initchecker.CheckInit(
+		"promptCheckStore", instance.promptCheckStore,
+		"ollama", instance.ollama,
+	)
+	Instance = instance
 }
 
 type impl struct {

@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 	"hr-tools-backend/db"
 	store "hr-tools-backend/lib/dicts/city/store"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	dictapimodels "hr-tools-backend/models/api/dict"
 )
 
@@ -15,9 +16,13 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler() {
-	Instance = impl{
+	instance := impl{
 		store: store.NewInstance(db.DB),
 	}
+	initchecker.CheckInit(
+		"store", instance.store,
+	)
+	Instance = instance
 }
 
 type impl struct {

@@ -18,6 +18,7 @@ import (
 	"hr-tools-backend/lib/smtp"
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
 	"hr-tools-backend/lib/utils/helpers"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	videonormalize "hr-tools-backend/lib/utils/video-normalize"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	applicantvkstore "hr-tools-backend/lib/vk/applicant-vk-store"
@@ -69,7 +70,7 @@ const (
 )
 
 func NewHandler(ctx context.Context) {
-	i := impl{
+	instance := impl{
 		ctx:                    ctx,
 		vacancyStore:           vacancystore.NewInstance(db.DB),
 		applicantStore:         applicantstore.NewInstance(db.DB),
@@ -82,11 +83,22 @@ func NewHandler(ctx context.Context) {
 		vkVideoAnalyzeStore:    vkvideoanalyzestore.NewInstance(db.DB),
 	}
 	if config.Conf.AI.VkStep1AI == "Ollama" {
-		i.vkAiProvider = ollamasearchhandler.GetHandler(ctx)
+		instance.vkAiProvider = ollamasearchhandler.GetHandler(ctx)
 	} else {
-		i.vkAiProvider = gpthandler.GetHandler(false)
+		instance.vkAiProvider = gpthandler.GetHandler(false)
 	}
-	Instance = i
+	initchecker.CheckInit(
+		"vacancyStore", instance.vacancyStore,
+		"applicantStore", instance.applicantStore,
+		"vkStore", instance.vkStore,
+		"negotiationChatHandler", instance.negotiationChatHandler,
+		"companyStore", instance.companyStore,
+		"messageTemplate", instance.messageTemplate,
+		"questionHistoryStore", instance.questionHistoryStore,
+		"spaceSettingsStore", instance.spaceSettingsStore,
+		"vkVideoAnalyzeStore", instance.vkVideoAnalyzeStore,
+	)
+	Instance = instance
 }
 
 type impl struct {

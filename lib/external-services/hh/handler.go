@@ -15,6 +15,7 @@ import (
 	spacesettingsstore "hr-tools-backend/lib/space/settings/store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	"hr-tools-backend/lib/utils/helpers"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	"hr-tools-backend/lib/utils/lock"
 	vacancystore "hr-tools-backend/lib/vacancy/store"
 	"hr-tools-backend/models"
@@ -33,7 +34,7 @@ import (
 var Instance externalservices.JobSiteProvider
 
 func NewHandler() {
-	Instance = &impl{
+	instance := &impl{
 		client:             hhclient.Instance,
 		extStore:           extservicestore.NewInstance(db.DB),
 		spaceUserStore:     spaceusersstore.NewInstance(db.DB),
@@ -45,6 +46,17 @@ func NewHandler() {
 		filesStorage:       filestorage.Instance,
 		applicantHistory:   applicanthistoryhandler.Instance,
 	}
+	initchecker.CheckInit(
+		"client", instance.client,
+		"extStore", instance.extStore,
+		"spaceUserStore", instance.spaceUserStore,
+		"vacancyStore", instance.vacancyStore,
+		"spaceSettingsStore", instance.spaceSettingsStore,
+		"applicantStore", instance.applicantStore,
+		"filesStorage", instance.filesStorage,
+		"applicantHistory", instance.applicantHistory,
+	)
+	Instance = instance
 }
 
 type impl struct {

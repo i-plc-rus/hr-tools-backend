@@ -7,6 +7,7 @@ import (
 	pushsettingsstore "hr-tools-backend/lib/space/push/settings-store"
 	spaceusersstore "hr-tools-backend/lib/space/users/store"
 	authhelpers "hr-tools-backend/lib/utils/auth-helpers"
+	initchecker "hr-tools-backend/lib/utils/init-checker"
 	"hr-tools-backend/models"
 	spaceapimodels "hr-tools-backend/models/api/space"
 	dbmodels "hr-tools-backend/models/db"
@@ -36,10 +37,15 @@ type Provider interface {
 var Instance Provider
 
 func NewHandler() {
-	Instance = impl{
+	instance := impl{
 		spaceUserStore:    spaceusersstore.NewInstance(db.DB),
 		pushSettingsStore: pushsettingsstore.NewInstance(db.DB),
 	}
+	initchecker.CheckInit(
+		"spaceUserStore", instance.spaceUserStore,
+		"pushSettingsStore", instance.pushSettingsStore,
+	)
+	Instance = instance
 }
 
 type impl struct {
