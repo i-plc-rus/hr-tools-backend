@@ -25,3 +25,15 @@ curl --location --request POST 'http://localhost:8080/api/v1/organizations' \
     "organization_name": "ООО ДЕМО1"
 }'
 ```
+
+## Superset
+
+### Настройка домена для дашборда superset
+1. Заходим в суперсет и открываем дашборд
+2. Нажимаем ... и выбираем "Встроить дашборд"
+
+<img src="docs/img/superset_embedded.png" alt="Screenshot" width="200">
+
+3. Прописыываем домен в "Разрешенные домены"
+
+<img src="docs/img/superset_embedded_settings.png" alt="Screenshot" width="400">
