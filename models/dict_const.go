@@ -576,3 +576,13 @@ const (
 	LicensePaymentStatusPaid    LicensePaymentStatus = "PAID"
 	LicensePaymentStatusFailed  LicensePaymentStatus = "FAILED"
 )
+
+type VideoInterviewStatus string
+
+const (
+	VideoInterviewStatusAbsent     VideoInterviewStatus = "ABSENT"
+	VideoInterviewStatusUploading  VideoInterviewStatus = "UPLOADING"
+	VideoInterviewStatusProcessing VideoInterviewStatus = "PROCESSING"
+	VideoInterviewStatusReady      VideoInterviewStatus = "READY"
+	VideoInterviewStatusError      VideoInterviewStatus = "ERROR"
+)

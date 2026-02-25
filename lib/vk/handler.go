@@ -630,6 +630,7 @@ func (i impl) UploadVideoAnswer(ctx context.Context, id, questionID string, file
 	rec.VideoInterview.Answers[questionID] = dbmodels.VkVideoAnswer{
 		FileID: fileID,
 	}
+	updateInterviewStatusOnUpload(rec)
 	_, err = i.vkStore.Save(*rec)
 	if err != nil {
 		i.getLogger(rec.SpaceID, rec.ApplicantID).
@@ -702,6 +703,8 @@ func (i impl) UploadStreamVideoAnswer(ctx context.Context, id, questionID string
 	rec.VideoInterview.Answers[questionID] = dbmodels.VkVideoAnswer{
 		FileID: info.Location,
 	}
+	updateInterviewStatusOnUpload(rec)
+
 	_, err = i.vkStore.Save(*rec)
 	if err != nil {
 		i.getLogger(rec.SpaceID, rec.ApplicantID).
@@ -835,6 +838,7 @@ func (i impl) GenerateReport(vkRec dbmodels.ApplicantVkStep) (ok bool, err error
 	}
 	vkRec.OverallComment = resp.OverallComment
 	vkRec.Status = dbmodels.VkStep11Report
+	vkRec.VideoInterview.Status = models.VideoInterviewStatusReady
 	_, err = i.vkStore.Save(vkRec)
 	if err != nil {
 		return false, errors.Wrap(err, "ошибка сохранения анкеты")
@@ -1165,5 +1169,21 @@ func (i impl) failScoreAnswer(rec dbmodels.ApplicantVkVideoSurvey, errMsg string
 			WithField("vk_step_id", rec.ApplicantVkStepID).
 			WithField("question_id", rec.QuestionID).
 			Error("ошибка сохранения результата оценки ответа")
+	}
+}
+
+func updateInterviewStatusOnUpload(rec *dbmodels.ApplicantVkStep) {
+	now := time.Now()
+	if rec.VideoInterview.StartTime == nil {
+		// старт видео интервью если еще не проставлен
+		rec.VideoInterview.StartTime = &now
+		rec.VideoInterview.Status = models.VideoInterviewStatusUploading
+	}
+
+	if len(rec.VideoInterview.Answers) == len(rec.Step1.Questions) {
+		// все вопросы загружены
+		now := time.Now()
+		rec.VideoInterview.EndTime = &now
+		rec.VideoInterview.Status = models.VideoInterviewStatusProcessing
 	}
 }
