@@ -27,6 +27,7 @@ type ApplicantView struct {
 	FIO                string                 `json:"fio"`                  // ФИО кандидата
 	Age                int                    `json:"age"`                  // возраст
 	Survey             ApplicantVkSurvey      `json:"survey"`               // Анкета для кандидата
+	VideoInterview     VideoInterview         `json:"videoInterview"`
 }
 
 type ApplicantVkSurvey struct {
@@ -187,6 +188,7 @@ func ApplicantConvert(rec dbmodels.Applicant) ApplicantView {
 		result.VacancyName = rec.Vacancy.VacancyName
 	}
 	result.FIO = rec.GetFIO()
+	result.VideoInterview.Status = models.VideoInterviewStatusAbsent
 	if rec.ApplicantVkStep != nil {
 		result.Survey.Status = rec.ApplicantVkStep.Status
 		result.Survey.StatusDescription = rec.ApplicantVkStep.Status.String()
@@ -207,6 +209,7 @@ func ApplicantConvert(rec dbmodels.Applicant) ApplicantView {
 		result.Survey.Step1 = surveyapimodels.VkStep1Convert(*rec.ApplicantVkStep, location)
 
 		result.Survey.ScoreAI = VkScoreAIConvert(rec)
+		result.VideoInterview.Status = rec.ApplicantVkStep.VideoInterview.Status
 	}
 	return result
 }
@@ -400,10 +403,14 @@ func VkScoreAIConvert(rec dbmodels.Applicant) ScoreAI {
 			detail.AnalyzeID = evaluation.ID
 			detail.LastAttemptAt = evaluation.LastAttemptAt
 			detail.ManualRetry = evaluation.ManualRetry
-			detail.ManualSkip = evaluation.ManualRetry
+			detail.ManualSkip = evaluation.ManualSkip
 			detail.ManualUserID = evaluation.ManualUserID
 		}
 		result.Details = append(result.Details, detail)
 	}
 	return result
+}
+
+type VideoInterview struct {
+	Status models.VideoInterviewStatus `json:"status"`
 }

@@ -46,6 +46,7 @@ import (
 	vacancyhandler "hr-tools-backend/lib/vacancy"
 	vacancyreqhandler "hr-tools-backend/lib/vacancy-req"
 	"hr-tools-backend/lib/vk"
+	vkstatuscheckworker "hr-tools-backend/lib/vk/status-check-worker"
 	vkstep0runworker "hr-tools-backend/lib/vk/step0-run-worker"
 	vkstep1runworker "hr-tools-backend/lib/vk/step1-run-worker"
 	vkstep10runworker "hr-tools-backend/lib/vk/step10-run-worker"
@@ -175,10 +176,14 @@ func initWorkers(ctx context.Context) {
 	// Задача ВК. Шаг 11. Генерация отчёта и рекомендаций
 	vkstep11runworker.StartWorker(ctx)
 
+	// Задача ВК. Проверка и обновление статуса
+	vkstatuscheckworker.StartWorker(ctx)
+
 	if makeTimeGap(ctx) {
 		//Задача получения откликов по вакансиям из HH/Avito
 		negotiationworker.StartWorker(ctx)
 	}
+
 	if makeTimeGap(ctx) {
 		// Задача получения сообщений из HH/Avito от кандидатов
 		newmsgworker.StartWorker(ctx)
