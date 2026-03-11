@@ -110,8 +110,10 @@ type ExternalData struct {
 }
 
 type ExternalLink struct {
-	ID  string `json:"id"`
-	Url string `json:"url"`
+	ID      string                  `json:"id"`
+	Url     string                  `json:"url"`
+	DraftID string                  `json:"draft_id"`
+	Status  models.VacancyPubStatus `json:"status"`
 }
 
 func VacancyConvert(rec dbmodels.VacancyExt) VacancyView {
@@ -202,9 +204,11 @@ func VacancyConvert(rec dbmodels.VacancyExt) VacancyView {
 		}
 	}
 
-	if rec.HhID != "" {
+	if rec.HhID != "" || rec.HhDraftID != "" {
 		result.External.HeadHunter.ID = rec.HhID
+		result.External.HeadHunter.DraftID = rec.HhDraftID
 		result.External.HeadHunter.Url = rec.HhUri
+		result.External.HeadHunter.Status = rec.HhStatus
 	}
 	result.SelectionStages = make([]SelectionStageView, 0, len(rec.SelectionStages))
 	for _, stage := range rec.SelectionStages {

@@ -29,6 +29,8 @@ func InitHHApiRouters(app *fiber.App) {
 			vacancyRoute.Put("close", controller.close)
 			vacancyRoute.Put("attach", controller.attach)
 			vacancyRoute.Get("status", controller.status)
+			vacancyRoute.Put("draft", controller.draft)
+			vacancyRoute.Delete("draft", controller.deleteDraft)
 		})
 	})
 }
@@ -223,4 +225,56 @@ func (c *hhApiController) status(ctx *fiber.Ctx) error {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения статуса размещения объявления на HeadHunter")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(info))
+}
+
+// @Summary Публикация черновика вакансии
+// @Tags Интеграция HeadHunter
+// @Description Публикация черновика вакансии
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    string  				    	true         "идентификатор вакансии"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router  /api/v1/space/ext/hh/{id}/draft [put]
+func (c *hhApiController) draft(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	spaceID := middleware.GetUserSpace(ctx)
+	hMsg, err := c.handler.VacancyDraft(ctx.UserContext(), spaceID, id)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка публикация вакансии на HeadHunter")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Удаление черновика вакансии
+// @Tags Интеграция HeadHunter
+// @Description Удаление черновика вакансии
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param   id          		path    string  				    	true         "идентификатор вакансии"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router  /api/v1/space/ext/hh/{id}/draft [delete]
+func (c *hhApiController) deleteDraft(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+	spaceID := middleware.GetUserSpace(ctx)
+	hMsg, err := c.handler.VacancyDeleteDraft(ctx.UserContext(), spaceID, id)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка публикация вакансии на HeadHunter")
+	}
+	if hMsg != "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(hMsg))
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }

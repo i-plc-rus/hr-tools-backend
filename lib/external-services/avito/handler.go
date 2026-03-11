@@ -193,6 +193,10 @@ func (i *impl) VacancyPublish(ctx context.Context, spaceID, vacancyID string) (h
 	return "", nil
 }
 
+func (i *impl) VacancyDraft(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error) {
+	return "отправка черновика не поддерживается", nil
+}
+
 func (i *impl) VacancyUpdate(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error) {
 	accessToken, hMsg, err := i.getToken(ctx, spaceID)
 	if err != nil || hMsg != "" {
@@ -244,6 +248,10 @@ func (i *impl) VacancyClose(ctx context.Context, spaceID, vacancyID string) (hMs
 		return hMsg, nil
 	}
 	return "", i.client.VacancyClose(externalservices.GetContextWithRecID(ctx, spaceID, vacancyID), accessToken, rec.AvitoID)
+}
+
+func (i *impl) VacancyDeleteDraft(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error) {
+	return "удаление черновика не поддерживается", nil
 }
 
 func (i *impl) VacancyAttach(ctx context.Context, spaceID, vacancyID string, extID string) (hMsg string, err error) {

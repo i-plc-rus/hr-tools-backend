@@ -133,6 +133,7 @@ const (
 	VacancyPubStatusPublished  VacancyPubStatus = "Опубликована"
 	VacancyPubStatusRejected   VacancyPubStatus = "Отклонена"
 	VacancyPubStatusClosed     VacancyPubStatus = "Закрыта"
+	VacancyPubStatusDraft      VacancyPubStatus = "Черновик"
 )
 
 type Employment string

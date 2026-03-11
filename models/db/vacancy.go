@@ -60,6 +60,7 @@ type HhData struct {
 	HhUri     string                  `gorm:"type:varchar(500)"`
 	HhStatus  models.VacancyPubStatus `gorm:"type:varchar(255)"` // статус публикации
 	HhReasons string                  `gorm:"type:varchar(500)"` // Расширенное описание статуса
+	HhDraftID string                  `gorm:"type:varchar(255)"` // идентификатор черновика
 }
 
 type AvitoData struct {

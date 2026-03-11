@@ -421,6 +421,8 @@ definitions:
       vacancy_name:
         description: Название вакансии
         type: string
+      videoInterview:
+        $ref: '#/definitions/applicantapimodels.VideoInterview'
     type: object
   applicantapimodels.ApplicantViewExt:
     properties:
@@ -536,6 +538,8 @@ definitions:
       vacancy_name:
         description: Название вакансии
         type: string
+      videoInterview:
+        $ref: '#/definitions/applicantapimodels.VideoInterview'
     type: object
   applicantapimodels.ApplicantVkSurvey:
     properties:
@@ -684,6 +688,11 @@ definitions:
         type: string
       percent:
         type: integer
+    type: object
+  applicantapimodels.VideoInterview:
+    properties:
+      status:
+        $ref: '#/definitions/models.VideoInterviewStatus'
     type: object
   applicantapimodels.XlsExportRequest:
     properties:
@@ -1788,6 +1797,7 @@ definitions:
     - Опубликована
     - Отклонена
     - Закрыта
+    - Черновик
     type: string
     x-enum-varnames:
     - VacancyPubStatusNone
@@ -1795,6 +1805,7 @@ definitions:
     - VacancyPubStatusPublished
     - VacancyPubStatusRejected
     - VacancyPubStatusClosed
+    - VacancyPubStatusDraft
   models.VacancyStatus:
     enum:
     - Открыта
@@ -1807,6 +1818,20 @@ definitions:
     - VacancyStatusCanceled
     - VacancyStatusSuspended
     - VacancyStatusClosed
+  models.VideoInterviewStatus:
+    enum:
+    - ABSENT
+    - UPLOADING
+    - PROCESSING
+    - READY
+    - ERROR
+    type: string
+    x-enum-varnames:
+    - VideoInterviewStatusAbsent
+    - VideoInterviewStatusUploading
+    - VideoInterviewStatusProcessing
+    - VideoInterviewStatusReady
+    - VideoInterviewStatusError
   msgtemplateapimodels.MsgTemplateData:
     properties:
       message:
@@ -2651,8 +2676,12 @@ definitions:
     type: object
   vacancyapimodels.ExternalLink:
     properties:
+      draft_id:
+        type: string
       id:
         type: string
+      status:
+        $ref: '#/definitions/models.VacancyPubStatus'
       url:
         type: string
     type: object
@@ -7136,6 +7165,69 @@ paths:
           schema:
             $ref: '#/definitions/apimodels.Response'
       summary: Удаление вакансии
+      tags:
+      - Интеграция HeadHunter
+  /api/v1/space/ext/hh/{id}/draft:
+    delete:
+      description: Удаление черновика вакансии
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: идентификатор вакансии
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Удаление черновика вакансии
+      tags:
+      - Интеграция HeadHunter
+    put:
+      description: Публикация черновика вакансии
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: идентификатор вакансии
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Публикация черновика вакансии
       tags:
       - Интеграция HeadHunter
   /api/v1/space/ext/hh/{id}/publish:

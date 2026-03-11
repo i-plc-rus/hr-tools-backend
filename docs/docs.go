@@ -5999,6 +5999,100 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/space/ext/hh/{id}/draft": {
+            "put": {
+                "description": "Публикация черновика вакансии",
+                "tags": [
+                    "Интеграция HeadHunter"
+                ],
+                "summary": "Публикация черновика вакансии",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "идентификатор вакансии",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Удаление черновика вакансии",
+                "tags": [
+                    "Интеграция HeadHunter"
+                ],
+                "summary": "Удаление черновика вакансии",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "идентификатор вакансии",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/space/ext/hh/{id}/publish": {
             "put": {
                 "description": "Публикация вакансии",
@@ -11504,6 +11598,9 @@ const docTemplate = `{
                 "vacancy_name": {
                     "description": "Название вакансии",
                     "type": "string"
+                },
+                "videoInterview": {
+                    "$ref": "#/definitions/applicantapimodels.VideoInterview"
                 }
             }
         },
@@ -11678,6 +11775,9 @@ const docTemplate = `{
                 "vacancy_name": {
                     "description": "Название вакансии",
                     "type": "string"
+                },
+                "videoInterview": {
+                    "$ref": "#/definitions/applicantapimodels.VideoInterview"
                 }
             }
         },
@@ -11898,6 +11998,14 @@ const docTemplate = `{
                 },
                 "percent": {
                     "type": "integer"
+                }
+            }
+        },
+        "applicantapimodels.VideoInterview": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "$ref": "#/definitions/models.VideoInterviewStatus"
                 }
             }
         },
@@ -13408,14 +13516,16 @@ const docTemplate = `{
                 "Публикуется",
                 "Опубликована",
                 "Отклонена",
-                "Закрыта"
+                "Закрыта",
+                "Черновик"
             ],
             "x-enum-varnames": [
                 "VacancyPubStatusNone",
                 "VacancyPubStatusModeration",
                 "VacancyPubStatusPublished",
                 "VacancyPubStatusRejected",
-                "VacancyPubStatusClosed"
+                "VacancyPubStatusClosed",
+                "VacancyPubStatusDraft"
             ]
         },
         "models.VacancyStatus": {
@@ -13431,6 +13541,23 @@ const docTemplate = `{
                 "VacancyStatusCanceled",
                 "VacancyStatusSuspended",
                 "VacancyStatusClosed"
+            ]
+        },
+        "models.VideoInterviewStatus": {
+            "type": "string",
+            "enum": [
+                "ABSENT",
+                "UPLOADING",
+                "PROCESSING",
+                "READY",
+                "ERROR"
+            ],
+            "x-enum-varnames": [
+                "VideoInterviewStatusAbsent",
+                "VideoInterviewStatusUploading",
+                "VideoInterviewStatusProcessing",
+                "VideoInterviewStatusReady",
+                "VideoInterviewStatusError"
             ]
         },
         "msgtemplateapimodels.MsgTemplateData": {
@@ -14676,8 +14803,14 @@ const docTemplate = `{
         "vacancyapimodels.ExternalLink": {
             "type": "object",
             "properties": {
+                "draft_id": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/models.VacancyPubStatus"
                 },
                 "url": {
                     "type": "string"

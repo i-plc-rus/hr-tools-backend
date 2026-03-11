@@ -13,8 +13,10 @@ type JobSiteProvider interface {
 	RemoveToken(spaceID string) (err error)
 	CheckConnected(ctx context.Context, spaceID string) bool
 	VacancyPublish(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error)
+	VacancyDraft(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error)
 	VacancyUpdate(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error)
 	VacancyClose(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error)
+	VacancyDeleteDraft(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error)
 	VacancyAttach(ctx context.Context, spaceID, vacancyID string, extID string) (hMsg string, err error)
 	GetVacancyInfo(ctx context.Context, spaceID, vacancyID string) (*vacancyapimodels.ExtVacancyInfo, error)
 	SendMessage(ctx context.Context, data dbmodels.Applicant, msg string) error
