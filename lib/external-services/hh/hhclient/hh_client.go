@@ -29,12 +29,20 @@ type Provider interface {
 	//https://api.hh.ru/openapi/redoc#tag/Upravlenie-vakansiyami/operation/publish-vacancy
 	VacancyPublish(ctx context.Context, accessToken string, request hhapimodels.VacancyPubRequest) (vacancyID string, hMsg string, err error)
 
+	VacancyPublishDraft(ctx context.Context, accessToken string, request hhapimodels.VacancyPubRequest) (vacancyDraftID string, hMsg string, err error)
+
+	//https://api.hh.ru/openapi/redoc#tag/Chernoviki-vakansij/operation/publish-vacancy-from-draft
+	VacancyPublishFromDraft(ctx context.Context, accessToken string, draftID string) (vacancyID string, hMsg string, err error)
+
 	//https://api.hh.ru/openapi/redoc#tag/Upravlenie-vakansiyami/operation/edit-vacancy
 	VacancyUpdate(ctx context.Context, accessToken string, vacancyID string, request hhapimodels.VacancyPubRequest) error
 
 	//https://api.hh.ru/openapi/redoc#tag/Upravlenie-vakansiyami/operation/add-vacancy-to-hidden
 	//https://api.hh.ru/openapi/redoc#tag/Upravlenie-vakansiyami/operation/add-vacancy-to-archive
 	VacancyClose(ctx context.Context, accessToken string, employerID, vacancyID string) error
+
+	//https://api.hh.ru/openapi/redoc#tag/Chernoviki-vakansij/operation/delete-vacancy-draft
+	VacancyDeleteDraft(ctx context.Context, accessToken string, employerID, vacancyDraftID string) error
 
 	//https://api.hh.ru/openapi/redoc#tag/Otklikipriglasheniya-rabotodatelya/operation/get-negotiations
 	//https://api.hh.ru/openapi/redoc#tag/Otklikipriglasheniya-rabotodatelya/operation/get-collection-negotiations-list
@@ -85,6 +93,9 @@ const (
 	tokenPath                 string = "%s/token"
 	oAuthPattern              string = "https://hh.ru/oauth/authorize?response_type=code&client_id=%v&state=%v&redirect_uri=%v"
 	vPublishPath              string = "%s/vacancies"
+	vPublishDraftPath         string = "%s/vacancies/drafts"
+	vPublishFromDraftPath     string = "%s/vacancies/drafts/%v/publish"
+	vDeleteDraftPath          string = "%s/vacancies/drafts/%v"
 	vUpdatePath               string = "%s/vacancies/%v"
 	vGetPath                  string = "%s/vacancies/%v"
 	vDeletePath               string = "%s/employers/%v/vacancies/%v"
@@ -207,6 +218,58 @@ func (i impl) VacancyPublish(ctx context.Context, accessToken string, request hh
 	return resp.ID, "", nil
 }
 
+func (i impl) VacancyPublishDraft(ctx context.Context, accessToken string, requestPub hhapimodels.VacancyPubRequest) (vacancyDraftID string, hMsg string, err error) {
+	uri := fmt.Sprintf(vPublishDraftPath, i.host)
+	logger := log.
+		WithField("external_request", uri)
+
+	ctxData := externalservices.ExtractAuditData(ctx)
+
+	requestDraft := requestPub.ToDraft(ctxData.RecID)
+	body, err := json.Marshal(requestDraft)
+	if err != nil {
+		return "", "", errors.Wrap(err, "ошибка десериализации запроса")
+	}
+
+	r, _ := http.NewRequestWithContext(ctx, "POST", uri, bytes.NewBuffer(body))
+	r.Header.Add("Content-Type", "application/json")
+	resp := hhapimodels.VacancyResponse{}
+
+	logger = logger.
+		WithField("request_body", string(body))
+
+	fmt.Println(string(body))
+	rCtx := externalservices.GetAuditContext(ctx, uri, body)
+	errData, err := i.sendRequestWithErrorData(rCtx, logger, r, &resp, accessToken, true)
+	if err != nil {
+		if errData != nil {
+			return "", errData.GetPublishErrorReason(), nil
+		}
+		return "", "", err
+	}
+	return resp.ID, "", nil
+}
+
+func (i impl) VacancyPublishFromDraft(ctx context.Context, accessToken string, draftID string) (vacancyID string, hMsg string, err error) {
+	uri := fmt.Sprintf(vPublishFromDraftPath, i.host, draftID)
+	logger := log.
+		WithField("external_request", uri)
+
+	r, _ := http.NewRequestWithContext(ctx, "POST", uri, nil)
+	r.Header.Add("Content-Type", "application/json")
+	resp := hhapimodels.VacancyResponse{}
+
+	rCtx := externalservices.GetAuditContext(ctx, uri, nil)
+	errData, err := i.sendRequestWithErrorData(rCtx, logger, r, &resp, accessToken, true)
+	if err != nil {
+		if errData != nil {
+			return "", errData.GetPublishErrorReason(), nil
+		}
+		return "", "", err
+	}
+	return resp.ID, "", nil
+}
+
 func (i impl) VacancyUpdate(ctx context.Context, accessToken, vacancyID string, request hhapimodels.VacancyPubRequest) error {
 	uri := fmt.Sprintf(vUpdatePath, i.host, vacancyID)
 	logger := log.
@@ -234,6 +297,18 @@ func (i impl) VacancyClose(ctx context.Context, accessToken, employerID, vacancy
 		WithField("employer_id", employerID).
 		WithField("external_request", uri)
 	r, _ := http.NewRequestWithContext(ctx, "PUT", uri, nil)
+	r.Header.Add("Content-Type", "application/json")
+	rCtx := externalservices.GetAuditContext(ctx, uri, nil)
+	return i.sendRequest(rCtx, logger, r, nil, accessToken, true)
+}
+
+func (i impl) VacancyDeleteDraft(ctx context.Context, accessToken string, employerID, vacancyDraftID string) error {
+	uri := fmt.Sprintf(vDeleteDraftPath, i.host, vacancyDraftID)
+	logger := log.
+		WithField("vacancy_draft_id", vacancyDraftID).
+		WithField("employer_id", employerID).
+		WithField("external_request", uri)
+	r, _ := http.NewRequestWithContext(ctx, "DELETE", uri, nil)
 	r.Header.Add("Content-Type", "application/json")
 	rCtx := externalservices.GetAuditContext(ctx, uri, nil)
 	return i.sendRequest(rCtx, logger, r, nil, accessToken, true)

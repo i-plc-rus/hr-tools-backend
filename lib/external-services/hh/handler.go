@@ -176,20 +176,30 @@ func (i *impl) VacancyPublish(ctx context.Context, spaceID, vacancyID string) (h
 		return "вакансия уже размещена", nil
 	}
 
-	request, hMsg := i.fillVacancyData(ctx, rec)
-	if hMsg != "" {
-		return hMsg, nil
+	var (
+		id           string
+		hhFailStatus models.VacancyPubStatus
+	)
+	if rec.HhDraftID != "" {
+		// публикация из черновика
+		id, hMsg, err = i.client.VacancyPublishFromDraft(externalservices.GetContextWithRecID(ctx, spaceID, vacancyID), accessToken, rec.HhDraftID)
+		hhFailStatus = models.VacancyPubStatusDraft
+	} else {
+		request, hMsg := i.fillVacancyData(ctx, rec)
+		if hMsg != "" {
+			return hMsg, nil
+		}
+		id, hMsg, err = i.client.VacancyPublish(externalservices.GetContextWithRecID(ctx, spaceID, vacancyID), accessToken, *request)
+		hhFailStatus = models.VacancyPubStatusNone
 	}
-
-	id, hMsg, err := i.client.VacancyPublish(externalservices.GetContextWithRecID(ctx, spaceID, vacancyID), accessToken, *request)
 	if err != nil || hMsg != "" {
-		updMap := map[string]interface{}{
+		updMap := map[string]any{
 			"hh_reasons": hMsg,
-			"hh_status":  models.VacancyPubStatusNone,
+			"hh_status":  hhFailStatus,
 		}
 		e := i.vacancyStore.Update(spaceID, vacancyID, updMap)
 		if e != nil {
-			i.getLogger(spaceID, vacancyID).WithError(e).Error("не удалось сохранить причину размещения вакансии")
+			i.getLogger(spaceID, vacancyID).WithError(e).Error("не удалось сохранить ответ на размещение вакансии")
 		}
 		return hMsg, err
 	}
@@ -772,6 +782,92 @@ func (i *impl) CheckIsModerationDone(ctx context.Context, spaceID string, list [
 
 func (i *impl) CheckIsActivePublications(ctx context.Context, spaceID string, list []dbmodels.Vacancy) error {
 	return i.checkPublications(ctx, spaceID, list)
+}
+
+func (i *impl) VacancyDraft(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error) {
+	_, accessToken, hMsg, err := i.getToken(ctx, spaceID)
+	if err != nil || hMsg != "" {
+		return hMsg, err
+	}
+
+	rec, err := i.vacancyStore.GetByID(spaceID, vacancyID)
+	if err != nil {
+		return "", err
+	}
+	if rec == nil {
+		return "вакансия не найдена", nil
+	}
+
+	if models.VacancyStatusOpened != rec.Status {
+		return fmt.Sprintf("неподходящей статус вакансии %v, для публикации", rec.Status), nil
+	}
+
+	if rec.HhDraftID != "" {
+		return "черновик уже размещен", nil
+	}
+
+	if rec.HhID != "" && rec.HhStatus != models.VacancyPubStatusNone && rec.HhStatus != models.VacancyPubStatusClosed {
+		return "вакансия уже размещена", nil
+	}
+
+	request, hMsg := i.fillVacancyData(ctx, rec)
+	if hMsg != "" {
+		return hMsg, nil
+	}
+	draftID, hMsg, err := i.client.VacancyPublishDraft(externalservices.GetContextWithRecID(ctx, spaceID, vacancyID), accessToken, *request)
+	if err != nil || hMsg != "" {
+		updMap := map[string]any{
+			"hh_reasons": hMsg,
+			"hh_status":  models.VacancyPubStatusNone,
+		}
+		e := i.vacancyStore.Update(spaceID, vacancyID, updMap)
+		if e != nil {
+			i.getLogger(spaceID, vacancyID).WithError(e).Error("не удалось сохранить ответ на размещение черновика вакансии")
+		}
+		return hMsg, err
+	}
+
+	updMap := map[string]any{
+		"hh_draft_id": draftID,
+		"hh_status":   models.VacancyPubStatusDraft,
+	}
+	err = i.vacancyStore.Update(spaceID, vacancyID, updMap)
+	if err != nil {
+		return "", errors.Errorf("не удалось сохранить идентификатор черновика вакансии (%v)", draftID)
+	}
+	return "", nil
+}
+
+func (i *impl) VacancyDeleteDraft(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error) {
+	self, accessToken, hMsg, err := i.getToken(ctx, spaceID)
+	if err != nil || hMsg != "" {
+		return hMsg, err
+	}
+	rec, err := i.vacancyStore.GetByID(spaceID, vacancyID)
+	if err != nil {
+		return "", err
+	}
+	if rec == nil {
+		return "вакансия не найдена", nil
+	}
+	if rec.HhDraftID == "" {
+		return "черновик вакансии еще не опубликованн", nil
+	}
+	err = i.client.VacancyDeleteDraft(externalservices.GetContextWithRecID(ctx, spaceID, vacancyID), accessToken, self.Employer.ID, rec.HhDraftID)
+	if err != nil {
+		return hMsg, err
+	}
+	updMap := map[string]any{
+		"hh_draft_id": "",
+	}
+	if rec.HhStatus == models.VacancyPubStatusDraft {
+		updMap["hh_status"] = models.VacancyPubStatusNone
+	}
+	e := i.vacancyStore.Update(spaceID, vacancyID, updMap)
+	if e != nil {
+		i.getLogger(spaceID, vacancyID).WithError(e).Error("не удалось сохранить ответ на размещение черновика вакансии")
+	}
+	return "", nil
 }
 
 func (i *impl) checkPublications(ctx context.Context, spaceID string, list []dbmodels.Vacancy) error {

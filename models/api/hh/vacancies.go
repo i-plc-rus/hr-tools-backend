@@ -55,9 +55,9 @@ type VacancyResponse struct {
 }
 
 type Contacts struct {
-	Name   string `json:"name"`
-	Email  string `json:"email"`
-	Phones Phone  `json:"phones"`
+	Name   string  `json:"name"`
+	Email  string  `json:"email"`
+	Phones []Phone `json:"phones"`
 }
 
 type Phone struct {
@@ -105,4 +105,53 @@ func (v VacancyInfo) GetPubStatus() models.VacancyPubStatus {
 	}
 
 	return models.VacancyPubStatusModeration
+}
+
+func (v VacancyPubRequest) ToDraft(recID string) VacancyDraftRequest {
+	result := VacancyDraftRequest{
+		ClosedForApplicants:     false,
+		VacancyProperties:       []VacancyProperty{{PropertyType: "HH_STANDARD"}},
+		AcceptHandicapped:       true,
+		AcceptIncompleteResumes: false,
+		AcceptLaborContract:     true,
+		AcceptTemporary:         true,
+		Address:                 nil,
+		AgeRestriction:          &DictItem{ID: "AGE_16_PLUS"},
+		AllowMessages:           true,
+		Areas:                   []DictItem{v.Area},
+		AutoResponse:            AutoResponse{AcceptAutoResponse: false},
+		BrandedTemplate:         nil,
+		CivilLawContracts:       &[]DictItem{{ID: "INDIVIDUAL_PERSON"}},
+		Code:                    nil,
+		Contacts:                v.Contacts,
+		Department:              nil,
+		Description:             v.Description,
+		DriverLicenseTypes:      nil,
+		Employment:              nil,
+		EmploymentFrom:          v.EmploymentFrom,
+		Experience:              v.Experience,
+		Internship:              false,
+		KeySkills:               nil,
+		Languages:               nil,
+		Name:                    v.Name,
+		NightShifts:             false,
+		ProfessionalRoles:       &v.ProfessionalRoles,
+		ResponseLetterRequired:  false,
+		ResponseNotifications:   true,
+		SalaryRange:             v.SalaryRange,
+		Schedule:                v.Schedule,
+		Test:                    nil,
+		WithZp:                  false,
+		WorkFormat:              &DictItem{ID: "ON_SITE"},
+		WorkScheduleByDays:      []DictItem{{ID: "WEEKEND"}},
+		WorkingDays:             nil,
+		WorkingHours:            []DictItem{{ID: "HOURS_8"}},
+		WorkingTimeIntervals:    nil,
+		WorkingTimeModes:        nil,
+	}
+
+	if recID != "" {
+		result.Code = &recID
+	}
+	return result
 }
