@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"hr-tools-backend/config"
+	"hr-tools-backend/models"
 	"time"
 
 	"github.com/pkg/errors"
@@ -151,7 +152,10 @@ func (r ApplicantVkStep) GetEvaluationsContent() (string, error) {
 }
 
 type VideoInterview struct {
-	Answers map[string]VkVideoAnswer `json:"answers"` // map[questionID]VkVideoAnswer
+	Answers   map[string]VkVideoAnswer    `json:"answers"`    // map[questionID]VkVideoAnswer
+	StartTime *time.Time                  `json:"start_time"` // время загрузки первого видео файла
+	EndTime   *time.Time                  `json:"end_time"`   // время загрузки последнего видео файла
+	Status    models.VideoInterviewStatus `json:"status"`     // общий статус интервью
 }
 
 type VkVideoAnswer struct {

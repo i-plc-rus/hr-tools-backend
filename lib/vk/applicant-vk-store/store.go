@@ -1,11 +1,13 @@
 package applicantvkstore
 
 import (
+	"hr-tools-backend/models"
 	dbmodels "hr-tools-backend/models/db"
 
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"slices"
 )
 
 type Provider interface {
@@ -15,6 +17,7 @@ type Provider interface {
 	Delete(spaceID, id string) error
 	DeleteByApplicantID(spaceID, applicantID string) error
 	GetByStatus(status dbmodels.StepStatus) ([]dbmodels.ApplicantVkStep, error)
+	GetByVideoInterviewStatus(statusSlice []models.VideoInterviewStatus) ([]dbmodels.ApplicantVkStep, error)
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -112,6 +115,25 @@ func (i impl) GetByStatus(status dbmodels.StepStatus) ([]dbmodels.ApplicantVkSte
 		Model(dbmodels.ApplicantVkStep{}).
 		Where("status = ?", status).
 		Preload(clause.Associations)
+	err := tx.Find(&list).Error
+	if err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (i impl) GetByVideoInterviewStatus(statusSlice []models.VideoInterviewStatus) ([]dbmodels.ApplicantVkStep, error) {
+	list := []dbmodels.ApplicantVkStep{}
+	tx := i.db.Model(dbmodels.ApplicantVkStep{})
+
+	if slices.Contains(statusSlice, "") {
+		tx.Where("video_interview IS NULL OR NOT (video_interview ? 'status')")
+	}
+	if len(statusSlice) > 0 {
+		tx = tx.Or("video_interview->>'status' IN ?", statusSlice)
+	}
+
+	tx = tx.Preload(clause.Associations)
 	err := tx.Find(&list).Error
 	if err != nil {
 		return nil, err

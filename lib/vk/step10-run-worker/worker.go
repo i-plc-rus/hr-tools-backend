@@ -84,7 +84,11 @@ func (i impl) Scoring(rec dbmodels.ApplicantVkStep) error {
 		}
 		err = updateApplicant(tx, rec.SpaceID, rec.ApplicantID, rec.Pass)
 		if err != nil {
-			return err
+			i.GetLogger().
+				WithError(err).
+				WithField("applicant_id", rec.ApplicantID).
+				WithField("space_id", rec.SpaceID).
+				Warn("Не удалось изменить статус отклика кандидата после оценки")
 		}
 		return nil
 	})
