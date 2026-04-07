@@ -729,11 +729,16 @@ func (i *impl) fillVacancyData(ctx context.Context, rec *dbmodels.Vacancy) (req 
 		return nil, "для публикации на HeadHunter, необходимо указать описание не менее 200 символов"
 	}
 	request := hhapimodels.VacancyPubRequest{
-		AllowMessages:     true,
-		Description:       rec.Requirements,
-		Name:              rec.VacancyName,
-		Area:              area,
-		ProfessionalRoles: []hhapimodels.DictItem{{ID: rec.JobTitle.HhRoleID}},
+		AllowMessages: true,
+		Description:   rec.Requirements,
+		Name:          rec.VacancyName,
+		Area:          area,
+		ProfessionalRoles: []hhapimodels.DictNameItem{
+			{
+				ID:   rec.JobTitle.HhRoleID,
+				Name: rec.JobTitle.Name,
+			},
+		},
 		BillingType: hhapimodels.DictItem{
 			ID: "free",
 		},
@@ -785,7 +790,7 @@ func (i *impl) CheckIsActivePublications(ctx context.Context, spaceID string, li
 }
 
 func (i *impl) VacancyDraft(ctx context.Context, spaceID, vacancyID string) (hMsg string, err error) {
-	_, accessToken, hMsg, err := i.getToken(ctx, spaceID)
+	self, accessToken, hMsg, err := i.getToken(ctx, spaceID)
 	if err != nil || hMsg != "" {
 		return hMsg, err
 	}
@@ -810,11 +815,108 @@ func (i *impl) VacancyDraft(ctx context.Context, spaceID, vacancyID string) (hMs
 		return "вакансия уже размещена", nil
 	}
 
-	request, hMsg := i.fillVacancyData(ctx, rec)
-	if hMsg != "" {
-		return hMsg, nil
+	area, err := i.getArea(ctx, rec.City)
+	if err != nil {
+		return "", err
 	}
-	draftID, hMsg, err := i.client.VacancyPublishDraft(externalservices.GetContextWithRecID(ctx, spaceID, vacancyID), accessToken, *request)
+	if area.ID == "" {
+		//сбасываем список городов, возможно не подгрузились все города с ХХ, будет повторная загрузка при следующей публикации
+		i.cityMap = map[string]string{}
+		return "для города публикации не найден идентификатор в HeadHunter", nil
+	}
+
+	addressID, err := i.getEmployerAdressID(ctx, accessToken, rec.City, rec.PlaceOfWork, self.Employer.ID)
+	if err != nil {
+		i.getLogger(spaceID, vacancyID).WithError(err).Error("ошибка получения списка адресов работодателя из HeadHunter для размещения черновика вакансии")
+	}
+
+	request := hhapimodels.VacancyDraftRequest{
+		ClosedForApplicants:     false,
+		VacancyProperties:       []hhapimodels.VacancyProperty{{PropertyType: "HH_STANDARD"}},
+		AcceptHandicapped:       true,
+		AcceptIncompleteResumes: false,
+		AcceptLaborContract:     true,
+		AcceptTemporary:         true,
+		Address:                 nil,
+		AgeRestriction:          nil,
+		AllowMessages:           true,
+		Areas:                   []hhapimodels.DictItem{area},
+		AutoResponse:            hhapimodels.AutoResponse{AcceptAutoResponse: false},
+		BrandedTemplate:         nil,
+		CivilLawContracts:       &[]hhapimodels.DictItem{{ID: "INDIVIDUAL_PERSON"}},
+		Code:                    &rec.ID,
+		Contacts:                nil,
+		Department:              nil,
+		Description:             rec.Requirements,
+		DriverLicenseTypes:      nil,
+		Employment:              nil,
+		EmploymentFrom:          nil,
+		Experience:              &hhapimodels.DictItem{ID: rec.Experience.ToHHId()},
+		Internship:              false,
+		KeySkills:               nil,
+		Languages:               nil,
+		Name:                    rec.VacancyName,
+		NightShifts:             false,
+		ProfessionalRoles:       nil,
+		ResponseLetterRequired:  false,
+		ResponseNotifications:   true,
+		// SalaryRange:            nil,
+		// Schedule:               nil,
+		Test:                 nil,
+		WithZp:               false,
+		WorkFormat:           []hhapimodels.DictNameItem{{ID: "ON_SITE", Name: "На месте работодателя"}},
+		WorkingHours:         []hhapimodels.DictNameItem{{ID: "HOURS_8", Name: "8 часов"}},
+		WorkingTimeIntervals: nil,
+		WorkingTimeModes:     nil,
+	}
+	if addressID != "" {
+		request.Address = &hhapimodels.AddressDraft{ID: addressID}
+	}
+	switch rec.Schedule {
+	case models.ScheduleFullDay:
+		request.WorkScheduleByDays = []hhapimodels.DictNameItem{{ID: "FIVE_ON_TWO_OFF", Name: "5/2"}}
+	case models.ScheduleFlexible:
+		request.WorkScheduleByDays = []hhapimodels.DictNameItem{{ID: "FLEXIBLE", Name: "Свободный"}}
+	default:
+		request.WorkScheduleByDays = []hhapimodels.DictNameItem{{ID: "OTHER", Name: "Другое"}}
+	}
+	employment := rec.Employment.ToHHEmploymentForm()
+	if employment != "" {
+		request.EmploymentFrom = &hhapimodels.DictItem{
+			ID: employment,
+		}
+	}
+	professionalRoles := []hhapimodels.DictNameItem{
+		{
+			ID:   rec.JobTitle.HhRoleID,
+			Name: rec.JobTitle.Name,
+		},
+	}
+	request.ProfessionalRoles = &professionalRoles
+
+	salary := hhapimodels.SalaryRange{
+		Currency: "RUR",
+		Gross:    false,
+		Frequency: &hhapimodels.DictItem{
+			ID: "TWICE_PER_MONTH",
+		},
+		Mode: hhapimodels.DictItem{
+			ID: "MONTH",
+		},
+	}
+	if rec.Salary.From != 0 || rec.Salary.To != 0 {
+		salary.From = &rec.Salary.From
+		salary.To = &rec.Salary.To
+		salary.Gross = true
+		request.SalaryRange = &salary
+	} else if rec.Salary.InHand != 0 {
+		salary.From = &rec.Salary.InHand
+		salary.To = &rec.Salary.InHand
+		salary.Gross = false
+		request.SalaryRange = &salary
+	}
+
+	draftID, hMsg, err := i.client.VacancyPublishDraft(externalservices.GetContextWithRecID(ctx, spaceID, vacancyID), accessToken, request)
 	if err != nil || hMsg != "" {
 		updMap := map[string]any{
 			"hh_reasons": hMsg,
@@ -985,4 +1087,27 @@ func (i *impl) getTokenFromStorage(spaceID string) (hhapimodels.TokenData, bool,
 func (i *impl) removeToken(spaceID string) error {
 	i.tokenMap.Delete(spaceID)
 	return i.extStore.DeleteRec(spaceID, TokenCode)
+}
+
+func (i *impl) getEmployerAdressID(ctx context.Context, accessToken string, city *dbmodels.City, placeOfWork string, employerID string) (string, error) {
+
+	address, err := i.client.GetAddresseses(ctx, accessToken, employerID)
+	if err != nil {
+		return "", err
+	}
+	cityOnlyID := ""
+	for _, area := range address.Items {
+		if area.City != city.City {
+			continue
+		}
+		if area.City == area.Raw {
+			cityOnlyID = area.ID
+			continue
+		}
+
+		if strings.HasSuffix(area.Raw, placeOfWork) {
+			return area.ID, nil
+		}
+	}
+	return cityOnlyID, nil
 }

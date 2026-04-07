@@ -237,6 +237,21 @@ func (s Experience) ToPoint() int {
 	}
 	return 0
 }
+func (s Experience) ToHHId() string {
+	switch s {
+	case ExperienceNoMatter:
+		return "noExperience"
+	case ExperienceMoreThan1:
+		return "between1And3"
+	case ExperienceMoreThan3:
+		return "between3And6"
+	case ExperienceMoreThan5:
+		return "moreThan6"
+	case ExperienceMoreThan10:
+		return "moreThan6"
+	}
+	return "noExperience"
+}
 
 func ExperienceSlice() []string {
 	return []string{"Без опыта", "Более 1 года", "Более 3 лет", "Более 5 лет", "Более 10 лет"}

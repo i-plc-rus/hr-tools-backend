@@ -27,17 +27,17 @@ type VacancyDraftRequest struct {
 	Languages               *[]Language       `json:"languages"`
 	Name                    string            `json:"name"`         // Менеджер по продажам
 	NightShifts             bool              `json:"night_shifts"` //true
-	ProfessionalRoles       *[]DictItem       `json:"professional_roles"`
+	ProfessionalRoles       *[]DictNameItem   `json:"professional_roles"`
 	ResponseLetterRequired  bool              `json:"response_letter_required"` //true
 	ResponseNotifications   bool              `json:"response_notifications"`   //true
 	SalaryRange             *SalaryRange      `json:"salary_range,omitempty"`
 	Schedule                *DictItem         `json:"schedule,omitempty"` // График работы
 	Test                    *Test             `json:"test"`
 	WithZp                  bool              `json:"with_zp"`
-	WorkFormat              *DictItem         `json:"work_format"`
-	WorkScheduleByDays      []DictItem        `json:"work_schedule_by_days"`  //WEEKEND
+	WorkFormat              []DictNameItem    `json:"work_format"`
+	WorkScheduleByDays      []DictNameItem    `json:"work_schedule_by_days"`  //WEEKEND
 	WorkingDays             []DictItem        `json:"working_days"`           //only_saturday_and_sunday
-	WorkingHours            []DictItem        `json:"working_hours"`          //HOURS_4
+	WorkingHours            []DictNameItem    `json:"working_hours"`          //HOURS_4
 	WorkingTimeIntervals    []DictItem        `json:"working_time_intervals"` //from_four_to_six_hours_in_a_day
 	WorkingTimeModes        []DictItem        `json:"working_time_modes"`     //start_after_sixteen
 }
