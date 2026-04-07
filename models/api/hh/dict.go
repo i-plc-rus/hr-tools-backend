@@ -20,3 +20,15 @@ type Area struct {
 	Name     string `json:"name"`
 	Areas    []Area `json:"areas"`
 }
+
+type EmployerAddresseses struct {
+	Items []EmployerAddresses `json:"items"`
+}
+
+type EmployerAddresses struct {
+	City     string `json:"city"`
+	Street   string `json:"street"`
+	Building string `json:"building"`
+	Raw      string `json:"raw"`
+	ID       string `json:"id"`
+}

@@ -29,7 +29,7 @@ type Provider interface {
 	//https://api.hh.ru/openapi/redoc#tag/Upravlenie-vakansiyami/operation/publish-vacancy
 	VacancyPublish(ctx context.Context, accessToken string, request hhapimodels.VacancyPubRequest) (vacancyID string, hMsg string, err error)
 
-	VacancyPublishDraft(ctx context.Context, accessToken string, request hhapimodels.VacancyPubRequest) (vacancyDraftID string, hMsg string, err error)
+	VacancyPublishDraft(ctx context.Context, accessToken string, request hhapimodels.VacancyDraftRequest) (vacancyDraftID string, hMsg string, err error)
 
 	//https://api.hh.ru/openapi/redoc#tag/Chernoviki-vakansij/operation/publish-vacancy-from-draft
 	VacancyPublishFromDraft(ctx context.Context, accessToken string, draftID string) (vacancyID string, hMsg string, err error)
@@ -65,6 +65,8 @@ type Provider interface {
 
 	// https://api.hh.ru/openapi/redoc#tag/Otklikipriglasheniya-rabotodatelya/operation/send-negotiation-message
 	SendNewMessage(ctx context.Context, accessToken, vacancyID, negotiationID, message string) error
+
+	GetAddresseses(ctx context.Context, accessToken, employerID string) (hhapimodels.EmployerAddresseses, error)
 }
 
 var Instance Provider
@@ -106,6 +108,7 @@ const (
 	areasPath                 string = "%s/areas"
 	messagesListPath          string = "%s/negotiations/%v/messages"
 	messageNewPath            string = "%s/negotiations/%v/messages"
+	addressesPath             string = "%s/employers/%s/addresses"
 )
 const (
 	tokenExpiredError     string = "token-expired"
@@ -218,14 +221,11 @@ func (i impl) VacancyPublish(ctx context.Context, accessToken string, request hh
 	return resp.ID, "", nil
 }
 
-func (i impl) VacancyPublishDraft(ctx context.Context, accessToken string, requestPub hhapimodels.VacancyPubRequest) (vacancyDraftID string, hMsg string, err error) {
+func (i impl) VacancyPublishDraft(ctx context.Context, accessToken string, requestDraft hhapimodels.VacancyDraftRequest) (vacancyDraftID string, hMsg string, err error) {
 	uri := fmt.Sprintf(vPublishDraftPath, i.host)
 	logger := log.
 		WithField("external_request", uri)
 
-	ctxData := externalservices.ExtractAuditData(ctx)
-
-	requestDraft := requestPub.ToDraft(ctxData.RecID)
 	body, err := json.Marshal(requestDraft)
 	if err != nil {
 		return "", "", errors.Wrap(err, "ошибка десериализации запроса")
@@ -238,7 +238,6 @@ func (i impl) VacancyPublishDraft(ctx context.Context, accessToken string, reque
 	logger = logger.
 		WithField("request_body", string(body))
 
-	fmt.Println(string(body))
 	rCtx := externalservices.GetAuditContext(ctx, uri, body)
 	errData, err := i.sendRequestWithErrorData(rCtx, logger, r, &resp, accessToken, true)
 	if err != nil {
@@ -417,6 +416,22 @@ func (i impl) SendNewMessage(ctx context.Context, accessToken, vacancyID, negoti
 		WithField("request_body", fmt.Sprintf("%+v", data.Encode()))
 
 	return i.sendRequest(ctx, logger, r, nil, "", true)
+}
+
+func (i impl) GetAddresseses(ctx context.Context, accessToken, employerID string) (hhapimodels.EmployerAddresseses, error) {
+	uri := fmt.Sprintf(addressesPath, i.host, employerID)
+	logger := log.
+		WithField("external_request", uri)
+
+	r, _ := http.NewRequestWithContext(ctx, "GET", uri, nil)
+	r.Header.Add("Content-Type", "application/json")
+	resp := hhapimodels.EmployerAddresseses{}
+
+	err := i.sendRequest(ctx, logger, r, &resp, accessToken, true)
+	if err != nil {
+		return hhapimodels.EmployerAddresseses{}, err
+	}
+	return resp, nil
 }
 
 func (i impl) getNegotiations(ctx context.Context, accessToken, vacancyID string) (*hhapimodels.NegotiationCollections, error) {

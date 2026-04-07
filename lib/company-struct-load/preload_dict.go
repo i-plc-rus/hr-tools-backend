@@ -37,7 +37,7 @@ func PreloadCompanyStruct(tx *gorm.DB, spaceID string) error {
 		departmentName := row[1]
 		avitoAreaID, _ := strconv.Atoi(row[2])
 		jobTitleName := row[7]
-		hhRoleID := row[4]
+		hhRoleID := row[6]
 
 		if len(strings.TrimSpace(companyName)) == 0 {
 			continue

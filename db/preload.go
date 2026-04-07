@@ -25,6 +25,7 @@ func InitPreload() {
 	addBaseLicensePlan()
 	addDefLicense()
 	correctRoles()
+	correctHhRoles()
 }
 
 func addSuperAdmin() {
