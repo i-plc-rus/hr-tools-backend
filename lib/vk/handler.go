@@ -1062,8 +1062,6 @@ func (i impl) step0CalcPoints(vacancy *dbmodels.Vacancy, request surveyapimodels
 				points += 20
 			}
 		case "5":
-			fmt.Println(vacancy.Experience.ToPoint())
-			fmt.Println(models.ExperienceFromDescr(answer.Answer).ToPoint())
 			if vacancy.Experience.ToPoint() <= models.ExperienceFromDescr(answer.Answer).ToPoint() {
 				points += 25
 			}

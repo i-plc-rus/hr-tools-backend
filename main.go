@@ -92,6 +92,7 @@ func main() {
 	dict.InitRejectReasonDictApiRouters(dicts)
 	dict.InitLangDictApiRouters(dicts)
 	dict.InitRoleDictApiRouters(dicts)
+	dict.InitCommonDictApiRouters(dicts)
 
 	//space
 	space := fiber.New()

@@ -127,6 +127,7 @@ func (i *impl) companyProfile() {
 
 func (i *impl) dict() {
 	// VIEW
+	i.RegisterRule(models.DictModule, models.ViewPermission, AllRoles, "/api/v1/dict/common [get]", nil)
 	i.RegisterRule(models.DictModule, models.ViewPermission, AllRoles, "/api/v1/dict/city/{id} [get]", nil)
 	i.RegisterRule(models.DictModule, models.ViewPermission, AllRoles, "/api/v1/dict/city/find [post]", nil)
 

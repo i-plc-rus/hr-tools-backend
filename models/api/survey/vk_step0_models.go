@@ -29,20 +29,20 @@ func GetQuestionsStep0(jobTitle string) VkStep0SurveyView {
 			{
 				QuestionID:   "3",
 				QuestionText: config.Conf.Survey.VkStep0.Question3,
-				Answers:      models.EmploymentSlice(),
+				Answers:      models.EmploymentNamesSlice(),
 				QuestionType: "single_choice",
 			},
 			{
 				QuestionID:   "4",
 				QuestionText: config.Conf.Survey.VkStep0.Question4,
 				QuestionType: "single_choice",
-				Answers:      models.ScheduleSlice(),
+				Answers:      models.ScheduleNameSlice(),
 			},
 			{
 				QuestionID:   "5",
 				QuestionText: config.Conf.Survey.VkStep0.Question5,
 				QuestionType: "single_choice",
-				Answers:      models.ExperienceSlice(),
+				Answers:      models.ExperienceNameSlice(),
 			},
 		},
 	}
@@ -91,17 +91,17 @@ func (v VkStep0SurveyAnswers) Validate() error {
 			}
 			validAnswerCount++
 		case "3":
-			if !slices.Contains(models.EmploymentSlice(), answer.Answer) {
+			if !slices.Contains(models.EmploymentNamesSlice(), answer.Answer) {
 				return errors.New("Для вопроса #3 необходимо выбрать ответ из списка")
 			}
 			validAnswerCount++
 		case "4":
-			if !slices.Contains(models.ScheduleSlice(), answer.Answer) {
+			if !slices.Contains(models.ScheduleNameSlice(), answer.Answer) {
 				return errors.New("Для вопроса #4 необходимо выбрать ответ из списка")
 			}
 			validAnswerCount++
 		case "5":
-			if !slices.Contains(models.ExperienceSlice(), answer.Answer) {
+			if !slices.Contains(models.ExperienceNameSlice(), answer.Answer) {
 				return errors.New("Для вопроса #5 необходимо выбрать ответ из списка")
 			}
 			validAnswerCount++
