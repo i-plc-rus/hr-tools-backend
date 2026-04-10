@@ -1,5 +1,7 @@
 package dbmodels
 
+import "time"
+
 type MasaiSession struct {
 	BaseModel
 	VkStepID    string
@@ -7,4 +9,5 @@ type MasaiSession struct {
 	ApplicantID string
 	VideoPath   string
 	EventID     string
+	ExpiresAt   *time.Time
 }
