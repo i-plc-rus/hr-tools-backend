@@ -116,6 +116,11 @@ type Configuration struct {
 		}
 		VideoNormalizeBitrate string `default:"1000" env:"VIDEO_NORMALIZE_BITRATE"`
 		VideoNormalizeEnabled bool   `default:"true" env:"VIDEO_NORMALIZE_ENABLED"`
+		VkStep1               struct {
+			RetryDelaySec      int `default:"5" env:"SURVEY_VK_STEP1_RETRY_DELAY_SEC"`
+			RetryAttempts      int `default:"2" env:"SURVEY_VK_STEP1_RETRY_ATTEMPTS"`
+			RegenRetryAttempts int `default:"2" env:"SURVEY_VK_STEP1_REGEN_RETRY_ATTEMPTS"`
+		}
 	}
 	NotifyBot struct {
 		AddrErr string `default:"http://93.189.231.84:8080/error" env:"NOTIFY_BOT_ERR"`

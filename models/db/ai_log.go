@@ -14,6 +14,7 @@ type AiName string
 
 const (
 	AiYaGptType AiName = "yandexgpt"
+	AiMasaiType AiName = "masai"
 )
 
 type AiReqestType string
@@ -24,4 +25,5 @@ const (
 	AiRegenHRSurveyType      AiReqestType = "RegenHRSurvey"
 	AiApplicantSurveyType    AiReqestType = "ApplicantSurvey"
 	AiScoreApplicantType     AiReqestType = "ScoreApplicant"
+	AiVideoAnalyze           AiReqestType = "VideoAnalyze"
 )

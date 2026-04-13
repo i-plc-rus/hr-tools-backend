@@ -172,13 +172,13 @@ func (i *impl) renderAnswer(answer string, rType dbmodels.PromptType) (data any,
 	case dbmodels.PromptTypeCheck:
 		return nil, nil
 	case dbmodels.PromptTypeQuestions:
-		questions, comments, err := ollamasearchhandler.ParseVk1QuestionsAIResponse(answer)
+		questionResult, err := ollamasearchhandler.ParseVk1QuestionsAIResponse(answer)
 		if err != nil {
 			return nil, err
 		}
 		return surveyapimodels.VkStep1{
-			Questions:   questions,
-			Comments:    comments,
+			Questions:   questionResult.Questions,
+			Comments:    questionResult.Comments,
 			ScriptIntro: "заполняется другим промптом",
 			ScriptOutro: "заполняется другим промптом",
 		}, nil

@@ -25,11 +25,22 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	shortRequestTimeout = 30 * time.Second
+	uploadTimeout       = 10 * time.Minute // до 700 МБ - 10 минут
+	listenTimeout       = 60 * time.Minute // таймаут на всю операцию ожидания – 60 минут
+	sessionTTL          = 30 * time.Minute // tll сессии
+)
+
 type impl struct {
-	ctx     context.Context
-	baseUrl string
-	session masaisessionstore.Provider
-	busy    atomic.Bool
+	ctx              context.Context
+	baseUrl          string
+	session          masaisessionstore.Provider
+	busy             atomic.Bool
+	shortHttpClient  *http.Client // для быстрых операций (submit)
+	uploadHttpClient *http.Client // для отправки видео (upload)
+	longHttpClient   *http.Client // для долгого listenResults (без таймаута, полагаемся на контекст)
+
 }
 
 var Instance *impl
@@ -40,10 +51,17 @@ func NewHandler(ctx context.Context) {
 		ctx:     ctx,
 		baseUrl: config.Conf.AI.Masai.URL,
 		session: masaisessionstore.NewInstance(db.DB),
+		shortHttpClient: &http.Client{
+			Timeout: shortRequestTimeout,
+		},
+		uploadHttpClient: &http.Client{
+			Timeout: uploadTimeout,
+		},
+		longHttpClient: &http.Client{
+			Timeout: 0, // тут таймаутом управляем через контекст
+		},
 	}
-	initchecker.CheckInit(
-		"session", instance.session,
-	)
+	initchecker.CheckInit("session", instance.session)
 	Instance = instance
 }
 
@@ -53,20 +71,29 @@ func GetHandler(ctx context.Context) *impl {
 		ctx:     ctx,
 		baseUrl: config.Conf.AI.Masai.URL,
 		session: masaisessionstore.NewInstance(db.DB),
+		shortHttpClient: &http.Client{
+			Timeout: shortRequestTimeout,
+		},
+		uploadHttpClient: &http.Client{
+			Timeout: uploadTimeout,
+		},
+		longHttpClient: &http.Client{
+			Timeout: 0,
+		},
 	}
 }
 
 func (i *impl) getLogger() *log.Entry {
-	return log.
-		WithField("ai", "masai")
+	return log.WithField("ai", "masai")
 }
 
+// AnalyzeAnswer основной метод анализа видео
 func (i *impl) AnalyzeAnswer(vkStepID, applicantID, questionID string, reader io.Reader) (result surveyapimodels.VkAiInterviewResponse, err error) {
-	//получаем данные по существующим сессиям
 	sessionRecs, err := i.session.GetAll()
 	if err != nil {
 		return surveyapimodels.VkAiInterviewResponse{}, err
 	}
+
 	var sessionRec dbmodels.MasaiSession
 	if len(sessionRecs) == 0 {
 		sessionRec = dbmodels.MasaiSession{
@@ -75,6 +102,7 @@ func (i *impl) AnalyzeAnswer(vkStepID, applicantID, questionID string, reader io
 			ApplicantID: applicantID,
 			VideoPath:   "",
 			EventID:     "",
+			ExpiresAt:   timePtr(time.Now().Add(30 * time.Minute)),
 		}
 		id, err := i.session.Save(sessionRec)
 		if err != nil {
@@ -88,11 +116,11 @@ func (i *impl) AnalyzeAnswer(vkStepID, applicantID, questionID string, reader io
 				break
 			}
 		}
-		// данных по текущему запросу нет, но есть другие, сначала завершим их
 		if sessionRec.ID == "" {
 			return surveyapimodels.VkAiInterviewResponse{}, errors.New("найден незавершенный запрос")
 		}
 	}
+
 	now := time.Now()
 	response, err := i.QueryMasai(reader, fmt.Sprintf("%v.mp4", questionID), sessionRec)
 	if err != nil {
@@ -102,14 +130,14 @@ func (i *impl) AnalyzeAnswer(vkStepID, applicantID, questionID string, reader io
 		WithField("applicant_id", applicantID).
 		WithField("question_id", questionID).
 		WithField("answer", response).
-		WithField("answer_duration_sec", time.Now().Sub(now).Seconds()).
+		WithField("answer_duration_sec", time.Since(now).Seconds()).
 		Info("Ответ AI на запрос QueryMasai")
 
 	return i.convertResponse(response), nil
 }
 
+// QueryMasai выполняет полный цикл: загрузка, запуск, ожидание результатов
 func (i *impl) QueryMasai(reader io.Reader, fileName string, sessionRec dbmodels.MasaiSession) (result masaimodels.GradioResponse, err error) {
-	// лочим ресурсы
 	if !lock.Resource.Acquire(i.ctx, "QueryMasai") {
 		return masaimodels.GradioResponse{}, errors.New("ошибка доступа к ресурсам - контекст завершен")
 	}
@@ -124,6 +152,7 @@ func (i *impl) QueryMasai(reader io.Reader, fileName string, sessionRec dbmodels
 		}
 		logger.Info("Видео файл загружен, путь к файлу (VideoPath):", videoPath)
 		sessionRec.VideoPath = videoPath
+		sessionRec.ExpiresAt = timePtr(time.Now().Add(30 * time.Minute))
 		_, err = i.session.Save(sessionRec)
 		if err != nil {
 			logger.WithError(err).Error("ошибка сохранения пути видео файла в сессию")
@@ -138,18 +167,23 @@ func (i *impl) QueryMasai(reader io.Reader, fileName string, sessionRec dbmodels
 		}
 		logger.Info("Задание отправлено, идентификатор события (EventID):", eventID)
 		sessionRec.EventID = eventID
+		sessionRec.ExpiresAt = timePtr(time.Now().Add(30 * time.Minute))
 		_, err = i.session.Save(sessionRec)
 		if err != nil {
 			logger.WithError(err).Error("ошибка сохранения идентификатора события в сессию")
 		}
 	}
 
-	data, err := i.listenResults(sessionRec.EventID)
+	data, err := i.listenResults(i.ctx, sessionRec.EventID)
 	if err != nil {
+		// если ошибка связана с обрывом соединения, не удаляем сессию – дадим шанс повторить
+		if errors.Is(err, io.ErrUnexpectedEOF) {
+			i.getLogger().WithError(err).Warn("неожиданный обрыв соединения при ожидании результатов, сессия сохранена")
+			return masaimodels.GradioResponse{}, errors.Wrap(err, "временная ошибка сети, повторите позже")
+		}
 		i.removeSession(sessionRec.ID, false)
 		return masaimodels.GradioResponse{}, errors.Wrap(err, "ошибка анализа видео файла")
 	}
-	i.removeSession(sessionRec.ID, true)
 
 	var updates []masaimodels.GradioUpdate
 	if err := json.Unmarshal(data, &updates); err != nil {
@@ -158,6 +192,7 @@ func (i *impl) QueryMasai(reader io.Reader, fileName string, sessionRec dbmodels
 	return masaimodels.GradioResponse{Elements: updates}, nil
 }
 
+// uploadVideo загружает видео на сервер AI (быстрая операция)
 func (i *impl) uploadVideo(reader io.Reader, fileName string) (videoPath string, err error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -170,7 +205,6 @@ func (i *impl) uploadVideo(reader io.Reader, fileName string) (videoPath string,
 	if err != nil {
 		return "", err
 	}
-
 	writer.Close()
 
 	req, err := http.NewRequestWithContext(i.ctx, "POST", fmt.Sprintf("%v/upload", i.baseUrl), body)
@@ -179,8 +213,7 @@ func (i *impl) uploadVideo(reader io.Reader, fileName string) (videoPath string,
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := i.uploadHttpClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -190,10 +223,13 @@ func (i *impl) uploadVideo(reader io.Reader, fileName string) (videoPath string,
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return "", err
 	}
-
+	if len(result) == 0 {
+		return "", errors.New("пустой ответ от сервера при загрузке видео")
+	}
 	return result[0], nil
 }
 
+// submitJob запускает задачу анализа (быстрая операция)
 func (i *impl) submitJob(videoPath string) (string, error) {
 	payload := map[string]interface{}{
 		"data": []interface{}{
@@ -211,7 +247,7 @@ func (i *impl) submitJob(videoPath string) (string, error) {
 
 	data, _ := json.Marshal(payload)
 
-	resp, err := http.Post(fmt.Sprintf("%v/call/event_handler_submit", i.baseUrl),
+	resp, err := i.shortHttpClient.Post(fmt.Sprintf("%v/call/event_handler_submit", i.baseUrl),
 		"application/json", bytes.NewBuffer(data))
 	if err != nil {
 		return "", err
@@ -224,31 +260,51 @@ func (i *impl) submitJob(videoPath string) (string, error) {
 	if err := json.Unmarshal(body, &r); err != nil {
 		return "", err
 	}
-
-	return r["event_id"], nil
+	eventID, ok := r["event_id"]
+	if !ok || eventID == "" {
+		return "", errors.New("не получен event_id в ответе")
+	}
+	return eventID, nil
 }
 
-func (i *impl) listenResults(eventID string) (result []byte, err error) {
-	// флаг занятости ИИ
+// listenResults ожидает завершения обработки через SSE (долгая операция, до 60 минут)
+func (i *impl) listenResults(ctx context.Context, eventID string) (result []byte, err error) {
 	i.busy.Store(true)
 	defer i.busy.Store(false)
 
+	// Таймаут на всю операцию ожидания – 60 минут
+	ctx, cancel := context.WithTimeout(ctx, listenTimeout)
+	defer cancel()
+
 	url := fmt.Sprintf("%v/call/event_handler_submit/%s", i.baseUrl, eventID)
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	// Используем longHttpClient без встроенного таймаута
+	resp, err := i.longHttpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	reader := bufio.NewReader(resp.Body)
-
 	var currentEvent string
 	var currentData bytes.Buffer
+
+	// Канал для сигнала о завершении по контексту
+	done := make(chan struct{})
+	defer close(done)
+
+	// Горутина для принудительного закрытия соединения при отмене контекста
+	go func() {
+		select {
+		case <-ctx.Done():
+			resp.Body.Close()
+		case <-done:
+		}
+	}()
 
 	for {
 		line, err := reader.ReadBytes('\n')
@@ -256,21 +312,23 @@ func (i *impl) listenResults(eventID string) (result []byte, err error) {
 			if err == io.EOF {
 				break
 			}
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
 			return nil, err
 		}
 
 		line = bytes.TrimSpace(line)
-		// Пустая строка означает конец события в SSE
 		if len(line) == 0 {
 			if currentEvent == "complete" {
-				// Убираем лишние пробелы
 				result := bytes.TrimSpace(currentData.Bytes())
 				return result, nil
 			}
 			if currentEvent == "error" {
-				return nil, errors.Wrap(errors.New(currentData.String()), "ошибка анализа видео файла")
+				errMsg := currentData.String()
+				i.getLogger().WithField("event_id", eventID).Error("ошибка от AI: ", errMsg)
+				return nil, errors.Errorf("ошибка анализа видео файла: %s", errMsg)
 			}
-			// Сбрасываем для следующего события
 			currentEvent = ""
 			currentData.Reset()
 			continue
@@ -278,14 +336,12 @@ func (i *impl) listenResults(eventID string) (result []byte, err error) {
 
 		if bytes.HasPrefix(line, []byte("event:")) {
 			currentEvent = string(bytes.TrimSpace(line[len("event:"):]))
-			currentData.Reset() // Сбрасываем данные при новом событии
+			currentData.Reset()
 		} else if bytes.HasPrefix(line, []byte("data:")) {
-			// Каждая строка начинается с "data:"
-			// Многострочные данные объединяются с одним переносом строки
-			dataPart := line[len("data:"):]
-			dataPart = bytes.TrimLeft(dataPart, " \t") // Убираем пробелы только в начале
+			dataPart := line[len("data"):]
+			dataPart = bytes.TrimLeft(dataPart, " \t")
 			if currentData.Len() > 0 {
-				currentData.WriteByte('\n') // Добавляем перенос между многострочными данными
+				currentData.WriteByte('\n')
 			}
 			currentData.Write(dataPart)
 		}
@@ -293,17 +349,18 @@ func (i *impl) listenResults(eventID string) (result []byte, err error) {
 	return nil, errors.New("не получено событие complete")
 }
 
+// removeSession удаляет сессию, если force == true или контекст не завершён
 func (i *impl) removeSession(id string, force bool) {
 	if !force && helpers.IsContextDone(i.ctx) {
-		// завершен контекст приложения, не удаляем сессию, тк возможно ИИ еще работает
 		return
 	}
 	err := i.session.Delete(id)
 	if err != nil {
-		i.getLogger().WithError(err).Error("ошибка удаление сессии")
+		i.getLogger().WithError(err).Error("ошибка удаления сессии")
 	}
 }
 
+// convertResponse преобразует ответ от Masai в нужный формат
 func (i *impl) convertResponse(response masaimodels.GradioResponse) (result surveyapimodels.VkAiInterviewResponse) {
 	result.RecognizedText = response.GetRecognizedText()
 	for k, elem := range response.Elements {
@@ -339,6 +396,11 @@ func (i *impl) convertResponse(response masaimodels.GradioResponse) (result surv
 	return result
 }
 
+// IsVideoAiAvailable возвращает true, если AI не занят
 func (i *impl) IsVideoAiAvailable() bool {
 	return !i.busy.Load()
+}
+
+func timePtr(t time.Time) *time.Time {
+	return &t
 }
