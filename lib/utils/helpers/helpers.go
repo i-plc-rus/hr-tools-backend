@@ -2,13 +2,14 @@ package helpers
 
 import (
 	"context"
-	"github.com/h2non/filetype"
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/h2non/filetype"
 )
 
 const (
@@ -102,4 +103,22 @@ func detectFromExtension(filename string) string {
 	}
 
 	return "application/octet-stream"
+}
+
+func WithRetry[T any](tries int, delaySec int, fn func() (T, error)) (T, error) {
+	var zero T
+	if tries <= 0 {
+		tries = 1
+	}
+
+	var lastErr error
+	for range tries {
+		if val, err := fn(); err == nil {
+			return val, nil
+		} else {
+			time.Sleep(time.Second * time.Duration(delaySec))
+			lastErr = err
+		}
+	}
+	return zero, lastErr
 }

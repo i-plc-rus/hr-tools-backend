@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"hr-tools-backend/config"
+	"hr-tools-backend/lib/utils/helpers"
 	"hr-tools-backend/lib/utils/lock"
+	aimodels "hr-tools-backend/models/ai"
 	ollamamodels "hr-tools-backend/models/api/ollama"
 	surveyapimodels "hr-tools-backend/models/api/survey"
 	"io"
@@ -51,39 +53,58 @@ func (i impl) VkStep1(spaceID, vacancyID string, aiData surveyapimodels.AiData) 
 	if err != nil {
 		return resp, err
 	}
-	vk1Questions, vk1Comments, err := i.genVk1Questions(aiData)
-	if err != nil {
-		return resp, err
+	attemps := config.Conf.Survey.VkStep1.RetryAttempts + 1
+	delaySec := config.Conf.Survey.VkStep1.RetryDelaySec
+	genQuestionsFn := func() (aimodels.Vk1QuestionResult, error) {
+		return i.genVk1Questions(aiData)
 	}
-	intro, outro, err := i.genVk1IntroOutro(aiData)
+	questionResult, err := helpers.WithRetry(attemps, delaySec, genQuestionsFn)
 	if err != nil {
-		return resp, err
+		return resp, errors.Wrap(err, "ошибка генерации вопросов")
 	}
+
+	genIntroOutroFn := func() (aimodels.Vk1IntroResult, error) {
+		return i.genVk1IntroOutro(aiData)
+	}
+	introResult, err := helpers.WithRetry(attemps, delaySec, genIntroOutroFn)
+	if err != nil {
+		return resp, errors.Wrap(err, "ошибка генерации intro/outro")
+	}
+
 	resp = surveyapimodels.VkStep1{
-		Questions:   vk1Questions,
-		ScriptIntro: intro,
-		ScriptOutro: outro,
-		Comments:    vk1Comments,
+		Questions:   questionResult.Questions,
+		ScriptIntro: introResult.Intro,
+		ScriptOutro: introResult.Outro,
+		Comments:    questionResult.Comments,
 	}
 	return resp, nil
 }
 
 func (i impl) VkStep1Regen(spaceID, vacancyID string, aiData surveyapimodels.AiData) (newQuestions []surveyapimodels.VkStep1Question, comments map[string]string, err error) {
-	prompt := fmt.Sprintf(step1QRegenTemplate, aiData.VacancyInfo, aiData.ApplicantInfo, aiData.GeneratedQuestions)
+	regenQuestionsFn := func() (aimodels.Vk1QuestionResult, error) {
+		prompt := fmt.Sprintf(step1QRegenTemplate, aiData.VacancyInfo, aiData.ApplicantInfo, aiData.GeneratedQuestions)
 
-	now := time.Now()
-	// запрос к локальной модели
-	response, err := i.QueryOllama(prompt)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "ошибка получения пула с новыми вопросами")
+		now := time.Now()
+		// запрос к локальной модели
+		response, err := i.QueryOllama(prompt)
+		if err != nil {
+			return aimodels.Vk1QuestionResult{}, errors.Wrap(err, "ошибка получения пула с новыми вопросами")
+		}
+		i.getLogger().
+			WithField("prompt", prompt).
+			WithField("answer", response).
+			WithField("answer_duration_sec", time.Now().Sub(now).Seconds()).
+			Info("Ответ AI на запрос VkStep1Regen")
+		return ParseVk1QuestionsAIResponse(response)
 	}
-	i.getLogger().
-		WithField("prompt", prompt).
-		WithField("answer", response).
-		WithField("answer_duration_sec", time.Now().Sub(now).Seconds()).
-		Info("Ответ AI на запрос VkStep1Regen")
+	attemps := config.Conf.Survey.VkStep1.RegenRetryAttempts + 1
+	delaySec := config.Conf.Survey.VkStep1.RetryDelaySec
+	questionResult, err := helpers.WithRetry(attemps, delaySec, regenQuestionsFn)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "ошибка перегенерации вопросов")
+	}
 
-	return ParseVk1QuestionsAIResponse(response)
+	return questionResult.Questions, questionResult.Comments, nil
 }
 
 func (i impl) VkStep9Score(aiData surveyapimodels.SemanticData) (scoreResult surveyapimodels.VkStep9ScoreResult, err error) {
@@ -134,14 +155,14 @@ func (i impl) checkConfig() error {
 	return nil
 }
 
-func (i impl) genVk1Questions(aiData surveyapimodels.AiData) (questions []surveyapimodels.VkStep1Question, comments map[string]string, err error) {
+func (i impl) genVk1Questions(aiData surveyapimodels.AiData) (result aimodels.Vk1QuestionResult, err error) {
 	prompt := fmt.Sprintf(step1QTemplate, aiData.VacancyInfo, aiData.Requirements, aiData.ApplicantInfo, aiData.Questions, aiData.ApplicantAnswers)
 
 	now := time.Now()
 	// запрос к локальной модели
 	response, err := i.QueryOllama(prompt)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "ошибка получения пула вопросов")
+		return aimodels.Vk1QuestionResult{}, errors.Wrap(err, "ошибка получения пула вопросов")
 	}
 	i.getLogger().
 		WithField("prompt", prompt).
@@ -152,14 +173,14 @@ func (i impl) genVk1Questions(aiData surveyapimodels.AiData) (questions []survey
 	return ParseVk1QuestionsAIResponse(response)
 }
 
-func (i impl) genVk1IntroOutro(aiData surveyapimodels.AiData) (intro, outro string, err error) {
+func (i impl) genVk1IntroOutro(aiData surveyapimodels.AiData) (result aimodels.Vk1IntroResult, err error) {
 	prompt := fmt.Sprintf(step1IntroOutroTemplate, aiData.VacancyInfo, aiData.ApplicantInfo)
 
 	now := time.Now()
 	// запрос к локальной модели
 	response, err := i.QueryOllama(prompt)
 	if err != nil {
-		return "", "", errors.Wrap(err, "ошибка получения текстов сценария intro/outro")
+		return aimodels.Vk1IntroResult{}, errors.Wrap(err, "ошибка получения текстов сценария intro/outro")
 	}
 
 	i.getLogger().
@@ -219,7 +240,7 @@ func (i impl) QueryOllama(prompt string) (string, error) {
 	return ollamaResponse.Response, nil
 }
 
-func ParseVk1QuestionsAIResponse(response string) (questions []surveyapimodels.VkStep1Question, comments map[string]string, err error) {
+func ParseVk1QuestionsAIResponse(response string) (result aimodels.Vk1QuestionResult, err error) {
 	answer := extractAnswer(response)
 	answer = replaceAnswerFormatTag(answer)
 
@@ -236,10 +257,10 @@ func ParseVk1QuestionsAIResponse(response string) (questions []surveyapimodels.V
 	answerData := answerFormat{}
 	err = json.Unmarshal([]byte(answer), &answerData)
 	if err != nil {
-		return nil, nil, err
+		return aimodels.Vk1QuestionResult{}, err
 	}
-	questions = []surveyapimodels.VkStep1Question{}
-	comments = map[string]string{}
+	questions := []surveyapimodels.VkStep1Question{}
+	comments := map[string]string{}
 	for k, question := range answerData.Questions {
 		questions = append(questions, surveyapimodels.VkStep1Question{
 			ID:    question.ID,
@@ -248,7 +269,11 @@ func ParseVk1QuestionsAIResponse(response string) (questions []surveyapimodels.V
 		})
 		comments[question.ID] = question.Comment
 	}
-	return questions, comments, nil
+
+	return aimodels.Vk1QuestionResult{
+		Questions: questions,
+		Comments:  comments,
+	}, nil
 }
 
 func ParseVkStep9ScoreAIResponse(response string) (scoreResult surveyapimodels.VkStep9ScoreResult, err error) {
@@ -261,7 +286,7 @@ func ParseVkStep9ScoreAIResponse(response string) (scoreResult surveyapimodels.V
 	return scoreResult, nil
 }
 
-func ParseVk1IntroOutroAIResponse(response string) (intro, outro string, err error) {
+func ParseVk1IntroOutroAIResponse(response string) (result aimodels.Vk1IntroResult, err error) {
 	answer := extractAnswer(response)
 	answer = replaceAnswerFormatTag(answer)
 
@@ -279,9 +304,12 @@ func ParseVk1IntroOutroAIResponse(response string) (intro, outro string, err err
 	answerData := answerFormat{}
 	err = json.Unmarshal([]byte(answer), &answerData)
 	if err != nil {
-		return "", "", err
+		return aimodels.Vk1IntroResult{}, err
 	}
-	return answerData.ScriptIntro, answerData.ScriptOutro, nil
+	return aimodels.Vk1IntroResult{
+		Intro: answerData.ScriptIntro,
+		Outro: answerData.ScriptOutro,
+	}, nil
 }
 
 func (i impl) ExtractAnswer(response string) string {
