@@ -2,14 +2,14 @@ package helpers
 
 import (
 	"context"
+	"github.com/h2non/filetype"
+	log "github.com/sirupsen/logrus"
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
-
-	"github.com/h2non/filetype"
 )
 
 const (
@@ -105,7 +105,7 @@ func detectFromExtension(filename string) string {
 	return "application/octet-stream"
 }
 
-func WithRetry[T any](tries int, delaySec int, fn func() (T, error)) (T, error) {
+func WithRetry[T any](tries int, delaySec int, logger *log.Entry, fn func() (T, error)) (T, error) {
 	var zero T
 	if tries <= 0 {
 		tries = 1
@@ -116,6 +116,9 @@ func WithRetry[T any](tries int, delaySec int, fn func() (T, error)) (T, error) 
 		if val, err := fn(); err == nil {
 			return val, nil
 		} else {
+			logger.
+				WithError(err).
+				Error("Ошибка вызова функции с WithRetry")
 			time.Sleep(time.Second * time.Duration(delaySec))
 			lastErr = err
 		}
