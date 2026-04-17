@@ -247,20 +247,37 @@ func (i impl) QueryOllama(prompt string) (string, error) {
 
 func ParseVk1QuestionsAIResponse(response string) (result aimodels.Vk1QuestionResult, err error) {
 	answer := extractAnswer(response)
-	type questionFormat struct {
-		ID      string `json:"id"`
-		Text    string `json:"text"`
-		Comment string `json:"comment"`
-	}
 
 	type answerFormat struct {
 		Questions []questionFormat `json:"questions"`
 	}
 
 	answerData := answerFormat{}
-	err = json.Unmarshal([]byte(answer), &answerData)
-	if err != nil {
-		return aimodels.Vk1QuestionResult{}, err
+	isValidParse := false
+	if answer != "" {
+		// пробуем стандартную сериализацию
+		err = json.Unmarshal([]byte(answer), &answerData)
+		if err == nil {
+			answerData.Questions, isValidParse = validateAndCleanQuestions(answerData.Questions)
+		}
+	}
+	if !isValidParse {
+		// пробуем построчное извлечение
+		questions, err := extractQuestionsFromBrokenJSON(response)
+		if err == nil {
+			questions, ok := validateAndCleanQuestions(questions)
+			if ok {
+				answerData.Questions = questions
+			} else {
+				// выбираем лучший вариант (больше вопросов)
+				if len(questions) > len(answerData.Questions) {
+					answerData.Questions = questions
+				}
+			}
+		}
+	}
+	if len(answerData.Questions) == 0 {
+		return aimodels.Vk1QuestionResult{}, errors.New("ошибка извлечения вопросов")
 	}
 	questions := []surveyapimodels.VkStep1Question{}
 	comments := map[string]string{}
@@ -290,12 +307,6 @@ func ParseVkStep9ScoreAIResponse(response string) (scoreResult surveyapimodels.V
 
 func ParseVk1IntroOutroAIResponse(response string) (result aimodels.Vk1IntroResult, err error) {
 	answer := extractAnswer(response)
-
-	type questionFormat struct {
-		ID      string `json:"id"`
-		Text    string `json:"text"`
-		Comment string `json:"comment"`
-	}
 
 	type answerFormat struct {
 		ScriptIntro string `json:"script_intro"`
@@ -330,14 +341,23 @@ func extractAnswer(response string) string {
 	if jsonBlock != "" {
 		jsonBlock = cleanTrailingCharacters(jsonBlock)
 		jsonBlock = sanitizeJSON(jsonBlock)
-		return jsonBlock
+		var data any
+		err := json.Unmarshal([]byte(jsonBlock), &data)
+		if err == nil {
+			return jsonBlock
+		}
 	}
 
 	// Fallback: ищем JSON по скобкам
 	jsonStr := extractJSONByBraces(response)
 	jsonStr = cleanTrailingCharacters(jsonStr)
 	jsonStr = sanitizeJSON(jsonStr)
-	return jsonStr
+	var data any
+	err := json.Unmarshal([]byte(jsonStr), &data)
+	if err == nil {
+		return jsonStr
+	}
+	return ""
 }
 
 // находит первый блок ```json ... ```, содержащий JSON
@@ -433,4 +453,197 @@ func sanitizeJSON(s string) string {
 	s = reMissingComma.ReplaceAllString(s, `$1, $2`)
 
 	return strings.TrimSpace(s)
+}
+
+func extractQuestionsFromBrokenJSON(response string) ([]questionFormat, error) {
+
+	// Предварительная очистка от умных кавычек и управляющих символов
+	cleaned := sanitizeForExtraction(response)
+
+	// Ищем все блоки, похожие на объекты вопросов (содержат "text" и "comment")
+	//    Шаблон: между { и } с возможными вложенными скобками (но для простоты ищем невложенные)
+	objectPattern := regexp.MustCompile(`(?s)\{([^{}]*)\}`)
+	objects := objectPattern.FindAllStringSubmatch(cleaned, -1)
+
+	var questions []questionFormat
+	idCounter := 1
+
+	for _, obj := range objects {
+		if len(obj) < 2 {
+			continue
+		}
+		content := obj[1] // содержимое без внешних {}
+
+		// Извлекаем текст вопроса
+		text := extractFieldValue(content, "text")
+		comment := extractFieldValue(content, "comment")
+
+		if text == "" && comment == "" {
+			continue
+		}
+		// Если нет текста вопроса, пропускаем (вопрос без текста не нужен)
+		if text == "" {
+			continue
+		}
+
+		questions = append(questions, questionFormat{
+			ID:      fmt.Sprintf("q%d", idCounter),
+			Text:    text,
+			Comment: comment,
+		})
+		idCounter++
+	}
+
+	// Если ничего не нашли, пробуем более слабый поиск по строкам без фигурных скобок
+	if len(questions) == 0 {
+		questions = extractByLineScan(cleaned)
+	}
+
+	return questions, nil
+}
+
+// fallback для поиска вопросов построчно без фигурных скобок
+func extractByLineScan(cleaned string) []questionFormat {
+	var questions []questionFormat
+	lines := strings.Split(cleaned, "\n")
+	var currentText, currentComment strings.Builder
+	inText := false
+	inComment := false
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.Contains(line, "text") && strings.Contains(line, ":") {
+			// Начинаем новый вопрос
+			if currentText.Len() > 0 {
+				// Сохраняем предыдущий
+				questions = append(questions, questionFormat{
+					ID:      fmt.Sprintf("q%d", len(questions)+1),
+					Text:    cleanString(currentText.String()),
+					Comment: cleanString(currentComment.String()),
+				})
+				currentText.Reset()
+				currentComment.Reset()
+			}
+			// Извлекаем текст из этой строки
+			val := extractFieldValue(line, "text")
+			if val != "" {
+				currentText.WriteString(val)
+				inText = true
+				inComment = false
+			}
+		} else if strings.Contains(line, "comment") && strings.Contains(line, ":") {
+			val := extractFieldValue(line, "comment")
+			if val != "" {
+				currentComment.WriteString(val)
+				inComment = true
+				inText = false
+			}
+		} else if inText && !strings.Contains(line, "comment") {
+			// Продолжение текста вопроса на следующих строках
+			currentText.WriteString(" " + line)
+		} else if inComment {
+			currentComment.WriteString(" " + line)
+		}
+	}
+	// Добавляем последний вопрос
+	if currentText.Len() > 0 {
+		questions = append(questions, questionFormat{
+			ID:      fmt.Sprintf("q%d", len(questions)+1),
+			Text:    cleanString(currentText.String()),
+			Comment: cleanString(currentComment.String()),
+		})
+	}
+	return questions
+}
+
+// ищет в строке поле вида "ключ": "значение" (с учётом различных кавычек и без кавычек)
+func extractFieldValue(content, key string) string {
+	// Паттерн: возможны пробелы, затем ключ (с кавычками или без), затем :, затем значение до следующей запятой или конца объекта
+	// Учитываем, что ключ может быть с умными кавычками или без кавычек, и регистр может быть разный
+	// Делаем нечувствительным к регистру
+	pattern := regexp.MustCompile(`(?i)(?:"?` + regexp.QuoteMeta(key) + `"?)\s*:\s*(?:"([^"\\]*(?:\\.[^"\\]*)*)"|([^,}\n]+))`)
+	matches := pattern.FindStringSubmatch(content)
+	if len(matches) == 0 {
+		return ""
+	}
+	// matches[1] — значение в двойных кавычках, matches[2] — значение без кавычек (до запятой/скобки)
+	rawVal := ""
+	if matches[1] != "" {
+		rawVal = matches[1]
+	} else if len(matches) > 2 {
+		rawVal = matches[2]
+	}
+	if rawVal == "" {
+		return ""
+	}
+	// Очистка от лишних символов: кавычек, пробелов, управляющих последовательностей
+	cleaned := cleanString(rawVal)
+	return cleaned
+}
+
+// убирает обрамляющие кавычки, лишние пробелы, экранированные символы
+func cleanString(s string) string {
+	s = strings.TrimSpace(s)
+	// Если строка окружена двойными или одинарными кавычками — удаляем их
+	if len(s) >= 2 && ((s[0] == '"' && s[len(s)-1] == '"') || (s[0] == '\'' && s[len(s)-1] == '\'')) {
+		s = s[1 : len(s)-1]
+	}
+	// Убираем экранирование кавычек внутри (простое)
+	s = strings.ReplaceAll(s, `\"`, `"`)
+	s = strings.ReplaceAll(s, `\\`, `\`)
+	// Удаляем непечатные символы, оставляя пробелы
+	var result strings.Builder
+	for _, r := range s {
+		if r >= 32 || r == '\n' || r == '\t' {
+			result.WriteRune(r)
+		}
+	}
+	return strings.TrimSpace(result.String())
+}
+
+// заменяет умные кавычки на обычные и удаляет непечатаемые символы
+func sanitizeForExtraction(s string) string {
+	// Умные кавычки
+	smart := map[string]string{
+		"“": "\"", "”": "\"", "„": "\"", "«": "\"", "»": "\"",
+		"’": "'", "‘": "'",
+		"′": "'", "″": "\"",
+	}
+	for old, new := range smart {
+		s = strings.ReplaceAll(s, old, new)
+	}
+	// Удаляем управляющие символы, кроме пробелов и переносов строк
+	var result strings.Builder
+	for _, r := range s {
+		if r >= 32 || r == '\n' || r == '\r' || r == '\t' {
+			result.WriteRune(r)
+		}
+	}
+	return result.String()
+}
+
+type questionFormat struct {
+	ID      string `json:"id"`
+	Text    string `json:"text"`
+	Comment string `json:"comment"`
+}
+
+func validateAndCleanQuestions(questions []questionFormat) ([]questionFormat, bool) {
+	idCounter := 1
+	result := []questionFormat{}
+	for _, question := range questions {
+		if strings.TrimSpace(question.Text) == "" {
+			continue
+		}
+		result = append(result, questionFormat{
+			ID:      fmt.Sprintf("q%d", idCounter),
+			Text:    question.Text,
+			Comment: question.Comment,
+		})
+		if idCounter == 15 {
+			break
+		}
+		idCounter++
+	}
+	return result, len(result) == 15
 }
