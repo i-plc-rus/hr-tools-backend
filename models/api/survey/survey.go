@@ -52,14 +52,14 @@ type NotSuitableQuestion struct {
 }
 
 type VacancyPubData struct {
-	Title        string `json:"title"`
-	Requirements string `json:"requirements"`
-	Employment   string `json:"employment,omitempty"`
-	Experience   string `json:"experience,omitempty"`
-	Schedule     string `json:"schedule,omitempty"`
-	SalaryFrom   int    `json:"salary_from,omitempty"`
-	SalaryTo     int    `json:"salary_to,omitempty"`
-	JobTitle     string `json:"job_title,omitempty"`
+	Title        string   `json:"title"`
+	Requirements string   `json:"requirements"`
+	Employment   string   `json:"employment,omitempty"`
+	Experience   string   `json:"experience,omitempty"`
+	KeySkills    []string `json:"key_skills"`
+	SalaryFrom   int      `json:"salary_from,omitempty"`
+	SalaryTo     int      `json:"salary_to,omitempty"`
+	JobTitle     string   `json:"job_title,omitempty"`
 }
 
 type ApplicantParamsData struct {
@@ -100,22 +100,22 @@ type HRSurveyQuestionPubData struct {
 func GetVacancyDataContent(rec dbmodels.Vacancy) (string, error) {
 	result := VacancyPubData{
 		Requirements: rec.Requirements,
-		Employment:   rec.Employment.ToString(),
 		Experience:   rec.Experience.ToString(),
-		Schedule:     rec.Schedule.ToString(),
 		Title:        rec.VacancyName,
+	}
+	if rec.VacancyProps.EmploymentForm != nil {
+		result.Employment = rec.VacancyProps.EmploymentForm.Name()
+	}
+	if rec.VacancyProps.KeySkills != nil {
+		result.KeySkills = *rec.VacancyProps.KeySkills
 	}
 	if rec.JobTitle != nil {
 		result.JobTitle = rec.JobTitle.Name
 	}
 
-	if rec.Salary.From != 0 || rec.Salary.To != 0 {
-		result.SalaryFrom = rec.From
-		result.SalaryTo = rec.To
-	} else if rec.Salary.InHand != 0 {
-		result.SalaryFrom = rec.Salary.InHand
-		result.SalaryTo = rec.Salary.InHand
-
+	if rec.VacancyProps.SalaryRange.From != 0 || rec.VacancyProps.SalaryRange.To != 0 {
+		result.SalaryFrom = rec.VacancyProps.SalaryRange.From
+		result.SalaryTo = rec.VacancyProps.SalaryRange.To
 	}
 	body, err := json.Marshal(result)
 	if err != nil {
@@ -125,13 +125,13 @@ func GetVacancyDataContent(rec dbmodels.Vacancy) (string, error) {
 }
 
 type VacancyAiData struct {
-	Title      string `json:"title"`
-	Employment string `json:"employment,omitempty"`
-	Experience string `json:"experience,omitempty"`
-	Schedule   string `json:"schedule,omitempty"`
-	SalaryFrom int    `json:"salary_from,omitempty"`
-	SalaryTo   int    `json:"salary_to,omitempty"`
-	JobTitle   string `json:"job_title,omitempty"`
+	Title      string   `json:"title"`
+	Employment string   `json:"employment,omitempty"`
+	Experience string   `json:"experience,omitempty"`
+	SalaryFrom int      `json:"salary_from,omitempty"`
+	SalaryTo   int      `json:"salary_to,omitempty"`
+	JobTitle   string   `json:"job_title,omitempty"`
+	KeySkills  []string `json:"key_skills"`
 }
 
 func GetVacancyAiDataContent(rec dbmodels.Vacancy) (string, string, error) {
@@ -139,23 +139,26 @@ func GetVacancyAiDataContent(rec dbmodels.Vacancy) (string, string, error) {
 	requirements = strings.ReplaceAll(requirements, "\u00a0", " ")
 
 	result := VacancyAiData{
-		Employment: rec.Employment.ToString(),
 		Experience: rec.Experience.ToString(),
-		Schedule:   rec.Schedule.ToString(),
 		Title:      rec.VacancyName,
 	}
+	if rec.VacancyProps.EmploymentForm != nil {
+		result.Employment = rec.VacancyProps.EmploymentForm.Name()
+	}
+
+	if rec.VacancyProps.KeySkills != nil {
+		result.KeySkills = *rec.VacancyProps.KeySkills
+	}
+
 	if rec.JobTitle != nil {
 		result.JobTitle = rec.JobTitle.Name
 	}
 
-	if rec.Salary.From != 0 || rec.Salary.To != 0 {
-		result.SalaryFrom = rec.From
-		result.SalaryTo = rec.To
-	} else if rec.Salary.InHand != 0 {
-		result.SalaryFrom = rec.Salary.InHand
-		result.SalaryTo = rec.Salary.InHand
-
+	if rec.VacancyProps.SalaryRange.From != 0 || rec.VacancyProps.SalaryRange.To != 0 {
+		result.SalaryFrom = rec.VacancyProps.SalaryRange.From
+		result.SalaryTo = rec.VacancyProps.SalaryRange.To
 	}
+
 	body, err := json.Marshal(result)
 	if err != nil {
 		return "", "", errors.Wrap(err, "ошибка десериализации структуры вакансии")

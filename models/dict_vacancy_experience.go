@@ -91,7 +91,7 @@ func (s Experience) ToPoint() int {
 	}
 	return 0
 }
-func (s Experience) ToHHId() string {
+func (s Experience) ToHH() string {
 	switch s {
 	case ExperienceNoMatter:
 		return "noExperience"

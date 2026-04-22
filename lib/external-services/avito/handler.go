@@ -600,10 +600,12 @@ func (i *impl) fillVacancyData(rec *dbmodels.Vacancy) (req *avitoapimodels.Vacan
 	if rec.Experience == "" {
 		return nil, "для публикации на Avito, необходимо указать опыт работы"
 	}
-	if rec.Schedule == "" {
+	// if rec.Schedule == "" {
+	if rec.VacancyProps.WorkFormat == nil {
 		return nil, "для публикации на Avito, необходимо указать режим работы"
 	}
-	if rec.Employment == "" {
+	if rec.VacancyProps.EmploymentForm == nil {
+		// if rec.Employment == "" {
 		return nil, "для публикации на Avito, необходимо указать занятость"
 	}
 	if len(rec.VacancyName) > 50 {
@@ -619,25 +621,36 @@ func (i *impl) fillVacancyData(rec *dbmodels.Vacancy) (req *avitoapimodels.Vacan
 		BillingType:  "package",
 		BusinessArea: rec.Department.BusinessAreaID,
 		Description:  rec.Requirements,
-		Employment:   rec.Employment,
-		Experience:   rec.Experience,
+		Employment:   rec.VacancyProps.EmploymentForm.ToAvito(),
+		// Employment:   rec.Employment,
+		Experience: rec.Experience,
 		Location: avitoapimodels.Location{
 			Address: avitoapimodels.LocationAddress{
 				Locality: rec.City.City,
 			},
 		},
-		Schedule: rec.Schedule,
-		Title:    rec.VacancyName,
+		// Schedule: rec.Schedule,
+		Title: rec.VacancyName,
 	}
-	if rec.Salary.From != 0 || rec.Salary.To != 0 {
-		request.SalaryRange = &avitoapimodels.SalaryRange{
-			From: rec.From,
-			To:   rec.To,
+	if *rec.VacancyProps.EmploymentForm == models.EmploymentFormFlyInFlyOut {
+		request.Schedule = models.ScheduleFlyInFlyOut
+	} else if *rec.VacancyProps.EmploymentForm == models.EmploymentFormPart {
+		request.Schedule = models.SchedulePartTime
+	} else if *rec.VacancyProps.EmploymentForm == models.EmploymentFormFull {
+		request.Schedule = models.ScheduleFullDay
+	} else {
+		for _, format := range *rec.VacancyProps.WorkFormat {
+			request.Schedule = format.ToAvito()
+			if request.Schedule != "" {
+				break
+			}
 		}
-	} else if rec.Salary.InHand != 0 {
+	}
+
+	if rec.VacancyProps.SalaryRange.From != 0 || rec.VacancyProps.SalaryRange.To != 0 {
 		request.SalaryRange = &avitoapimodels.SalaryRange{
-			From: rec.Salary.InHand,
-			To:   rec.Salary.InHand,
+			From: rec.VacancyProps.SalaryRange.From,
+			To:   rec.VacancyProps.SalaryRange.To,
 		}
 	}
 	return &request, ""

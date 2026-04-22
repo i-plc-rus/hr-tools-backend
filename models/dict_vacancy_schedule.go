@@ -7,7 +7,7 @@ import (
 )
 
 // График работы
-// Deprecated: используются WorkSchedule
+// Deprecated: для вакансии используются WorkFormat
 type Schedule string
 
 const (

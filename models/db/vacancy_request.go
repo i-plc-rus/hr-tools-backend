@@ -1,11 +1,10 @@
 package dbmodels
 
 import (
-	"hr-tools-backend/models"
-	"time"
-
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"hr-tools-backend/models"
+	"time"
 )
 
 type VacancyRequest struct {
@@ -38,14 +37,14 @@ type VacancyRequest struct {
 	OutInteraction  string
 	InInteraction   string
 	Status          models.VRStatus
-	Employment      models.Employment `gorm:"type:varchar(255)"` // Занятость
 	Experience      models.Experience `gorm:"type:varchar(255)"` // Опыт работы
-	Schedule        models.Schedule   `gorm:"type:varchar(255)"` // Режим работы
 	Favorite        bool
 	Pinned          bool
 	Vacancies       []Vacancy
 	Comments        []VacancyRequestComment `gorm:"foreignKey:VacancyRequestID"`
 	ApprovalTasks   []ApprovalTask          `gorm:"foreignKey:RequestID"`
+	AdditionalInfo  string
+	VacancyProps    VacancyProps `gorm:"type:jsonb"`
 }
 
 type VacancyRequestComment struct {

@@ -85,6 +85,35 @@ const (
 	VacancyPubStatusDraft      VacancyPubStatus = "Черновик"
 )
 
+type Employment string
+
+const (
+	EmploymentTemporary  Employment = "temporary"  //Временная
+	EmploymentFull       Employment = "full"       //Полная
+	EmploymentInternship Employment = "internship" //Стажировка
+	EmploymentPartial    Employment = "partial"    //Частичная
+	EmploymentVolunteer  Employment = "volunteer"  //Волонтерство
+	EmploymentProbation  Employment = "probation"  //Стажировка
+)
+
+func (e Employment) ToString() string {
+	switch e {
+	case EmploymentTemporary:
+		return "Временная"
+	case EmploymentFull:
+		return "Полная"
+	case EmploymentInternship:
+		return "Стажировка"
+	case EmploymentPartial:
+		return "Частичная"
+	case EmploymentVolunteer:
+		return "Волонтерство"
+	case EmploymentProbation:
+		return "Стажировка"
+	}
+	return ""
+}
+
 type ApplicantStatus string
 
 const (
@@ -186,18 +215,6 @@ const (
 	ResponsePeriodTypeMoreMonth ResponsePeriodType = "более месяца"
 )
 
-type LanguageLevelType string
-
-const (
-	LanguageLevelA1 LanguageLevelType = "a1"
-	LanguageLevelA2 LanguageLevelType = "a2"
-	LanguageLevelB1 LanguageLevelType = "b1"
-	LanguageLevelB2 LanguageLevelType = "b2"
-	LanguageLevelC1 LanguageLevelType = "c1"
-	LanguageLevelC2 LanguageLevelType = "c2"
-	LanguageLevelL1 LanguageLevelType = "l1"
-)
-
 type GenderType string
 
 const (
@@ -234,21 +251,6 @@ func (t TripReadinessType) ToString() string {
 	}
 	return ""
 }
-
-type DriverLicenseType string
-
-const (
-	DriverLicenseA  DriverLicenseType = "A"
-	DriverLicenseB  DriverLicenseType = "B"
-	DriverLicenseC  DriverLicenseType = "C"
-	DriverLicenseD  DriverLicenseType = "D"
-	DriverLicenseE  DriverLicenseType = "E"
-	DriverLicenseBE DriverLicenseType = "BE"
-	DriverLicenseCE DriverLicenseType = "CE"
-	DriverLicenseDE DriverLicenseType = "DE"
-	DriverLicenseTM DriverLicenseType = "TM"
-	DriverLicenseTB DriverLicenseType = "TB"
-)
 
 type SearchStatusType string
 

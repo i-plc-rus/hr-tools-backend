@@ -1036,6 +1036,136 @@ definitions:
       value:
         type: string
     type: object
+  dbmodels.VacancyContacts:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      phones:
+        items:
+          $ref: '#/definitions/dbmodels.VacancyPhone'
+        type: array
+    type: object
+  dbmodels.VacancyLanguage:
+    properties:
+      language_id:
+        type: string
+      level:
+        $ref: '#/definitions/models.LanguageLevelType'
+    type: object
+  dbmodels.VacancyPhone:
+    properties:
+      city:
+        type: string
+      country:
+        type: string
+      number:
+        type: string
+    type: object
+  dbmodels.VacancyProps:
+    properties:
+      accept_handicapped:
+        description: Соискатель с инвалидностью
+        type: boolean
+      accept_incomplete_resumes:
+        description: Разрешен ли отклик на вакансию неполным резюме
+        type: boolean
+      accept_labor_contract:
+        description: Указание на возможность приёма кандидата на работу по трудовому
+          договору
+        type: boolean
+      age_restriction:
+        allOf:
+        - $ref: '#/definitions/models.AgeRestriction'
+        description: Указание на возможность приёма кандидата на работу по трудовому
+          договору в соответствии с трудовым законодательством
+      allow_messages:
+        description: Возможность переписки с кандидатами по данной вакансии
+        type: boolean
+      auto_response:
+        description: Настройки для автооткликов
+        type: boolean
+      civil_law_contracts:
+        description: Договор гражданско-правового характера
+        items:
+          $ref: '#/definitions/models.CivilLawContract'
+        type: array
+      closed_for_applicants:
+        description: Закрытая или открытая вакансия
+        type: boolean
+      contacts:
+        allOf:
+        - $ref: '#/definitions/dbmodels.VacancyContacts'
+        description: Контакты
+      driver_license_types:
+        description: Права (опционально)
+        items:
+          $ref: '#/definitions/models.DriverLicenseType'
+        type: array
+      employment_form:
+        allOf:
+        - $ref: '#/definitions/models.EmploymentForm'
+        description: Занятость
+      fly_in_fly_out_duration:
+        description: Длительность вахты
+        items:
+          $ref: '#/definitions/models.FlyInFlyOutDuration'
+        type: array
+      internship:
+        description: Стажировка
+        type: boolean
+      key_skills:
+        description: Ключевые навыки
+        items:
+          type: string
+        type: array
+      languages:
+        description: Языки вакансии
+        items:
+          $ref: '#/definitions/dbmodels.VacancyLanguage'
+        type: array
+      night_shifts:
+        description: Ночные смены
+        type: boolean
+      response_letter_required:
+        description: Обязательно ли заполнять сообщение при отклике на вакансию
+        type: boolean
+      response_notifications:
+        description: Уведомлять ли менеджера о новых откликах
+        type: boolean
+      salary_range:
+        allOf:
+        - $ref: '#/definitions/dbmodels.VacancySalaryRange'
+        description: Зарплата
+      with_zp:
+        description: Разместить на Зарплата.ру
+        type: boolean
+      work_format:
+        description: Формат работы
+        items:
+          $ref: '#/definitions/models.WorkFormat'
+        type: array
+      work_schedule_by_days:
+        description: График работы
+        items:
+          $ref: '#/definitions/models.WorkScheduleByDays'
+        type: array
+      working_hours:
+        description: Рабочие часы в день
+        items:
+          $ref: '#/definitions/models.WorkingHours'
+        type: array
+    type: object
+  dbmodels.VacancySalaryRange:
+    properties:
+      from:
+        type: integer
+      gross:
+        type: boolean
+      to:
+        type: integer
+    type: object
   dictapimodels.CityData:
     properties:
       address:
@@ -1283,6 +1413,14 @@ definitions:
     x-enum-varnames:
     - AddedTypeAdded
     - AddedTypeNegotiation
+  models.AgeRestriction:
+    enum:
+    - AGE_14_PLUS
+    - AGE_16_PLUS
+    type: string
+    x-enum-varnames:
+    - AgeRestriction14Plus
+    - AgeRestriction16Plus
   models.ApAddedPeriodType:
     enum:
     - За сегодня
@@ -1339,6 +1477,86 @@ definitions:
     - AStateRequestChanges
     - AStateRejected
     - AStateRemoved
+  models.CivilLawContract:
+    enum:
+    - SELF_EMPLOYED
+    - INDIVIDUAL_ENTREPRENEUR
+    - INDIVIDUAL_PERSON
+    type: string
+    x-enum-varnames:
+    - CivilLawContractSelfEmployed
+    - CivilLawContractIndividualEntrepreneur
+    - CivilLawContractIndividualPerson
+  models.CommonDict:
+    properties:
+      age_restriction:
+        items:
+          $ref: '#/definitions/models.CommonDictItem'
+        type: array
+      civil_law_contract:
+        items:
+          $ref: '#/definitions/models.CommonDictItem'
+        type: array
+      driver_license_types:
+        items:
+          $ref: '#/definitions/models.CommonDictItem'
+        type: array
+      fly_in_fly_out_duration:
+        items:
+          $ref: '#/definitions/models.CommonDictItem'
+        type: array
+      language_level_types:
+        items:
+          $ref: '#/definitions/models.CommonDictItem'
+        type: array
+      vacancy_employment_from:
+        items:
+          $ref: '#/definitions/models.CommonDictItem'
+        type: array
+      vacancy_experience:
+        items:
+          $ref: '#/definitions/models.CommonDictItem'
+        type: array
+      vacancy_request_type:
+        items:
+          $ref: '#/definitions/models.CommonDictItem'
+        type: array
+      vacancy_schedule:
+        items:
+          $ref: '#/definitions/models.CommonDictItem'
+        type: array
+      vacancy_selection_type:
+        items:
+          $ref: '#/definitions/models.CommonDictItem'
+        type: array
+      vacancy_urgency:
+        items:
+          $ref: '#/definitions/models.CommonDictItem'
+        type: array
+      vacancy_work_schedule:
+        items:
+          $ref: '#/definitions/models.CommonDictItem'
+        type: array
+      vacancy_working_hours:
+        items:
+          $ref: '#/definitions/models.CommonDictItem'
+        type: array
+      work_format:
+        items:
+          $ref: '#/definitions/models.CommonDictItem'
+        type: array
+      work_hours:
+        items:
+          $ref: '#/definitions/models.CommonDictItem'
+        type: array
+    type: object
+  models.CommonDictItem:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
   models.DriverLicenseType:
     enum:
     - A
@@ -1423,6 +1641,18 @@ definitions:
     - EmploymentPartial
     - EmploymentVolunteer
     - EmploymentProbation
+  models.EmploymentForm:
+    enum:
+    - FULL
+    - PART
+    - PROJECT
+    - FLY_IN_FLY_OUT
+    type: string
+    x-enum-varnames:
+    - EmploymentFormFull
+    - EmploymentFormPart
+    - EmploymentFormProject
+    - EmploymentFormFlyInFlyOut
   models.Experience:
     enum:
     - noMatter
@@ -1460,6 +1690,30 @@ definitions:
     - ExperienceTypeBetween1And3
     - ExperienceTypeBetween3And6
     - ExperienceTypeMoreThan6
+  models.FlyInFlyOutDuration:
+    enum:
+    - DAYS_15
+    - DAYS_20
+    - DAYS_30
+    - DAYS_40
+    - DAYS_45
+    - DAYS_60
+    - DAYS_90
+    - DAYS_120
+    - DAYS_180
+    - OTHER
+    type: string
+    x-enum-varnames:
+    - FlyInFlyOutDurationDays15
+    - FlyInFlyOutDurationDays20
+    - FlyInFlyOutDurationDays30
+    - FlyInFlyOutDurationDays40
+    - FlyInFlyOutDurationDays45
+    - FlyInFlyOutDurationDays60
+    - FlyInFlyOutDurationDays90
+    - FlyInFlyOutDurationDays120
+    - FlyInFlyOutDurationDays180
+    - FlyInFlyOutDurationOther
   models.GenderType:
     enum:
     - male
@@ -1832,6 +2086,82 @@ definitions:
     - VideoInterviewStatusProcessing
     - VideoInterviewStatusReady
     - VideoInterviewStatusError
+  models.WorkFormat:
+    enum:
+    - ON_SITE
+    - REMOTE
+    - HYBRID
+    - FIELD_WORK
+    type: string
+    x-enum-varnames:
+    - WorkFormatOnSite
+    - WorkFormatRemote
+    - WorkFormatHybrid
+    - WorkFormatFieldWork
+  models.WorkScheduleByDays:
+    enum:
+    - 6/1
+    - 5/2
+    - 4/4
+    - 4/3
+    - 4/2
+    - 3/3
+    - 3/2
+    - 2/2
+    - 2/1
+    - 1/3
+    - 1/2
+    - По выходным
+    - Свободный
+    - Другое
+    type: string
+    x-enum-varnames:
+    - WorkScheduleByDaysSixOnOneOff
+    - WorkScheduleByDaysFiveOnTwoOff
+    - WorkScheduleByDaysFourOnFourOff
+    - WorkScheduleByDaysFourOnThreeOff
+    - WorkScheduleByDaysFourOnTwoOff
+    - WorkScheduleByDaysThreeOnThreeOff
+    - WorkScheduleByDaysThreeOnTwoOff
+    - WorkScheduleByDaysTwoOnTwoOff
+    - WorkScheduleByDaysTwoOnOneOff
+    - WorkScheduleByDaysOneOnThreeOff
+    - WorkScheduleByDaysOneOnTwoOff
+    - WorkScheduleByDaysWeekend
+    - WorkScheduleByDaysFlexible
+    - WorkScheduleByDaysOther
+  models.WorkingHours:
+    enum:
+    - HOURS_2
+    - HOURS_3
+    - HOURS_4
+    - HOURS_5
+    - HOURS_6
+    - HOURS_7
+    - HOURS_8
+    - HOURS_9
+    - HOURS_10
+    - HOURS_11
+    - HOURS_12
+    - HOURS_24
+    - FLEXIBLE
+    - OTHER
+    type: string
+    x-enum-varnames:
+    - WorkingHours2
+    - WorkingHours3
+    - WorkingHours4
+    - WorkingHours5
+    - WorkingHours6
+    - WorkingHours7
+    - WorkingHours8
+    - WorkingHours9
+    - WorkingHours10
+    - WorkingHours11
+    - WorkingHours12
+    - WorkingHours24
+    - WorkingHoursFlexible
+    - WorkingHoursOther
   msgtemplateapimodels.MsgTemplateData:
     properties:
       message:
@@ -2691,17 +3021,6 @@ definitions:
         description: Поиск по ФИО
         type: string
     type: object
-  vacancyapimodels.Salary:
-    properties:
-      by_result:
-        type: integer
-      from:
-        type: integer
-      in_hand:
-        type: integer
-      to:
-        type: integer
-    type: object
   vacancyapimodels.SearchPeriod:
     enum:
     - 1
@@ -2783,6 +3102,9 @@ definitions:
     type: object
   vacancyapimodels.VacancyData:
     properties:
+      additional_info:
+        description: условия / доп. информация (разделить с requirements)
+        type: string
       chief_fio:
         description: фио непосредственного руководителя
         type: string
@@ -2801,10 +3123,6 @@ definitions:
       department_id:
         description: ид подразделения
         type: string
-      employment:
-        allOf:
-        - $ref: '#/definitions/models.Employment'
-        description: Занятость
       experience:
         allOf:
         - $ref: '#/definitions/models.Experience'
@@ -2825,14 +3143,6 @@ definitions:
       requirements:
         description: требования/обязанности/условия
         type: string
-      salary:
-        allOf:
-        - $ref: '#/definitions/vacancyapimodels.Salary'
-        description: ожидания по зп
-      schedule:
-        allOf:
-        - $ref: '#/definitions/models.Schedule'
-        description: Режим работы
       selection_type:
         allOf:
         - $ref: '#/definitions/models.VRSelectionType'
@@ -2844,6 +3154,8 @@ definitions:
       vacancy_name:
         description: название вакансии
         type: string
+      vacancy_props:
+        $ref: '#/definitions/dbmodels.VacancyProps'
       vacancy_request_id:
         description: ид заявки на вакансию
         type: string
@@ -2911,6 +3223,9 @@ definitions:
     type: object
   vacancyapimodels.VacancyRequestCreateData:
     properties:
+      additional_info:
+        description: условия / доп. информация (разделить с requirements)
+        type: string
       approval_stages:
         items:
           $ref: '#/definitions/vacancyapimodels.ApprovalTaskData'
@@ -2942,10 +3257,6 @@ definitions:
       description:
         description: Коментарий к заявке
         type: string
-      employment:
-        allOf:
-        - $ref: '#/definitions/models.Employment'
-        description: Занятость
       experience:
         allOf:
         - $ref: '#/definitions/models.Experience'
@@ -2975,10 +3286,6 @@ definitions:
       requirements:
         description: требования/обязанности/условия
         type: string
-      schedule:
-        allOf:
-        - $ref: '#/definitions/models.Schedule'
-        description: Режим работы
       selection_type:
         allOf:
         - $ref: '#/definitions/models.VRSelectionType'
@@ -2993,9 +3300,14 @@ definitions:
       vacancy_name:
         description: название вакансии
         type: string
+      vacancy_props:
+        $ref: '#/definitions/dbmodels.VacancyProps'
     type: object
   vacancyapimodels.VacancyRequestEditData:
     properties:
+      additional_info:
+        description: условия / доп. информация (разделить с requirements)
+        type: string
       approval_stages:
         items:
           $ref: '#/definitions/vacancyapimodels.ApprovalTaskData'
@@ -3024,10 +3336,6 @@ definitions:
       description:
         description: Коментарий к заявке
         type: string
-      employment:
-        allOf:
-        - $ref: '#/definitions/models.Employment'
-        description: Занятость
       experience:
         allOf:
         - $ref: '#/definitions/models.Experience'
@@ -3057,10 +3365,6 @@ definitions:
       requirements:
         description: требования/обязанности/условия
         type: string
-      schedule:
-        allOf:
-        - $ref: '#/definitions/models.Schedule'
-        description: Режим работы
       selection_type:
         allOf:
         - $ref: '#/definitions/models.VRSelectionType'
@@ -3075,6 +3379,8 @@ definitions:
       vacancy_name:
         description: название вакансии
         type: string
+      vacancy_props:
+        $ref: '#/definitions/dbmodels.VacancyProps'
     type: object
   vacancyapimodels.VacancyRequestPreView:
     properties:
@@ -3087,6 +3393,9 @@ definitions:
     type: object
   vacancyapimodels.VacancyRequestView:
     properties:
+      additional_info:
+        description: условия / доп. информация (разделить с requirements)
+        type: string
       approval_tasks:
         description: список согласующих
         items:
@@ -3132,10 +3441,6 @@ definitions:
       description:
         description: Коментарий к заявке
         type: string
-      employment:
-        allOf:
-        - $ref: '#/definitions/models.Employment'
-        description: Занятость
       experience:
         allOf:
         - $ref: '#/definitions/models.Experience'
@@ -3176,10 +3481,6 @@ definitions:
       requirements:
         description: требования/обязанности/условия
         type: string
-      schedule:
-        allOf:
-        - $ref: '#/definitions/models.Schedule'
-        description: Режим работы
       selection_type:
         allOf:
         - $ref: '#/definitions/models.VRSelectionType'
@@ -3196,6 +3497,8 @@ definitions:
       vacancy_name:
         description: название вакансии
         type: string
+      vacancy_props:
+        $ref: '#/definitions/dbmodels.VacancyProps'
     type: object
   vacancyapimodels.VacancySort:
     properties:
@@ -3217,6 +3520,9 @@ definitions:
     - VacancyTabArch
   vacancyapimodels.VacancyView:
     properties:
+      additional_info:
+        description: условия / доп. информация (разделить с requirements)
+        type: string
       author_full_name:
         description: ФИО автора вакансии
         type: string
@@ -3253,10 +3559,6 @@ definitions:
         type: string
       department_name:
         type: string
-      employment:
-        allOf:
-        - $ref: '#/definitions/models.Employment'
-        description: Занятость
       experience:
         allOf:
         - $ref: '#/definitions/models.Experience'
@@ -3297,14 +3599,6 @@ definitions:
       responsible_id:
         description: Идентификатор ответственного
         type: string
-      salary:
-        allOf:
-        - $ref: '#/definitions/vacancyapimodels.Salary'
-        description: ожидания по зп
-      schedule:
-        allOf:
-        - $ref: '#/definitions/models.Schedule'
-        description: Режим работы
       selection_stages:
         description: этапы подбора
         items:
@@ -3323,6 +3617,8 @@ definitions:
       vacancy_name:
         description: название вакансии
         type: string
+      vacancy_props:
+        $ref: '#/definitions/dbmodels.VacancyProps'
       vacancy_request_id:
         description: ид заявки на вакансию
         type: string
@@ -4132,6 +4428,38 @@ paths:
       summary: Поиск по названию
       tags:
       - Справочник. Города
+  /api/v1/dict/common:
+    get:
+      description: Получение справочников
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.CommonDict'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Получение справочников
+      tags:
+      - Справочник. Статические справочники
   /api/v1/dict/company:
     post:
       description: Создание

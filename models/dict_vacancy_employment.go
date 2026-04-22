@@ -6,72 +6,75 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Employment string
+type EmploymentForm string
 
 const (
-	EmploymentTemporary  Employment = "temporary"  //Временная
-	EmploymentFull       Employment = "full"       //Полная
-	EmploymentInternship Employment = "internship" //Стажировка
-	EmploymentPartial    Employment = "partial"    //Частичная
-	EmploymentVolunteer  Employment = "volunteer"  //Волонтерство
-	EmploymentProbation  Employment = "probation"  //Стажировка
+	EmploymentFormFull        EmploymentForm = "FULL"
+	EmploymentFormPart        EmploymentForm = "PART"
+	EmploymentFormProject     EmploymentForm = "PROJECT"
+	EmploymentFormFlyInFlyOut EmploymentForm = "FLY_IN_FLY_OUT"
 )
 
-func EmploymentNamesSlice() []string {
-	return []string{"Временная", "Полная", "Стажировка", "Частичная", "Волонтерство"}
+func EmploymentFormSlice() []EmploymentForm {
+	return []EmploymentForm{
+		EmploymentFormFull,
+		EmploymentFormPart,
+		EmploymentFormProject,
+		EmploymentFormFlyInFlyOut,
+	}
 }
 
-func EmploymentSlice() []Employment {
-	return []Employment{EmploymentTemporary, EmploymentFull, EmploymentInternship, EmploymentPartial, EmploymentVolunteer, EmploymentProbation}
+func EmploymentFormNameSlice() []string {
+	return []string{"Полная занятость", "Частичная занятость", "Подработка", "Вахта"}
 }
 
-func (v Employment) Code() string {
+func (v EmploymentForm) Code() string {
 	return string(v)
 }
 
-func (v Employment) Name() string {
-	return v.ToString()
-}
-
-func (e Employment) ToString() string {
-	switch e {
-	case EmploymentTemporary:
-		return "Временная"
-	case EmploymentFull:
-		return "Полная"
-	case EmploymentInternship:
-		return "Стажировка"
-	case EmploymentPartial:
-		return "Частичная"
-	case EmploymentVolunteer:
-		return "Волонтерство"
-	case EmploymentProbation:
-		return "Стажировка"
+func (v EmploymentForm) Name() string {
+	switch v {
+	case EmploymentFormFull:
+		return "Полная занятость"
+	case EmploymentFormPart:
+		return "Частичная занятость"
+	case EmploymentFormProject:
+		return "Подработка"
+	case EmploymentFormFlyInFlyOut:
+		return "Вахта"
+	default:
+		return ""
 	}
-	return ""
 }
 
-func (e Employment) ToHHEmploymentForm() string {
-	switch e {
-	case EmploymentTemporary:
-		return "PROJECT"
-	case EmploymentFull:
-		return "FULL"
-	case EmploymentPartial:
-		return "PART"
+func (v EmploymentForm) ToHh() string {
+	return string(v)
+}
+
+func (v EmploymentForm) ToAvito() Employment {
+	switch v {
+	case EmploymentFormFull:
+		return EmploymentFull
+	case EmploymentFormPart:
+		return EmploymentPartial
+	case EmploymentFormProject:
+		return EmploymentTemporary
+	case EmploymentFormFlyInFlyOut:
+		return EmploymentFull
+	default:
+		return ""
 	}
-	return ""
 }
 
-func (v Employment) Validate(optional bool) error {
+func (v EmploymentForm) Validate(optional bool) error {
 	if v == "" {
 		if optional {
 			return nil
 		}
-		return errors.New("занятость не указана")
+		return errors.New("тип занятости не указан")
 	}
-	if !slices.Contains(EmploymentSlice(), v) {
-		return errors.New("занятость указана некорректно")
+	if !slices.Contains(EmploymentFormSlice(), v) {
+		return errors.New("тип занятости указан некорректно")
 	}
 	return nil
 }

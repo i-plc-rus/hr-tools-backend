@@ -29,14 +29,14 @@ func GetQuestionsStep0(jobTitle string) VkStep0SurveyView {
 			{
 				QuestionID:   "3",
 				QuestionText: config.Conf.Survey.VkStep0.Question3,
-				Answers:      models.EmploymentNamesSlice(),
+				Answers:      models.EmploymentFormNameSlice(),
 				QuestionType: "single_choice",
 			},
 			{
 				QuestionID:   "4",
 				QuestionText: config.Conf.Survey.VkStep0.Question4,
 				QuestionType: "single_choice",
-				Answers:      models.ScheduleNameSlice(),
+				Answers:      models.WorkFormatNameSlice(),
 			},
 			{
 				QuestionID:   "5",
@@ -91,12 +91,12 @@ func (v VkStep0SurveyAnswers) Validate() error {
 			}
 			validAnswerCount++
 		case "3":
-			if !slices.Contains(models.EmploymentNamesSlice(), answer.Answer) {
+			if !slices.Contains(models.EmploymentFormNameSlice(), answer.Answer) {
 				return errors.New("Для вопроса #3 необходимо выбрать ответ из списка")
 			}
 			validAnswerCount++
 		case "4":
-			if !slices.Contains(models.ScheduleNameSlice(), answer.Answer) {
+			if !slices.Contains(models.WorkFormatNameSlice(), answer.Answer) {
 				return errors.New("Для вопроса #4 необходимо выбрать ответ из списка")
 			}
 			validAnswerCount++

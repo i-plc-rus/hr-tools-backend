@@ -152,9 +152,9 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyReques
 		OutInteraction:  data.OutInteraction,
 		InInteraction:   data.InInteraction,
 		Status:          models.VRStatusCreated,
-		Employment:      data.Employment,
 		Experience:      data.Experience,
-		Schedule:        data.Schedule,
+		AdditionalInfo:  data.AdditionalInfo,
+		VacancyProps:    data.VacancyProps,
 	}
 	if data.AsTemplate {
 		rec.Status = models.VRStatusDraft
@@ -640,9 +640,9 @@ func (i impl) updateVr(store vacancyreqstore.Provider, spaceID, id string, data 
 		"Description":     data.Description,
 		"OutInteraction":  data.OutInteraction,
 		"InInteraction":   data.InInteraction,
-		"Employment":      data.Employment,
 		"Experience":      data.Experience,
-		"Schedule":        data.Schedule,
+		"AdditionalInfo":  data.AdditionalInfo,
+		"VacancyProps":    data.VacancyProps,
 	}
 	err = store.Update(spaceID, id, updMap)
 	if err != nil {
@@ -679,10 +679,9 @@ func (i impl) publish(spaceID, id, userID string) error {
 		PlaceOfWork:      rec.PlaceOfWork,
 		ChiefFio:         rec.ChiefFio,
 		Requirements:     rec.Requirements,
-		Salary:           vacancyapimodels.Salary{},
-		Employment:       rec.Employment,
-		Experience:       rec.Experience,
-		Schedule:         rec.Schedule,
+		Experience:     rec.Experience,
+		AdditionalInfo: rec.AdditionalInfo,
+		VacancyProps:   rec.VacancyProps,
 	}
 	err = data.Validate(true)
 	if err != nil {

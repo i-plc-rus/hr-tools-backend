@@ -7,95 +7,95 @@ import (
 )
 
 // График работы
-type WorkSchedule string
+type WorkScheduleByDays string
 
 const (
-	WorkScheduleSixOnOneOff     WorkSchedule = "6/1"
-	WorkScheduleFiveOnTwoOff    WorkSchedule = "5/2"
-	WorkScheduleFourOnFourOff   WorkSchedule = "4/4"
-	WorkScheduleFourOnThreeOff  WorkSchedule = "4/3"
-	WorkScheduleFourOnTwoOff    WorkSchedule = "4/2"
-	WorkScheduleThreeOnThreeOff WorkSchedule = "3/3"
-	WorkScheduleThreeOnTwoOff   WorkSchedule = "3/2"
-	WorkScheduleTwoOnTwoOff     WorkSchedule = "2/2"
-	WorkScheduleTwoOnOneOff     WorkSchedule = "2/1"
-	WorkScheduleOneOnThreeOff   WorkSchedule = "1/3"
-	WorkScheduleOneOnTwoOff     WorkSchedule = "1/2"
-	WorkScheduleWeekend         WorkSchedule = "По выходным"
-	WorkScheduleFlexible        WorkSchedule = "Свободный"
-	WorkScheduleOther           WorkSchedule = "Другое"
+	WorkScheduleByDaysSixOnOneOff     WorkScheduleByDays = "6/1"
+	WorkScheduleByDaysFiveOnTwoOff    WorkScheduleByDays = "5/2"
+	WorkScheduleByDaysFourOnFourOff   WorkScheduleByDays = "4/4"
+	WorkScheduleByDaysFourOnThreeOff  WorkScheduleByDays = "4/3"
+	WorkScheduleByDaysFourOnTwoOff    WorkScheduleByDays = "4/2"
+	WorkScheduleByDaysThreeOnThreeOff WorkScheduleByDays = "3/3"
+	WorkScheduleByDaysThreeOnTwoOff   WorkScheduleByDays = "3/2"
+	WorkScheduleByDaysTwoOnTwoOff     WorkScheduleByDays = "2/2"
+	WorkScheduleByDaysTwoOnOneOff     WorkScheduleByDays = "2/1"
+	WorkScheduleByDaysOneOnThreeOff   WorkScheduleByDays = "1/3"
+	WorkScheduleByDaysOneOnTwoOff     WorkScheduleByDays = "1/2"
+	WorkScheduleByDaysWeekend         WorkScheduleByDays = "По выходным"
+	WorkScheduleByDaysFlexible        WorkScheduleByDays = "Свободный"
+	WorkScheduleByDaysOther           WorkScheduleByDays = "Другое"
 )
 
-func WorkScheduleSlice() []WorkSchedule {
-	return []WorkSchedule{
-		WorkScheduleSixOnOneOff,
-		WorkScheduleFiveOnTwoOff,
-		WorkScheduleFourOnFourOff,
-		WorkScheduleFourOnThreeOff,
-		WorkScheduleFourOnTwoOff,
-		WorkScheduleThreeOnThreeOff,
-		WorkScheduleThreeOnTwoOff,
-		WorkScheduleTwoOnTwoOff,
-		WorkScheduleTwoOnOneOff,
-		WorkScheduleOneOnThreeOff,
-		WorkScheduleOneOnTwoOff,
-		WorkScheduleWeekend,
-		WorkScheduleFlexible,
-		WorkScheduleOther,
+func WorkScheduleByDaysSlice() []WorkScheduleByDays {
+	return []WorkScheduleByDays{
+		WorkScheduleByDaysSixOnOneOff,
+		WorkScheduleByDaysFiveOnTwoOff,
+		WorkScheduleByDaysFourOnFourOff,
+		WorkScheduleByDaysFourOnThreeOff,
+		WorkScheduleByDaysFourOnTwoOff,
+		WorkScheduleByDaysThreeOnThreeOff,
+		WorkScheduleByDaysThreeOnTwoOff,
+		WorkScheduleByDaysTwoOnTwoOff,
+		WorkScheduleByDaysTwoOnOneOff,
+		WorkScheduleByDaysOneOnThreeOff,
+		WorkScheduleByDaysOneOnTwoOff,
+		WorkScheduleByDaysWeekend,
+		WorkScheduleByDaysFlexible,
+		WorkScheduleByDaysOther,
 	}
 }
 
-func (v WorkSchedule) Code() string {
+func (v WorkScheduleByDays) Code() string {
 	return string(v)
 }
 
-func (v WorkSchedule) Name() string {
+func (v WorkScheduleByDays) Name() string {
 	return string(v)
 }
 
-func (s WorkSchedule) ToHhCode() string {
+func (s WorkScheduleByDays) ToHh() string {
 	switch s {
-	case WorkScheduleSixOnOneOff:
+	case WorkScheduleByDaysSixOnOneOff:
 		return "SIX_ON_ONE_OFF"
-	case WorkScheduleFiveOnTwoOff:
+	case WorkScheduleByDaysFiveOnTwoOff:
 		return "FIVE_ON_TWO_OFF"
-	case WorkScheduleFourOnFourOff:
+	case WorkScheduleByDaysFourOnFourOff:
 		return "FOUR_ON_FOUR_OFF"
-	case WorkScheduleFourOnThreeOff:
+	case WorkScheduleByDaysFourOnThreeOff:
 		return "FOUR_ON_THREE_OFF"
-	case WorkScheduleFourOnTwoOff:
+	case WorkScheduleByDaysFourOnTwoOff:
 		return "FOUR_ON_TWO_OFF"
-	case WorkScheduleThreeOnThreeOff:
+	case WorkScheduleByDaysThreeOnThreeOff:
 		return "THREE_ON_THREE_OFF"
-	case WorkScheduleThreeOnTwoOff:
+	case WorkScheduleByDaysThreeOnTwoOff:
 		return "THREE_ON_TWO_OFF"
-	case WorkScheduleTwoOnTwoOff:
+	case WorkScheduleByDaysTwoOnTwoOff:
 		return "TWO_ON_TWO_OFF"
-	case WorkScheduleTwoOnOneOff:
+	case WorkScheduleByDaysTwoOnOneOff:
 		return "TWO_ON_ONE_OFF"
-	case WorkScheduleOneOnThreeOff:
+	case WorkScheduleByDaysOneOnThreeOff:
 		return "ONE_ON_THREE_OFF"
-	case WorkScheduleOneOnTwoOff:
+	case WorkScheduleByDaysOneOnTwoOff:
 		return "ONE_ON_TWO_OFF"
-	case WorkScheduleWeekend:
+	case WorkScheduleByDaysWeekend:
 		return "WEEKEND"
-	case WorkScheduleFlexible:
+	case WorkScheduleByDaysFlexible:
 		return "FLEXIBLE"
-	case WorkScheduleOther:
+	case WorkScheduleByDaysOther:
 		return "OTHER"
 	default:
 		return ""
 	}
 }
 
-func (v WorkSchedule) Validate(optional bool) error {
+func (v WorkScheduleByDays) Validate(optional bool) error {
 	if v == "" {
 		if optional {
 			return nil
 		}
 		return errors.New("график работы не указан")
 	}
-	if !slices.Contains(WorkScheduleSlice(), v) {
+	if !slices.Contains(WorkScheduleByDaysSlice(), v) {
 		return errors.New("график работы указан некорректно")
 	}
 	return nil

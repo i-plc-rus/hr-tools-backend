@@ -1028,14 +1028,10 @@ func (i impl) step0CalcPoints(vacancy *dbmodels.Vacancy, request surveyapimodels
 		case "2":
 			expectedSalary, _ := strconv.Atoi(answer.Answer) //валидировали через (v VkStep0SurveyAnswers) Validate()
 			v := 0
-			if vacancy.Salary.InHand > 0 {
-				v = vacancy.Salary.InHand
-			} else if vacancy.Salary.ByResult > 0 {
-				v = vacancy.Salary.ByResult
-			} else if vacancy.Salary.To > 0 {
-				v = vacancy.Salary.To
-			} else if vacancy.Salary.From > 0 {
-				v = vacancy.Salary.From
+			if vacancy.VacancyProps.SalaryRange.To > 0 {
+				v = vacancy.VacancyProps.SalaryRange.To
+			} else if vacancy.VacancyProps.SalaryRange.From > 0 {
+				v = vacancy.VacancyProps.SalaryRange.From
 			} else {
 				points += 35
 				continue
@@ -1054,12 +1050,17 @@ func (i impl) step0CalcPoints(vacancy *dbmodels.Vacancy, request surveyapimodels
 				continue
 			}
 		case "3":
-			if vacancy.Employment.ToString() == answer.Answer {
+			if vacancy.VacancyProps.EmploymentForm.Name() == answer.Answer {
 				points += 20
 			}
 		case "4":
-			if vacancy.Schedule.ToString() == answer.Answer {
-				points += 20
+			if vacancy.VacancyProps.WorkFormat != nil {
+				for _, value := range *vacancy.VacancyProps.WorkFormat {
+					if value.Name() == answer.Answer {
+						points += 20
+						break
+					}
+				}
 			}
 		case "5":
 			if vacancy.Experience.ToPoint() <= models.ExperienceFromDescr(answer.Answer).ToPoint() {
