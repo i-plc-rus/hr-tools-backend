@@ -217,9 +217,14 @@ func (i impl) analyzeVideoAnswer(ctx context.Context, vkStepRec dbmodels.Applica
 			return false, nil // контекст завершён – не удаляем сессию
 		}
 		i.saveFailAnalize(rec, vkStepRec.ID, questionID, "ошибка анализа видео файла")
-
+		retryCount := 0
+		if rec != nil {
+			retryCount = rec.RetryCount
+		} else {
+			retryCount++
+		}
 		// сохраним ошибку в бд
-		i.saveLog(vkStepRec, questionID, rec.RetryCount, err)
+		i.saveLog(vkStepRec, questionID, retryCount, err)
 
 		// Отправка уведомлений в Telegram
 		if rec != nil && rec.RetryCount >= maxAutoRetries {

@@ -144,7 +144,6 @@ func (i *impl) CheckConnected(ctx context.Context, spaceID string) bool {
 		return false
 	}
 	if hMsg == NotConnectedMsg {
-		logger.Info(NotConnectedMsg)
 		return false
 	}
 	if hMsg != "" {
