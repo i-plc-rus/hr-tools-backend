@@ -175,13 +175,13 @@ func (i *impl) QueryMasai(reader io.Reader, fileName string, sessionRec dbmodels
 	}
 
 	data, err := i.listenResults(i.ctx, sessionRec.EventID)
+	i.removeSession(sessionRec.ID, false)
 	if err != nil {
 		// если ошибка связана с обрывом соединения, не удаляем сессию – дадим шанс повторить
 		if errors.Is(err, io.ErrUnexpectedEOF) {
 			i.getLogger().WithError(err).Warn("неожиданный обрыв соединения при ожидании результатов, сессия сохранена")
 			return masaimodels.GradioResponse{}, errors.Wrap(err, "временная ошибка сети, повторите позже")
 		}
-		i.removeSession(sessionRec.ID, false)
 		return masaimodels.GradioResponse{}, errors.Wrap(err, "ошибка анализа видео файла")
 	}
 
@@ -199,11 +199,11 @@ func (i *impl) uploadVideo(reader io.Reader, fileName string) (videoPath string,
 
 	part, err := writer.CreateFormFile("files", fileName)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "ошибка создания формы с данными")
 	}
 	_, err = io.Copy(part, reader)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "ошибка получения файла для отправки")
 	}
 	writer.Close()
 
@@ -317,33 +317,32 @@ func (i *impl) listenResults(ctx context.Context, eventID string) (result []byte
 			}
 			return nil, err
 		}
-
-		line = bytes.TrimSpace(line)
-		if len(line) == 0 {
+		data, dataType := parseLine(line)
+		switch dataType {
+		case eventMsg:
+			currentEvent = string(data)
+			currentData.Reset()
+		case dataMsg:
+			if currentData.Len() > 0 {
+				currentData.WriteByte('\n')
+			}
+			currentData.Write(data)
+		case endOfMsg:
 			if currentEvent == "complete" {
 				result := bytes.TrimSpace(currentData.Bytes())
 				return result, nil
 			}
 			if currentEvent == "error" {
 				errMsg := currentData.String()
-				i.getLogger().WithField("event_id", eventID).Error("ошибка от AI: ", errMsg)
-				return nil, errors.Errorf("ошибка анализа видео файла: %s", errMsg)
+				if errMsg != "null" {
+					i.getLogger().WithField("event_id", eventID).Error("ошибка от AI: ", errMsg)
+					return nil, errors.Errorf("ошибка анализа видео файла: %s", errMsg)
+				}
 			}
 			currentEvent = ""
 			currentData.Reset()
 			continue
-		}
-
-		if bytes.HasPrefix(line, []byte("event:")) {
-			currentEvent = string(bytes.TrimSpace(line[len("event:"):]))
-			currentData.Reset()
-		} else if bytes.HasPrefix(line, []byte("data:")) {
-			dataPart := line[len("data"):]
-			dataPart = bytes.TrimLeft(dataPart, " \t")
-			if currentData.Len() > 0 {
-				currentData.WriteByte('\n')
-			}
-			currentData.Write(dataPart)
+		default:
 		}
 	}
 	return nil, errors.New("не получено событие complete")
@@ -357,6 +356,28 @@ func (i *impl) removeSession(id string, force bool) {
 	err := i.session.Delete(id)
 	if err != nil {
 		i.getLogger().WithError(err).Error("ошибка удаления сессии")
+	}
+	i.clearEvent()
+}
+
+func (i *impl) clearEvent() {
+	payload := map[string]interface{}{
+		"data": []interface{}{},
+	}
+
+	data, _ := json.Marshal(payload)
+
+	resp, err := i.shortHttpClient.Post(fmt.Sprintf("%v/call/event_handler_clear", i.baseUrl),
+		"application/json", bytes.NewBuffer(data))
+	if err != nil {
+		i.getLogger().WithError(err).Error("ошибка удаления сессии в Masai")
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		i.getLogger().Errorf("ошибка удаления сессии в Masai (Status: %v)", resp.StatusCode)
+		return
 	}
 }
 
@@ -403,4 +424,31 @@ func (i *impl) IsVideoAiAvailable() bool {
 
 func timePtr(t time.Time) *time.Time {
 	return &t
+}
+
+type msgType int
+
+const (
+	eventMsg msgType = iota
+	dataMsg
+	endOfMsg
+	unknownMsg
+)
+
+func parseLine(line []byte) (data []byte, dataType msgType) {
+	line = bytes.TrimSpace(line)
+	log.Infof("Masai response: %v", string(line))
+	if len(line) == 0 {
+		return nil, endOfMsg
+	}
+	if bytes.HasPrefix(line, []byte("event:")) {
+		data = bytes.TrimSpace(line[len("event:"):])
+		return data, eventMsg
+	} else if bytes.HasPrefix(line, []byte("data:")) {
+		dataPart := line[len("data:"):]
+		dataPart = bytes.TrimLeft(dataPart, " \t")
+		dataPart = bytes.TrimSpace(dataPart)
+		return dataPart, dataMsg
+	}
+	return nil, unknownMsg
 }
