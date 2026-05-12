@@ -800,9 +800,7 @@ func (i *impl) VacancyDraft(ctx context.Context, spaceID, vacancyID string) (hMs
 		}
 		for _, phone := range rec.VacancyProps.Contacts.Phones {
 			request.Contacts.Phones = append(request.Contacts.Phones, hhapimodels.Phone{
-				City:    phone.City,
-				Country: phone.Country,
-				Number:  phone.Number,
+				Formatted: phone,
 			})
 		}
 	}

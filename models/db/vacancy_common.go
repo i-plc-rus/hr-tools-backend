@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"hr-tools-backend/models"
+	"regexp"
 
 	"github.com/pkg/errors"
 )
@@ -66,6 +67,15 @@ func (v *VacancyProps) Validate() error {
 	if v.SalaryRange.From <= 0 && v.SalaryRange.To <= 0 {
 		return errors.New("не указана зарплата")
 	}
+	if v.Contacts != nil && len(v.Contacts.Phones) != 0 {
+		re := regexp.MustCompile(`^\d+$`)
+		for _, phone := range v.Contacts.Phones {
+			if !re.MatchString(phone) {
+				return errors.Errorf("Контактный телефон %v указан некорректно", phone)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -101,15 +111,9 @@ type VacancyLanguage struct {
 }
 
 type VacancyContacts struct {
-	Name   string         `json:"name"`
-	Email  string         `json:"email"`
-	Phones []VacancyPhone `json:"phones"`
-}
-
-type VacancyPhone struct {
-	City    string `json:"city"`
-	Country string `json:"country"`
-	Number  string `json:"number"`
+	Name   string   `json:"name"`
+	Email  string   `json:"email"`
+	Phones []string `json:"phones"`
 }
 
 type VacancySalaryRange struct {

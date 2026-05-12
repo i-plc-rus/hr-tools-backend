@@ -23,7 +23,6 @@ type CommonDict struct {
 	LanguageLevelTypes  []CommonDictItem `json:"language_level_types"`
 	DriverLicenseTypes  []CommonDictItem `json:"driver_license_types"`
 	WorkFormat          []CommonDictItem `json:"work_format"`
-	WorkHours           []CommonDictItem `json:"work_hours"`
 	FlyInFlyOutDuration []CommonDictItem `json:"fly_in_fly_out_duration"`
 	CivilLawContract    []CommonDictItem `json:"civil_law_contract"`
 	AgeRestriction      []CommonDictItem `json:"age_restriction"`

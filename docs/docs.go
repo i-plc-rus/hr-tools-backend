@@ -12574,7 +12574,7 @@ const docTemplate = `{
                 "phones": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dbmodels.VacancyPhone"
+                        "type": "string"
                     }
                 }
             }
@@ -12587,20 +12587,6 @@ const docTemplate = `{
                 },
                 "level": {
                     "$ref": "#/definitions/models.LanguageLevelType"
-                }
-            }
-        },
-        "dbmodels.VacancyPhone": {
-            "type": "object",
-            "properties": {
-                "city": {
-                    "type": "string"
-                },
-                "country": {
-                    "type": "string"
-                },
-                "number": {
-                    "type": "string"
                 }
             }
         },
@@ -13314,12 +13300,6 @@ const docTemplate = `{
                     }
                 },
                 "work_format": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.CommonDictItem"
-                    }
-                },
-                "work_hours": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/models.CommonDictItem"

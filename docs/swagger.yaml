@@ -1044,7 +1044,7 @@ definitions:
         type: string
       phones:
         items:
-          $ref: '#/definitions/dbmodels.VacancyPhone'
+          type: string
         type: array
     type: object
   dbmodels.VacancyLanguage:
@@ -1053,15 +1053,6 @@ definitions:
         type: string
       level:
         $ref: '#/definitions/models.LanguageLevelType'
-    type: object
-  dbmodels.VacancyPhone:
-    properties:
-      city:
-        type: string
-      country:
-        type: string
-      number:
-        type: string
     type: object
   dbmodels.VacancyProps:
     properties:
@@ -1542,10 +1533,6 @@ definitions:
           $ref: '#/definitions/models.CommonDictItem'
         type: array
       work_format:
-        items:
-          $ref: '#/definitions/models.CommonDictItem'
-        type: array
-      work_hours:
         items:
           $ref: '#/definitions/models.CommonDictItem'
         type: array

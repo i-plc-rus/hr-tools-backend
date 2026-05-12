@@ -679,9 +679,9 @@ func (i impl) publish(spaceID, id, userID string) error {
 		PlaceOfWork:      rec.PlaceOfWork,
 		ChiefFio:         rec.ChiefFio,
 		Requirements:     rec.Requirements,
-		Experience:     rec.Experience,
-		AdditionalInfo: rec.AdditionalInfo,
-		VacancyProps:   rec.VacancyProps,
+		Experience:       rec.Experience,
+		AdditionalInfo:   rec.AdditionalInfo,
+		VacancyProps:     rec.VacancyProps,
 	}
 	err = data.Validate(true)
 	if err != nil {
