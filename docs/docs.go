@@ -1161,6 +1161,59 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/dict/common": {
+            "get": {
+                "description": "Получение справочников",
+                "tags": [
+                    "Справочник. Статические справочники"
+                ],
+                "summary": "Получение справочников",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.CommonDict"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/dict/company": {
             "post": {
                 "description": "Создание",
@@ -12509,6 +12562,185 @@ const docTemplate = `{
                 }
             }
         },
+        "dbmodels.VacancyContacts": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phones": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "dbmodels.VacancyLanguage": {
+            "type": "object",
+            "properties": {
+                "language_id": {
+                    "type": "string"
+                },
+                "level": {
+                    "$ref": "#/definitions/models.LanguageLevelType"
+                }
+            }
+        },
+        "dbmodels.VacancyProps": {
+            "type": "object",
+            "properties": {
+                "accept_handicapped": {
+                    "description": "Соискатель с инвалидностью",
+                    "type": "boolean"
+                },
+                "accept_incomplete_resumes": {
+                    "description": "Разрешен ли отклик на вакансию неполным резюме",
+                    "type": "boolean"
+                },
+                "accept_labor_contract": {
+                    "description": "Указание на возможность приёма кандидата на работу по трудовому договору",
+                    "type": "boolean"
+                },
+                "age_restriction": {
+                    "description": "Указание на возможность приёма кандидата на работу по трудовому договору в соответствии с трудовым законодательством",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.AgeRestriction"
+                        }
+                    ]
+                },
+                "allow_messages": {
+                    "description": "Возможность переписки с кандидатами по данной вакансии",
+                    "type": "boolean"
+                },
+                "auto_response": {
+                    "description": "Настройки для автооткликов",
+                    "type": "boolean"
+                },
+                "civil_law_contracts": {
+                    "description": "Договор гражданско-правового характера",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CivilLawContract"
+                    }
+                },
+                "closed_for_applicants": {
+                    "description": "Закрытая или открытая вакансия",
+                    "type": "boolean"
+                },
+                "contacts": {
+                    "description": "Контакты",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dbmodels.VacancyContacts"
+                        }
+                    ]
+                },
+                "driver_license_types": {
+                    "description": "Права (опционально)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.DriverLicenseType"
+                    }
+                },
+                "employment_form": {
+                    "description": "Занятость",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.EmploymentForm"
+                        }
+                    ]
+                },
+                "fly_in_fly_out_duration": {
+                    "description": "Длительность вахты",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.FlyInFlyOutDuration"
+                    }
+                },
+                "internship": {
+                    "description": "Стажировка",
+                    "type": "boolean"
+                },
+                "key_skills": {
+                    "description": "Ключевые навыки",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "languages": {
+                    "description": "Языки вакансии",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dbmodels.VacancyLanguage"
+                    }
+                },
+                "night_shifts": {
+                    "description": "Ночные смены",
+                    "type": "boolean"
+                },
+                "response_letter_required": {
+                    "description": "Обязательно ли заполнять сообщение при отклике на вакансию",
+                    "type": "boolean"
+                },
+                "response_notifications": {
+                    "description": "Уведомлять ли менеджера о новых откликах",
+                    "type": "boolean"
+                },
+                "salary_range": {
+                    "description": "Зарплата",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dbmodels.VacancySalaryRange"
+                        }
+                    ]
+                },
+                "with_zp": {
+                    "description": "Разместить на Зарплата.ру",
+                    "type": "boolean"
+                },
+                "work_format": {
+                    "description": "Формат работы",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.WorkFormat"
+                    }
+                },
+                "work_schedule_by_days": {
+                    "description": "График работы",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.WorkScheduleByDays"
+                    }
+                },
+                "working_hours": {
+                    "description": "Рабочие часы в день",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.WorkingHours"
+                    }
+                }
+            }
+        },
+        "dbmodels.VacancySalaryRange": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "type": "integer"
+                },
+                "gross": {
+                    "type": "boolean"
+                },
+                "to": {
+                    "type": "integer"
+                }
+            }
+        },
         "dictapimodels.CityData": {
             "type": "object",
             "properties": {
@@ -12894,6 +13126,17 @@ const docTemplate = `{
                 "AddedTypeNegotiation"
             ]
         },
+        "models.AgeRestriction": {
+            "type": "string",
+            "enum": [
+                "AGE_14_PLUS",
+                "AGE_16_PLUS"
+            ],
+            "x-enum-varnames": [
+                "AgeRestriction14Plus",
+                "AgeRestriction16Plus"
+            ]
+        },
         "models.ApAddedPeriodType": {
             "type": "string",
             "enum": [
@@ -12961,6 +13204,119 @@ const docTemplate = `{
                 "AStateRejected",
                 "AStateRemoved"
             ]
+        },
+        "models.CivilLawContract": {
+            "type": "string",
+            "enum": [
+                "SELF_EMPLOYED",
+                "INDIVIDUAL_ENTREPRENEUR",
+                "INDIVIDUAL_PERSON"
+            ],
+            "x-enum-varnames": [
+                "CivilLawContractSelfEmployed",
+                "CivilLawContractIndividualEntrepreneur",
+                "CivilLawContractIndividualPerson"
+            ]
+        },
+        "models.CommonDict": {
+            "type": "object",
+            "properties": {
+                "age_restriction": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CommonDictItem"
+                    }
+                },
+                "civil_law_contract": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CommonDictItem"
+                    }
+                },
+                "driver_license_types": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CommonDictItem"
+                    }
+                },
+                "fly_in_fly_out_duration": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CommonDictItem"
+                    }
+                },
+                "language_level_types": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CommonDictItem"
+                    }
+                },
+                "vacancy_employment_from": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CommonDictItem"
+                    }
+                },
+                "vacancy_experience": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CommonDictItem"
+                    }
+                },
+                "vacancy_request_type": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CommonDictItem"
+                    }
+                },
+                "vacancy_schedule": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CommonDictItem"
+                    }
+                },
+                "vacancy_selection_type": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CommonDictItem"
+                    }
+                },
+                "vacancy_urgency": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CommonDictItem"
+                    }
+                },
+                "vacancy_work_schedule": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CommonDictItem"
+                    }
+                },
+                "vacancy_working_hours": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CommonDictItem"
+                    }
+                },
+                "work_format": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CommonDictItem"
+                    }
+                }
+            }
+        },
+        "models.CommonDictItem": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
         },
         "models.DriverLicenseType": {
             "type": "string",
@@ -13060,6 +13416,21 @@ const docTemplate = `{
                 "EmploymentProbation"
             ]
         },
+        "models.EmploymentForm": {
+            "type": "string",
+            "enum": [
+                "FULL",
+                "PART",
+                "PROJECT",
+                "FLY_IN_FLY_OUT"
+            ],
+            "x-enum-varnames": [
+                "EmploymentFormFull",
+                "EmploymentFormPart",
+                "EmploymentFormProject",
+                "EmploymentFormFlyInFlyOut"
+            ]
+        },
         "models.Experience": {
             "type": "string",
             "enum": [
@@ -13103,6 +13474,33 @@ const docTemplate = `{
                 "ExperienceTypeBetween1And3",
                 "ExperienceTypeBetween3And6",
                 "ExperienceTypeMoreThan6"
+            ]
+        },
+        "models.FlyInFlyOutDuration": {
+            "type": "string",
+            "enum": [
+                "DAYS_15",
+                "DAYS_20",
+                "DAYS_30",
+                "DAYS_40",
+                "DAYS_45",
+                "DAYS_60",
+                "DAYS_90",
+                "DAYS_120",
+                "DAYS_180",
+                "OTHER"
+            ],
+            "x-enum-varnames": [
+                "FlyInFlyOutDurationDays15",
+                "FlyInFlyOutDurationDays20",
+                "FlyInFlyOutDurationDays30",
+                "FlyInFlyOutDurationDays40",
+                "FlyInFlyOutDurationDays45",
+                "FlyInFlyOutDurationDays60",
+                "FlyInFlyOutDurationDays90",
+                "FlyInFlyOutDurationDays120",
+                "FlyInFlyOutDurationDays180",
+                "FlyInFlyOutDurationOther"
             ]
         },
         "models.GenderType": {
@@ -13558,6 +13956,91 @@ const docTemplate = `{
                 "VideoInterviewStatusProcessing",
                 "VideoInterviewStatusReady",
                 "VideoInterviewStatusError"
+            ]
+        },
+        "models.WorkFormat": {
+            "type": "string",
+            "enum": [
+                "ON_SITE",
+                "REMOTE",
+                "HYBRID",
+                "FIELD_WORK"
+            ],
+            "x-enum-varnames": [
+                "WorkFormatOnSite",
+                "WorkFormatRemote",
+                "WorkFormatHybrid",
+                "WorkFormatFieldWork"
+            ]
+        },
+        "models.WorkScheduleByDays": {
+            "type": "string",
+            "enum": [
+                "6/1",
+                "5/2",
+                "4/4",
+                "4/3",
+                "4/2",
+                "3/3",
+                "3/2",
+                "2/2",
+                "2/1",
+                "1/3",
+                "1/2",
+                "По выходным",
+                "Свободный",
+                "Другое"
+            ],
+            "x-enum-varnames": [
+                "WorkScheduleByDaysSixOnOneOff",
+                "WorkScheduleByDaysFiveOnTwoOff",
+                "WorkScheduleByDaysFourOnFourOff",
+                "WorkScheduleByDaysFourOnThreeOff",
+                "WorkScheduleByDaysFourOnTwoOff",
+                "WorkScheduleByDaysThreeOnThreeOff",
+                "WorkScheduleByDaysThreeOnTwoOff",
+                "WorkScheduleByDaysTwoOnTwoOff",
+                "WorkScheduleByDaysTwoOnOneOff",
+                "WorkScheduleByDaysOneOnThreeOff",
+                "WorkScheduleByDaysOneOnTwoOff",
+                "WorkScheduleByDaysWeekend",
+                "WorkScheduleByDaysFlexible",
+                "WorkScheduleByDaysOther"
+            ]
+        },
+        "models.WorkingHours": {
+            "type": "string",
+            "enum": [
+                "HOURS_2",
+                "HOURS_3",
+                "HOURS_4",
+                "HOURS_5",
+                "HOURS_6",
+                "HOURS_7",
+                "HOURS_8",
+                "HOURS_9",
+                "HOURS_10",
+                "HOURS_11",
+                "HOURS_12",
+                "HOURS_24",
+                "FLEXIBLE",
+                "OTHER"
+            ],
+            "x-enum-varnames": [
+                "WorkingHours2",
+                "WorkingHours3",
+                "WorkingHours4",
+                "WorkingHours5",
+                "WorkingHours6",
+                "WorkingHours7",
+                "WorkingHours8",
+                "WorkingHours9",
+                "WorkingHours10",
+                "WorkingHours11",
+                "WorkingHours12",
+                "WorkingHours24",
+                "WorkingHoursFlexible",
+                "WorkingHoursOther"
             ]
         },
         "msgtemplateapimodels.MsgTemplateData": {
@@ -14826,23 +15309,6 @@ const docTemplate = `{
                 }
             }
         },
-        "vacancyapimodels.Salary": {
-            "type": "object",
-            "properties": {
-                "by_result": {
-                    "type": "integer"
-                },
-                "from": {
-                    "type": "integer"
-                },
-                "in_hand": {
-                    "type": "integer"
-                },
-                "to": {
-                    "type": "integer"
-                }
-            }
-        },
         "vacancyapimodels.SearchPeriod": {
             "type": "integer",
             "enum": [
@@ -14963,6 +15429,10 @@ const docTemplate = `{
         "vacancyapimodels.VacancyData": {
             "type": "object",
             "properties": {
+                "additional_info": {
+                    "description": "условия / доп. информация (разделить с requirements)",
+                    "type": "string"
+                },
                 "chief_fio": {
                     "description": "фио непосредственного руководителя",
                     "type": "string"
@@ -14986,14 +15456,6 @@ const docTemplate = `{
                 "department_id": {
                     "description": "ид подразделения",
                     "type": "string"
-                },
-                "employment": {
-                    "description": "Занятость",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.Employment"
-                        }
-                    ]
                 },
                 "experience": {
                     "description": "Опыт работы",
@@ -15027,22 +15489,6 @@ const docTemplate = `{
                     "description": "требования/обязанности/условия",
                     "type": "string"
                 },
-                "salary": {
-                    "description": "ожидания по зп",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/vacancyapimodels.Salary"
-                        }
-                    ]
-                },
-                "schedule": {
-                    "description": "Режим работы",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.Schedule"
-                        }
-                    ]
-                },
                 "selection_type": {
                     "description": "вид подбора",
                     "allOf": [
@@ -15062,6 +15508,9 @@ const docTemplate = `{
                 "vacancy_name": {
                     "description": "название вакансии",
                     "type": "string"
+                },
+                "vacancy_props": {
+                    "$ref": "#/definitions/dbmodels.VacancyProps"
                 },
                 "vacancy_request_id": {
                     "description": "ид заявки на вакансию",
@@ -15168,6 +15617,10 @@ const docTemplate = `{
         "vacancyapimodels.VacancyRequestCreateData": {
             "type": "object",
             "properties": {
+                "additional_info": {
+                    "description": "условия / доп. информация (разделить с requirements)",
+                    "type": "string"
+                },
                 "approval_stages": {
                     "type": "array",
                     "items": {
@@ -15210,14 +15663,6 @@ const docTemplate = `{
                     "description": "Коментарий к заявке",
                     "type": "string"
                 },
-                "employment": {
-                    "description": "Занятость",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.Employment"
-                        }
-                    ]
-                },
                 "experience": {
                     "description": "Опыт работы",
                     "allOf": [
@@ -15262,14 +15707,6 @@ const docTemplate = `{
                     "description": "требования/обязанности/условия",
                     "type": "string"
                 },
-                "schedule": {
-                    "description": "Режим работы",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.Schedule"
-                        }
-                    ]
-                },
                 "selection_type": {
                     "description": "вид подбора",
                     "allOf": [
@@ -15293,12 +15730,19 @@ const docTemplate = `{
                 "vacancy_name": {
                     "description": "название вакансии",
                     "type": "string"
+                },
+                "vacancy_props": {
+                    "$ref": "#/definitions/dbmodels.VacancyProps"
                 }
             }
         },
         "vacancyapimodels.VacancyRequestEditData": {
             "type": "object",
             "properties": {
+                "additional_info": {
+                    "description": "условия / доп. информация (разделить с requirements)",
+                    "type": "string"
+                },
                 "approval_stages": {
                     "type": "array",
                     "items": {
@@ -15337,14 +15781,6 @@ const docTemplate = `{
                     "description": "Коментарий к заявке",
                     "type": "string"
                 },
-                "employment": {
-                    "description": "Занятость",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.Employment"
-                        }
-                    ]
-                },
                 "experience": {
                     "description": "Опыт работы",
                     "allOf": [
@@ -15389,14 +15825,6 @@ const docTemplate = `{
                     "description": "требования/обязанности/условия",
                     "type": "string"
                 },
-                "schedule": {
-                    "description": "Режим работы",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.Schedule"
-                        }
-                    ]
-                },
                 "selection_type": {
                     "description": "вид подбора",
                     "allOf": [
@@ -15420,6 +15848,9 @@ const docTemplate = `{
                 "vacancy_name": {
                     "description": "название вакансии",
                     "type": "string"
+                },
+                "vacancy_props": {
+                    "$ref": "#/definitions/dbmodels.VacancyProps"
                 }
             }
         },
@@ -15440,6 +15871,10 @@ const docTemplate = `{
         "vacancyapimodels.VacancyRequestView": {
             "type": "object",
             "properties": {
+                "additional_info": {
+                    "description": "условия / доп. информация (разделить с requirements)",
+                    "type": "string"
+                },
                 "approval_tasks": {
                     "description": "список согласующих",
                     "type": "array",
@@ -15503,14 +15938,6 @@ const docTemplate = `{
                     "description": "Коментарий к заявке",
                     "type": "string"
                 },
-                "employment": {
-                    "description": "Занятость",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.Employment"
-                        }
-                    ]
-                },
                 "experience": {
                     "description": "Опыт работы",
                     "allOf": [
@@ -15571,14 +15998,6 @@ const docTemplate = `{
                     "description": "требования/обязанности/условия",
                     "type": "string"
                 },
-                "schedule": {
-                    "description": "Режим работы",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.Schedule"
-                        }
-                    ]
-                },
                 "selection_type": {
                     "description": "вид подбора",
                     "allOf": [
@@ -15605,6 +16024,9 @@ const docTemplate = `{
                 "vacancy_name": {
                     "description": "название вакансии",
                     "type": "string"
+                },
+                "vacancy_props": {
+                    "$ref": "#/definitions/dbmodels.VacancyProps"
                 }
             }
         },
@@ -15635,6 +16057,10 @@ const docTemplate = `{
         "vacancyapimodels.VacancyView": {
             "type": "object",
             "properties": {
+                "additional_info": {
+                    "description": "условия / доп. информация (разделить с requirements)",
+                    "type": "string"
+                },
                 "author_full_name": {
                     "description": "ФИО автора вакансии",
                     "type": "string"
@@ -15684,14 +16110,6 @@ const docTemplate = `{
                 },
                 "department_name": {
                     "type": "string"
-                },
-                "employment": {
-                    "description": "Занятость",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.Employment"
-                        }
-                    ]
                 },
                 "experience": {
                     "description": "Опыт работы",
@@ -15754,22 +16172,6 @@ const docTemplate = `{
                     "description": "Идентификатор ответственного",
                     "type": "string"
                 },
-                "salary": {
-                    "description": "ожидания по зп",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/vacancyapimodels.Salary"
-                        }
-                    ]
-                },
-                "schedule": {
-                    "description": "Режим работы",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.Schedule"
-                        }
-                    ]
-                },
                 "selection_stages": {
                     "description": "этапы подбора",
                     "type": "array",
@@ -15799,6 +16201,9 @@ const docTemplate = `{
                 "vacancy_name": {
                     "description": "название вакансии",
                     "type": "string"
+                },
+                "vacancy_props": {
+                    "$ref": "#/definitions/dbmodels.VacancyProps"
                 },
                 "vacancy_request_id": {
                     "description": "ид заявки на вакансию",

@@ -161,17 +161,11 @@ func (i impl) Create(spaceID, userID string, data vacancyapimodels.VacancyData) 
 			PlaceOfWork:     data.PlaceOfWork,
 			ChiefFio:        data.ChiefFio,
 			Requirements:    data.Requirements,
-			Salary: dbmodels.Salary{
-				From:     data.Salary.From,
-				To:       data.Salary.To,
-				ByResult: data.Salary.ByResult,
-				InHand:   data.Salary.InHand,
-			},
-			AuthorID:   userID,
-			Status:     models.VacancyStatusOpened,
-			Employment: data.Employment,
-			Experience: data.Experience,
-			Schedule:   data.Schedule,
+			AuthorID:        userID,
+			Status:          models.VacancyStatusOpened,
+			Experience:      data.Experience,
+			AdditionalInfo:  data.AdditionalInfo,
+			VacancyProps:    data.VacancyProps,
 		}
 		if data.VacancyRequestID != "" {
 			vrStore := vacancyreqstore.NewInstance(tx)
@@ -319,13 +313,9 @@ func (i impl) Update(spaceID, id string, data vacancyapimodels.VacancyData) erro
 			"PlaceOfWork":     data.PlaceOfWork,
 			"ChiefFio":        data.ChiefFio,
 			"Requirements":    data.Requirements,
-			"salary_from":     data.Salary.From,
-			"salary_to":       data.Salary.To,
-			"salary_result":   data.Salary.ByResult,
-			"salary_in_hand":  data.Salary.InHand,
-			"Employment":      data.Employment,
 			"Experience":      data.Experience,
-			"Schedule":        data.Schedule,
+			"AdditionalInfo":  data.AdditionalInfo,
+			"VacancyProps":    data.VacancyProps,
 		}
 		store := vacancystore.NewInstance(tx)
 		err = store.Update(spaceID, id, updMap)

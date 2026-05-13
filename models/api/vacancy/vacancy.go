@@ -25,10 +25,9 @@ type VacancyData struct {
 	PlaceOfWork      string                 `json:"place_of_work"`      // адрес места работы
 	ChiefFio         string                 `json:"chief_fio"`          // фио непосредственного руководителя
 	Requirements     string                 `json:"requirements"`       // требования/обязанности/условия
-	Salary           Salary                 `json:"salary"`             // ожидания по зп
-	Employment       models.Employment      `json:"employment"`         // Занятость
 	Experience       models.Experience      `json:"experience"`         // Опыт работы
-	Schedule         models.Schedule        `json:"schedule"`           // Режим работы
+	AdditionalInfo   string                 `json:"additional_info"`    // условия / доп. информация (разделить с requirements)
+	VacancyProps     dbmodels.VacancyProps  `json:"vacancy_props"`
 }
 
 func (v VacancyData) Validate(isFromRequest bool) error {
@@ -46,27 +45,22 @@ func (v VacancyData) Validate(isFromRequest bool) error {
 		return errors.New("не указано фио непосредственного руководителя")
 	}
 	if !isFromRequest {
-		if v.Salary.InHand == 0 {
-			return errors.New("не указана сумма заработной платы 'на руки'")
-		}
-		if v.Salary.From == 0 {
-			return errors.New("не указана сумма заработной платы 'от'")
-		}
-		if v.Salary.To == 0 {
-			return errors.New("не указана сумма заработной платы 'до'")
+		err := v.VacancyProps.Validate()
+		if err != nil {
+			return err
 		}
 	}
 	if v.OpenedPositions <= 0 {
 		return errors.New("не указано количество вакантных позиций")
 	}
 
-	if err := v.Urgency.Validate(); err != nil {
+	if err := v.Urgency.Validate(false); err != nil {
 		return err
 	}
-	if err := v.RequestType.Validate(); err != nil {
+	if err := v.RequestType.Validate(false); err != nil {
 		return err
 	}
-	if err := v.SelectionType.Validate(); err != nil {
+	if err := v.SelectionType.Validate(false); err != nil {
 		return err
 	}
 	return nil
@@ -98,12 +92,6 @@ type VacancyView struct {
 	Request         *VacancyRequestPreView `json:"request"`
 }
 
-type Salary struct {
-	From     int `json:"from"`
-	To       int `json:"to"`
-	ByResult int `json:"by_result"`
-	InHand   int `json:"in_hand"`
-}
 
 type ExternalData struct {
 	HeadHunter ExternalLink `json:"head_hunter"`
@@ -133,15 +121,9 @@ func VacancyConvert(rec dbmodels.VacancyExt) VacancyView {
 			PlaceOfWork:     rec.PlaceOfWork,
 			ChiefFio:        rec.ChiefFio,
 			Requirements:    rec.Requirements,
-			Salary: Salary{
-				From:     rec.From,
-				To:       rec.To,
-				ByResult: rec.ByResult,
-				InHand:   rec.InHand,
-			},
-			Employment: rec.Employment,
 			Experience: rec.Experience,
-			Schedule:   rec.Schedule,
+			AdditionalInfo: rec.AdditionalInfo,
+			VacancyProps:   rec.VacancyProps,
 		},
 		ID:           rec.ID,
 		CreationDate: rec.CreatedAt,

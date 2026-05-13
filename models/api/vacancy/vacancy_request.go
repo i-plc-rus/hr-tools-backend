@@ -30,9 +30,9 @@ type VacancyRequestData struct {
 	Description     string                 `json:"description"`       // Коментарий к заявке
 	OutInteraction  string                 `json:"out_interaction"`   // внешнее взаимодействие
 	InInteraction   string                 `json:"in_interaction"`    // внутреннее взаимодействие
-	Employment      models.Employment      `json:"employment"`        // Занятость
 	Experience      models.Experience      `json:"experience"`        // Опыт работы
-	Schedule        models.Schedule        `json:"schedule"`          // Режим работы
+	AdditionalInfo  string                 `json:"additional_info"`   // условия / доп. информация (разделить с requirements)
+	VacancyProps    dbmodels.VacancyProps  `json:"vacancy_props"`
 }
 
 func (v VacancyRequestData) Validate() error {
@@ -45,15 +45,23 @@ func (v VacancyRequestData) Validate() error {
 	if v.OpenedPositions <= 0 {
 		return errors.New("не указано количество вакантных позиций")
 	}
-	if err := v.Urgency.Validate(); err != nil {
+	if err := v.Urgency.Validate(false); err != nil {
 		return err
 	}
-	if err := v.RequestType.Validate(); err != nil {
+	if err := v.RequestType.Validate(false); err != nil {
 		return err
 	}
-	if err := v.SelectionType.Validate(); err != nil {
+	if err := v.SelectionType.Validate(false); err != nil {
 		return err
 	}
+	if err := v.Experience.Validate(true); err != nil {
+		return err
+	}
+
+	if err := v.VacancyProps.Validate(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -116,9 +124,8 @@ func VacancyRequestConvert(rec dbmodels.VacancyRequest) VacancyRequestView {
 			Description:     rec.Description,
 			OutInteraction:  rec.OutInteraction,
 			InInteraction:   rec.InInteraction,
-			Employment:      rec.Employment,
 			Experience:      rec.Experience,
-			Schedule:        rec.Schedule,
+			VacancyProps:    rec.VacancyProps,
 		},
 		ID:           rec.ID,
 		CreationDate: rec.CreatedAt,

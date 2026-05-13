@@ -61,9 +61,7 @@ type Contacts struct {
 }
 
 type Phone struct {
-	City    string `json:"city"`
-	Country string `json:"country"`
-	Number  string `json:"number"`
+	Formatted string `json:"formatted"`
 }
 
 // Deprecated: use SalaryRange

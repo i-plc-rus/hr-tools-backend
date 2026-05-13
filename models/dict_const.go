@@ -4,57 +4,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type VRUrgency string
-
-const (
-	VRTypeUrgent    VRUrgency = "Срочно"
-	VRTypeNonUrgent VRUrgency = "В плановом порядке"
-)
-
-func (v VRUrgency) Validate() error {
-	if v == "" {
-		return errors.New("параметр срочности не указан")
-	}
-	if v != VRTypeUrgent && v != VRTypeNonUrgent {
-		return errors.New("параметр срочности указан некорректно")
-	}
-	return nil
-}
-
-type VRType string
-
-const (
-	VRTypeNew     VRType = "Новая позиция"
-	VRTypeReplace VRType = "Замена"
-)
-
-func (v VRType) Validate() error {
-	if v == "" {
-		return errors.New("тип вакансии не указан")
-	}
-	if v != VRTypeNew && v != VRTypeReplace {
-		return errors.New("типа вакансии указан некорректно")
-	}
-	return nil
-}
-
-type VRSelectionType string
-
-const (
-	VRSelectionTypeMass     VRSelectionType = "Массовый"
-	VRSelectionTypePersonal VRSelectionType = "Индивидуальный"
-)
-
-func (v VRSelectionType) Validate() error {
-	if v == "" {
-		return errors.New("вид подбора не указан")
-	}
-	if v != VRSelectionTypeMass && v != VRSelectionTypePersonal {
-		return errors.New("вид подбора указан некорректно")
-	}
-	return nil
-}
-
 type VacancyStatus string
 
 const (
@@ -165,128 +114,6 @@ func (e Employment) ToString() string {
 	return ""
 }
 
-func (e Employment) ToHHEmploymentForm() string {
-	switch e {
-	case EmploymentTemporary:
-		return "PROJECT"
-	case EmploymentFull:
-		return "FULL"
-	case EmploymentPartial:
-		return "PART"
-	}
-	return ""
-}
-
-func EmploymentSlice() []string {
-	return []string{"Временная", "Полная", "Стажировка", "Частичная", "Волонтерство"}
-}
-
-type Experience string
-
-const (
-	ExperienceNoMatter   Experience = "noMatter"   // Без опыта
-	ExperienceMoreThan1  Experience = "moreThan1"  // Более 1 года
-	ExperienceMoreThan3  Experience = "moreThan3"  // Более 3 лет
-	ExperienceMoreThan5  Experience = "moreThan5"  // Более 5 лет
-	ExperienceMoreThan10 Experience = "moreThan10" // Более 10 лет
-)
-
-func (s Experience) ToString() string {
-	switch s {
-	case ExperienceNoMatter:
-		return "Без опыта"
-	case ExperienceMoreThan1:
-		return "Более 1 года"
-	case ExperienceMoreThan3:
-		return "Более 3 лет"
-	case ExperienceMoreThan5:
-		return "Более 5 лет"
-	case ExperienceMoreThan10:
-		return "Более 10 лет"
-	}
-	return ""
-}
-func ExperienceFromDescr(s string) Experience {
-	switch s {
-	case "Без опыта":
-		return ExperienceNoMatter
-	case "Более 1 года":
-		return ExperienceMoreThan1
-	case "Более 3 лет":
-		return ExperienceMoreThan3
-	case "Более 5 лет":
-		return ExperienceMoreThan5
-	case "Более 10 лет":
-		return ExperienceMoreThan10
-	}
-	return ""
-}
-
-func (s Experience) ToPoint() int {
-	switch s {
-	case ExperienceNoMatter:
-		return 1
-	case ExperienceMoreThan1:
-		return 2
-	case ExperienceMoreThan3:
-		return 3
-	case ExperienceMoreThan5:
-		return 4
-	case ExperienceMoreThan10:
-		return 5
-	}
-	return 0
-}
-func (s Experience) ToHHId() string {
-	switch s {
-	case ExperienceNoMatter:
-		return "noExperience"
-	case ExperienceMoreThan1:
-		return "between1And3"
-	case ExperienceMoreThan3:
-		return "between3And6"
-	case ExperienceMoreThan5:
-		return "moreThan6"
-	case ExperienceMoreThan10:
-		return "moreThan6"
-	}
-	return "noExperience"
-}
-
-func ExperienceSlice() []string {
-	return []string{"Без опыта", "Более 1 года", "Более 3 лет", "Более 5 лет", "Более 10 лет"}
-}
-
-type Schedule string
-
-const (
-	ScheduleFlyInFlyOut Schedule = "flyInFlyOut" // Вахта
-	SchedulePartTime    Schedule = "partTime"    // Неполный день
-	ScheduleFullDay     Schedule = "fullDay"     // Полный день
-	ScheduleFlexible    Schedule = "flexible"    // Гибкий
-	ScheduleShift       Schedule = "shift"       // Сменный
-)
-
-func (s Schedule) ToString() string {
-	switch s {
-	case ScheduleFlyInFlyOut:
-		return "Вахта"
-	case SchedulePartTime:
-		return "Неполный день"
-	case ScheduleFullDay:
-		return "Полный день"
-	case ScheduleFlexible:
-		return "Гибкий"
-	case ScheduleShift:
-		return "Сменный"
-	}
-	return ""
-}
-
-func ScheduleSlice() []string {
-	return []string{"Вахта", "Неполный день", "Полный день", "Гибкий", "Сменный"}
-}
-
 type ApplicantStatus string
 
 const (
@@ -388,18 +215,6 @@ const (
 	ResponsePeriodTypeMoreMonth ResponsePeriodType = "более месяца"
 )
 
-type LanguageLevelType string
-
-const (
-	LanguageLevelA1 LanguageLevelType = "a1"
-	LanguageLevelA2 LanguageLevelType = "a2"
-	LanguageLevelB1 LanguageLevelType = "b1"
-	LanguageLevelB2 LanguageLevelType = "b2"
-	LanguageLevelC1 LanguageLevelType = "c1"
-	LanguageLevelC2 LanguageLevelType = "c2"
-	LanguageLevelL1 LanguageLevelType = "l1"
-)
-
 type GenderType string
 
 const (
@@ -436,21 +251,6 @@ func (t TripReadinessType) ToString() string {
 	}
 	return ""
 }
-
-type DriverLicenseType string
-
-const (
-	DriverLicenseA  DriverLicenseType = "A"
-	DriverLicenseB  DriverLicenseType = "B"
-	DriverLicenseC  DriverLicenseType = "C"
-	DriverLicenseD  DriverLicenseType = "D"
-	DriverLicenseE  DriverLicenseType = "E"
-	DriverLicenseBE DriverLicenseType = "BE"
-	DriverLicenseCE DriverLicenseType = "CE"
-	DriverLicenseDE DriverLicenseType = "DE"
-	DriverLicenseTM DriverLicenseType = "TM"
-	DriverLicenseTB DriverLicenseType = "TB"
-)
 
 type SearchStatusType string
 

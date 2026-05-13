@@ -19,7 +19,6 @@ func (v *Vacancy) AfterDelete(tx *gorm.DB) (err error) {
 
 type Vacancy struct {
 	BaseSpaceModel
-	Salary
 	VacancyRequestID *string `gorm:"type:varchar(36)"`
 	VacancyRequest   *VacancyRequest
 	AuthorID         string
@@ -46,13 +45,13 @@ type Vacancy struct {
 	Status           models.VacancyStatus
 	HhData
 	AvitoData
-	Employment      models.Employment `gorm:"type:varchar(255)"` // Занятость
 	Experience      models.Experience `gorm:"type:varchar(255)"` // Опыт работы
-	Schedule        models.Schedule   `gorm:"type:varchar(255)"` // Режим работы
 	SelectionStages []SelectionStage
 	VacancyTeam     []VacancyTeam
 	HRSurvey        *HRSurvey
 	Comments        []VacancyComment `gorm:"foreignKey:VacancyID"`
+	AdditionalInfo  string
+	VacancyProps    VacancyProps `gorm:"type:jsonb"`
 }
 
 type HhData struct {
@@ -69,13 +68,6 @@ type AvitoData struct {
 	AvitoUri       string                  `gorm:"type:varchar(500)"` // урл вакансии на сайте авито
 	AvitoStatus    models.VacancyPubStatus `gorm:"type:varchar(255)"` // статус публикации
 	AvitoReasons   string                  `gorm:"type:varchar(500)"` // Расширенное описание статуса
-}
-
-type Salary struct {
-	From     int `gorm:"column:salary_from"`
-	To       int `gorm:"column:salary_to"`
-	ByResult int `gorm:"column:salary_result"`
-	InHand   int `gorm:"column:salary_in_hand"`
 }
 
 type VacancyExt struct {
