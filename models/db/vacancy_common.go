@@ -76,6 +76,16 @@ func (v *VacancyProps) Validate() error {
 		}
 	}
 
+	if v.KeySkills != nil && len(*v.KeySkills) != 0 {
+		for _, keySkill := range *v.KeySkills {
+			// для проверки строки надо использовать utf8.RuneCountInString,
+			// но перестрахуемся, вдруг на HH проверяют по байтно
+			if len(keySkill) > 100 {
+				return errors.New("Максимальная длина названия ключевого навыка не должно превышеть 100 символов")
+			}
+		}
+	}
+
 	return nil
 }
 

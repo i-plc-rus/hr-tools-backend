@@ -611,7 +611,7 @@ func (i *impl) fillVacancyData(rec *dbmodels.Vacancy) (req *avitoapimodels.Vacan
 	if len(rec.VacancyName) > 50 {
 		return nil, "для публикации на Avito, название вакансии не должно превышать 50 символов"
 	}
-	if len(rec.Requirements) < 200 {
+	if len(rec.GetDescription()) < 200 {
 		return nil, "для публикации на Avito, необходимо указать описание не более 5000 символов"
 	}
 	request := avitoapimodels.VacancyPubRequest{
@@ -620,7 +620,7 @@ func (i *impl) fillVacancyData(rec *dbmodels.Vacancy) (req *avitoapimodels.Vacan
 		},
 		BillingType:  "package",
 		BusinessArea: rec.Department.BusinessAreaID,
-		Description:  rec.Requirements,
+		Description:  rec.GetDescription(),
 		Employment:   rec.VacancyProps.EmploymentForm.ToAvito(),
 		// Employment:   rec.Employment,
 		Experience: rec.Experience,

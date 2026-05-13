@@ -736,7 +736,7 @@ func (i *impl) VacancyDraft(ctx context.Context, spaceID, vacancyID string) (hMs
 		AutoResponse:            hhapimodels.AutoResponse{AcceptAutoResponse: false},
 		CivilLawContracts:       &[]hhapimodels.DictItem{{ID: "INDIVIDUAL_PERSON"}},
 		Code:                    &rec.ID,
-		Description:             rec.Requirements,
+		Description:             rec.GetDescription(),
 		Experience:              &hhapimodels.DictItem{ID: rec.Experience.ToHH()},
 		Internship:              rec.VacancyProps.Internship,
 		Name:                    rec.VacancyName,
@@ -777,7 +777,7 @@ func (i *impl) VacancyDraft(ctx context.Context, spaceID, vacancyID string) (hMs
 		for _, language := range *rec.VacancyProps.Languages {
 			slice = append(slice, hhapimodels.Language{
 				ID:    language.LanguageID,
-				Level: hhapimodels.LanguageLevel{ID: language.Level.Code()},
+				Level: hhapimodels.LanguageLevel{ID: language.Level.ToHH()},
 			})
 		}
 		request.Languages = &slice
@@ -786,7 +786,7 @@ func (i *impl) VacancyDraft(ctx context.Context, spaceID, vacancyID string) (hMs
 	if rec.VacancyProps.DriverLicenseTypes != nil && len(*rec.VacancyProps.DriverLicenseTypes) != 0 {
 		slice := []hhapimodels.DictItem{}
 		for _, value := range *rec.VacancyProps.DriverLicenseTypes {
-			slice = append(slice, hhapimodels.DictItem{ID: value.Code()})
+			slice = append(slice, hhapimodels.DictItem{ID: value.ToHh()})
 		}
 		request.DriverLicenseTypes = &slice
 	}
@@ -821,28 +821,28 @@ func (i *impl) VacancyDraft(ctx context.Context, spaceID, vacancyID string) (hMs
 	if rec.VacancyProps.WorkFormat != nil && len(*rec.VacancyProps.WorkFormat) != 0 {
 		slice := []hhapimodels.DictItem{}
 		for _, value := range *rec.VacancyProps.WorkFormat {
-			slice = append(slice, hhapimodels.DictItem{ID: value.Code()})
+			slice = append(slice, hhapimodels.DictItem{ID: value.ToHh()})
 		}
 		request.WorkFormat = &slice
 	}
 	if rec.VacancyProps.WorkingHours != nil && len(*rec.VacancyProps.WorkingHours) != 0 {
 		slice := []hhapimodels.DictItem{}
 		for _, value := range *rec.VacancyProps.WorkingHours {
-			slice = append(slice, hhapimodels.DictItem{ID: value.Code()})
+			slice = append(slice, hhapimodels.DictItem{ID: value.ToHh()})
 		}
 		request.WorkingHours = &slice
 	}
 	if rec.VacancyProps.WorkScheduleByDays != nil && len(*rec.VacancyProps.WorkScheduleByDays) != 0 {
 		slice := []hhapimodels.DictItem{}
 		for _, value := range *rec.VacancyProps.WorkScheduleByDays {
-			slice = append(slice, hhapimodels.DictItem{ID: value.Code()})
+			slice = append(slice, hhapimodels.DictItem{ID: value.ToHh()})
 		}
 		request.WorkScheduleByDays = &slice
 	}
 	if rec.VacancyProps.FlyInFlyOutDuration != nil && len(*rec.VacancyProps.FlyInFlyOutDuration) != 0 {
 		slice := []hhapimodels.DictItem{}
 		for _, value := range *rec.VacancyProps.FlyInFlyOutDuration {
-			slice = append(slice, hhapimodels.DictItem{ID: value.Code()})
+			slice = append(slice, hhapimodels.DictItem{ID: value.ToHh()})
 		}
 		request.FlyInFlyOutDuration = &slice
 	}
@@ -854,7 +854,7 @@ func (i *impl) VacancyDraft(ctx context.Context, spaceID, vacancyID string) (hMs
 	if rec.VacancyProps.CivilLawContracts != nil && len(*rec.VacancyProps.CivilLawContracts) != 0 {
 		slice := []hhapimodels.DictItem{}
 		for _, value := range *rec.VacancyProps.CivilLawContracts {
-			slice = append(slice, hhapimodels.DictItem{ID: value.Code()})
+			slice = append(slice, hhapimodels.DictItem{ID: value.ToHh()})
 		}
 		request.CivilLawContracts = &slice
 	}

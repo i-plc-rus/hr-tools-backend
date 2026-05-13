@@ -1,7 +1,9 @@
 package dbmodels
 
 import (
+	"fmt"
 	"hr-tools-backend/models"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -85,4 +87,17 @@ type VacancyComment struct {
 	AuthorID  string
 	Author    *SpaceUser `gorm:"foreignKey:AuthorID"`
 	Comment   string
+}
+
+func (v Vacancy) GetDescription() string {
+	requirements := strings.TrimSpace(v.Requirements)
+	additionalInfo := strings.TrimSpace(v.AdditionalInfo)
+	if requirements != "" {
+		if additionalInfo == "" {
+			return requirements
+		}
+		return fmt.Sprintf("%v<br>%v", requirements, additionalInfo)
+	} else {
+		return additionalInfo
+	}
 }
