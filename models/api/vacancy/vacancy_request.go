@@ -126,6 +126,7 @@ func VacancyRequestConvert(rec dbmodels.VacancyRequest) VacancyRequestView {
 			InInteraction:   rec.InInteraction,
 			Experience:      rec.Experience,
 			VacancyProps:    rec.VacancyProps,
+			AdditionalInfo:  rec.AdditionalInfo,
 		},
 		ID:           rec.ID,
 		CreationDate: rec.CreatedAt,
