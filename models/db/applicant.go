@@ -58,6 +58,11 @@ type ApplicantWithJob struct {
 	JobTitleName string
 }
 
+type ApplicantWithSelected struct {
+	Applicant
+	Selected bool
+}
+
 func (j ApplicantParams) Value() (driver.Value, error) {
 	valueString, err := json.Marshal(j)
 	return string(valueString), err

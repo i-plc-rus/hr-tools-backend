@@ -569,7 +569,7 @@ func (i impl) StatusChange(spaceID, vacancyID, userID string, status models.Vaca
 				Limit: 100,
 			},
 		}
-		list, err := applicantStore.ListOfApplicant(spaceID, filter)
+		list, err := applicantStore.ListOfApplicant(spaceID,userID, filter)
 		if err != nil {
 			return errors.Wrap(err, "ошибка получения списка кандидатов по вакансии")
 		}
