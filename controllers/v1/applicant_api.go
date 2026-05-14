@@ -33,6 +33,7 @@ func InitApplicantApiRouters(app *fiber.App) {
 		router.Delete("doc/:id", controller.deleteDoc) // удлить документ по id
 		router.Post("list", controller.list)
 		router.Post("", controller.create)
+		router.Put("clear_set", controller.clearSet)
 		router.Route("multi-actions", func(mRouter fiber.Router) {
 			mRouter.Put("reject", controller.multiReject)
 			mRouter.Put("change_stage", controller.multiChangeStage)
@@ -62,6 +63,7 @@ func InitApplicantApiRouters(app *fiber.App) {
 			idRouter.Put("reject", controller.reject)
 			idRouter.Put("survey", controller.surveyUpdate)
 			idRouter.Put("survey_regen", controller.surveyRegen)
+			idRouter.Put("set", controller.set)
 		})
 
 		router.Put("analyze-retry/video/:id", controller.videoRetry)
@@ -398,7 +400,8 @@ func (c *applicantApiController) list(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
 	}
 	spaceID := middleware.GetUserSpace(ctx)
-	list, rowCount, err := applicant.Instance.ListOfApplicant(spaceID, payload)
+	userID := middleware.GetUserID(ctx)
+	list, rowCount, err := applicant.Instance.ListOfApplicant(spaceID, userID, payload)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка получения списка кандидатов")
 	}
@@ -999,6 +1002,50 @@ func (c *applicantApiController) videoSkip(ctx *fiber.Ctx) error {
 	err = vk.Instance.VideoSkip(recID, userID)
 	if err != nil {
 		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка повторной отправки видео на анализ")
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Сбросить выделение чекбоксами
+// @Tags Кандидат
+// @Description Сбросить выделение чекбоксами
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Success 200 {object} apimodels.Response{data=string}
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/clear_set [put]
+func (c *applicantApiController) clearSet(ctx *fiber.Ctx) error {
+	userID := middleware.GetUserID(ctx)
+	err := applicant.Instance.ClearSelected(userID)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка очистки выбора")
+	}
+	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
+}
+
+// @Summary Выделение чекбоксами
+// @Tags Кандидат
+// @Description Выделение чекбоксами
+// @Param   Authorization		header		string	true	"Authorization token"
+// @Param	set					query 	bool							false		 "выбрано/не выбрано"
+// @Param   id          		path    string  				    	true         "rec ID"
+// @Success 200 {object} apimodels.Response
+// @Failure 400 {object} apimodels.Response
+// @Failure 403
+// @Failure 500 {object} apimodels.Response
+// @router /api/v1/space/applicant/{id}/set [put]
+func (c *applicantApiController) set(ctx *fiber.Ctx) error {
+	id, err := c.GetID(ctx)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(apimodels.NewError(err.Error()))
+	}
+
+	isSet := ctx.QueryBool("set", false)
+	userID := middleware.GetUserID(ctx)
+	err = applicant.Instance.ToSelected(id, userID, isSet)
+	if err != nil {
+		return c.SendError(ctx, c.GetLogger(ctx), err, "Ошибка изменения выбора")
 	}
 	return ctx.Status(fiber.StatusOK).JSON(apimodels.NewResponse(nil))
 }

@@ -16,7 +16,7 @@ const docTemplate = `{
     "basePath": "{{.BasePath}}",
     "paths": {
         "/api/v1/admin_panel/billing/payment/confirm": {
-            "post": {
+            "put": {
                 "description": "Подтвердить платеж",
                 "tags": [
                     "Админ панель. Лицензия"
@@ -3747,6 +3747,59 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/space/applicant/clear_set": {
+            "put": {
+                "description": "Сбросить выделение чекбоксами",
+                "tags": [
+                    "Кандидат"
+                ],
+                "summary": "Сбросить выделение чекбоксами",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apimodels.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/space/applicant/doc/{id}": {
             "get": {
                 "description": "Скачать документ кандидата",
@@ -4855,6 +4908,60 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/space/applicant/{id}/set": {
+            "put": {
+                "description": "Выделение чекбоксами",
+                "tags": [
+                    "Кандидат"
+                ],
+                "summary": "Выделение чекбоксами",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Authorization token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "выбрано/не выбрано",
+                        "name": "set",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "rec ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apimodels.Response"
+                        }
                     },
                     "400": {
                         "description": "Bad Request",
@@ -11600,6 +11707,9 @@ const docTemplate = `{
                     "description": "Желаемая ЗП",
                     "type": "integer"
                 },
+                "selected": {
+                    "type": "boolean"
+                },
                 "selection_stage_id": {
                     "description": "Идентификатор этапа подбора кандидата",
                     "type": "string"
@@ -11770,6 +11880,9 @@ const docTemplate = `{
                 "salary": {
                     "description": "Желаемая ЗП",
                     "type": "integer"
+                },
+                "selected": {
+                    "type": "boolean"
                 },
                 "selection_stage_id": {
                     "description": "Идентификатор этапа подбора кандидата",

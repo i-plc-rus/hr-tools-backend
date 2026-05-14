@@ -22,7 +22,7 @@ type Provider interface {
 	IsExistNegotiationID(spaceID, negotiationID string, source models.ApplicantSource) (found bool, err error)
 	ListOfNegotiation(spaceID string, filter dbmodels.NegotiationFilter) ([]dbmodels.Applicant, error)
 	ListCountOfApplicant(spaceID string, filter applicantapimodels.ApplicantFilter) (count int64, err error)
-	ListOfApplicant(spaceID string, filter applicantapimodels.ApplicantFilter) ([]dbmodels.Applicant, error)
+	ListOfApplicant(spaceID, userID string, filter applicantapimodels.ApplicantFilter) ([]dbmodels.ApplicantWithSelected, error)
 	ListOfDuplicateApplicant(spaceID string, filter dbmodels.DuplicateApplicantFilter) (list []dbmodels.Applicant, err error)
 	ApplicantsByStages(spaceID string, vacancyIDs []string) (list []dbmodels.ApplicantsStage, err error)
 	ListOfApplicantByIDs(spaceID string, ids []string, filter *applicantapimodels.ApplicantFilter) ([]dbmodels.ApplicantWithJob, error)
@@ -30,6 +30,9 @@ type Provider interface {
 	ListOfActiveApplicants() ([]dbmodels.Applicant, error)
 	ListOfActivefNegotiation(withHrSurvy bool) ([]dbmodels.Applicant, error)
 	ListForSurveySend() ([]dbmodels.Applicant, error)
+	AddSelected(id, userID string) error
+	RemoveSelected(id, userID string) error
+	ClearSelected(userID string) error
 }
 
 func NewInstance(DB *gorm.DB) Provider {
@@ -127,14 +130,15 @@ func (i impl) ListOfNegotiation(spaceID string, filter dbmodels.NegotiationFilte
 	return list, nil
 }
 
-func (i impl) ListOfApplicant(spaceID string, filter applicantapimodels.ApplicantFilter) (list []dbmodels.Applicant, err error) {
-	list = []dbmodels.Applicant{}
+func (i impl) ListOfApplicant(spaceID, userID string, filter applicantapimodels.ApplicantFilter) (list []dbmodels.ApplicantWithSelected, err error) {
+	list = []dbmodels.ApplicantWithSelected{}
 	tx := i.db.
-		Select("applicants.*, (last_name || ' ' || first_name|| ' ' || middle_name) as fio").
+		Select("applicants.*, (last_name || ' ' || first_name|| ' ' || middle_name) as fio, apsel.selected as selected").
 		Model(dbmodels.Applicant{}).
 		Where("applicants.space_id = ?", spaceID).
 		Joins("left join vacancies as v on vacancy_id = v.id").
-		Joins("left join selection_stages as st on selection_stage_id = st.id")
+		Joins("left join selection_stages as st on selection_stage_id = st.id").
+		Joins("left join applicant_selecteds as apsel on applicants.id = apsel.applicant_id and apsel.space_user_id = ?", userID)
 	i.addApplicantFilter(tx, filter)
 	i.addSort(tx, filter.Sort)
 	page, limit := filter.GetPage()
@@ -311,6 +315,48 @@ func (i impl) ListForSurveySend() ([]dbmodels.Applicant, error) {
 		return nil, err
 	}
 	return list, nil
+}
+
+func (i impl) AddSelected(id, userID string) error {
+	rec := dbmodels.ApplicantSelected{
+		ApplicantID: id,
+		SpaceUserID: userID,
+		Selected:    true,
+	}
+	err := i.db.
+		Save(&rec).
+		Error
+	if err != nil {
+		if strings.Contains(err.Error(), "(SQLSTATE 23505)") {
+			return nil
+		}
+		return errors.Wrap(err, "ошибка добавления в выбранное")
+	}
+	return nil
+}
+
+func (i impl) RemoveSelected(id, userID string) error {
+	rec := dbmodels.ApplicantSelected{}
+	err := i.db.Model(&dbmodels.ApplicantSelected{}).
+		Where("space_user_id = ?", userID).
+		Where("applicant_id = ?", id).
+		Delete(&rec).Error
+	if err != nil {
+		return errors.Wrap(err, "ошибка удаления из выбранного")
+	}
+	return nil
+}
+
+
+func (i impl) ClearSelected(userID string) error {
+	rec := dbmodels.ApplicantSelected{}
+	err := i.db.Model(&dbmodels.ApplicantSelected{}).
+		Where("space_user_id = ?", userID).
+		Delete(&rec).Error
+	if err != nil {
+		return errors.Wrap(err, "ошибка удаления из выбранного")
+	}
+	return nil
 }
 
 func (i impl) addApplicantFilter(tx *gorm.DB, filter applicantapimodels.ApplicantFilter) {

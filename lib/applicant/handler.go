@@ -35,7 +35,7 @@ type Provider interface {
 	GetByID(spaceID, id string) (negotiationapimodels.NegotiationView, error)
 	CreateApplicant(spaceID, userID string, applicant applicantapimodels.ApplicantData) (string, error)
 	GetApplicant(spaceID string, id string) (applicantapimodels.ApplicantViewExt, error)
-	ListOfApplicant(spaceID string, filter applicantapimodels.ApplicantFilter) (list []applicantapimodels.ApplicantView, rowCount int64, err error)
+	ListOfApplicant(spaceID, userID string, filter applicantapimodels.ApplicantFilter) (list []applicantapimodels.ApplicantView, rowCount int64, err error)
 	UpdateApplicant(spaceID string, id, userID string, applicant applicantapimodels.ApplicantData) error
 	ApplicantAddTag(spaceID string, id, userID string, tag string) error
 	ApplicantRemoveTag(spaceID string, id, userID string, tag string) error
@@ -46,6 +46,8 @@ type Provider interface {
 	ApplicantMultiReject(spaceID string, userID string, data applicantapimodels.MultiRejectRequest) error
 	ExportToXls(spaceID string, data applicantapimodels.XlsExportRequest) (*bytes.Buffer, error)
 	ListOfSource(spaceID string, filter applicantapimodels.ApplicantFilter) (data applicantapimodels.ApplicantSourceData, err error)
+	ToSelected(id, userID string, isSet bool) error
+	ClearSelected(userID string) error
 }
 
 var Instance Provider
@@ -272,7 +274,7 @@ func (i impl) GetApplicant(spaceID string, id string) (applicantapimodels.Applic
 	return result, nil
 }
 
-func (i impl) ListOfApplicant(spaceID string, filter applicantapimodels.ApplicantFilter) (list []applicantapimodels.ApplicantView, rowCount int64, err error) {
+func (i impl) ListOfApplicant(spaceID, userID string, filter applicantapimodels.ApplicantFilter) (list []applicantapimodels.ApplicantView, rowCount int64, err error) {
 	rowCount, err = i.store.ListCountOfApplicant(spaceID, filter)
 	if err != nil {
 		return nil, 0, err
@@ -284,13 +286,13 @@ func (i impl) ListOfApplicant(spaceID string, filter applicantapimodels.Applican
 		return []applicantapimodels.ApplicantView{}, rowCount, nil
 	}
 
-	recList, err := i.store.ListOfApplicant(spaceID, filter)
+	recList, err := i.store.ListOfApplicant(spaceID, userID, filter)
 	if err != nil {
 		return nil, 0, err
 	}
 	result := make([]applicantapimodels.ApplicantView, 0, len(recList))
 	for _, rec := range recList {
-		result = append(result, applicantapimodels.ApplicantConvert(rec))
+		result = append(result, applicantapimodels.ApplicantConvertWithSelected(rec))
 	}
 	return result, rowCount, nil
 }
@@ -545,6 +547,17 @@ func (i impl) ListOfSource(spaceID string, filter applicantapimodels.ApplicantFi
 		}}
 	result.TotalSource.Data = calcPercent(result.TotalSource.Data, result.TotalSource.Total)
 	return result, nil
+}
+
+func (i impl) ToSelected(id, userID string, isSet bool) error {
+	if isSet {
+		return i.store.AddSelected(id, userID)
+	}
+	return i.store.RemoveSelected(id, userID)
+}
+
+func (i impl) ClearSelected(userID string) error {
+	return i.store.ClearSelected(userID)
 }
 
 func (i impl) markAsDifferentApplicants(spaceID string, mainID, minorID, userID string, logger *log.Entry) error {

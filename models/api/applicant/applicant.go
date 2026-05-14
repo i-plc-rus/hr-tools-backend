@@ -28,6 +28,7 @@ type ApplicantView struct {
 	Age                int                    `json:"age"`                  // возраст
 	Survey             ApplicantVkSurvey      `json:"survey"`               // Анкета для кандидата
 	VideoInterview     VideoInterview         `json:"videoInterview"`
+	Selected           bool                   `json:"selected"`
 }
 
 type ApplicantVkSurvey struct {
@@ -126,6 +127,12 @@ func (a ApplicantData) GetBirthDate() (time.Time, error) {
 		return time.Time{}, err
 	}
 	return date, nil
+}
+
+func ApplicantConvertWithSelected(rec dbmodels.ApplicantWithSelected) ApplicantView {
+	result := ApplicantConvert(rec.Applicant)
+	result.Selected = rec.Selected
+	return result
 }
 
 func ApplicantConvert(rec dbmodels.Applicant) ApplicantView {

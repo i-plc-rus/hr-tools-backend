@@ -388,6 +388,8 @@ definitions:
       salary:
         description: Желаемая ЗП
         type: integer
+      selected:
+        type: boolean
       selection_stage_id:
         description: Идентификатор этапа подбора кандидата
         type: string
@@ -501,6 +503,8 @@ definitions:
       salary:
         description: Желаемая ЗП
         type: integer
+      selected:
+        type: boolean
       selection_stage_id:
         description: Идентификатор этапа подбора кандидата
         type: string
@@ -3680,7 +3684,7 @@ info:
   contact: {}
 paths:
   /api/v1/admin_panel/billing/payment/confirm:
-    post:
+    put:
       description: Подтвердить платеж
       parameters:
       - description: Authorization token
@@ -6445,6 +6449,42 @@ paths:
       summary: Скачать резюме кандидата
       tags:
       - Кандидат
+  /api/v1/space/applicant/{id}/set:
+    put:
+      description: Выделение чекбоксами
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: выбрано/не выбрано
+        in: query
+        name: set
+        type: boolean
+      - description: rec ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Выделение чекбоксами
+      tags:
+      - Кандидат
   /api/v1/space/applicant/{id}/survey:
     put:
       description: Обновить/утвердить вопросы для интервью
@@ -6793,6 +6833,38 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/apimodels.Response'
+      tags:
+      - Кандидат
+  /api/v1/space/applicant/clear_set:
+    put:
+      description: Сбросить выделение чекбоксами
+      parameters:
+      - description: Authorization token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/apimodels.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apimodels.Response'
+      summary: Сбросить выделение чекбоксами
       tags:
       - Кандидат
   /api/v1/space/applicant/doc/{id}:
